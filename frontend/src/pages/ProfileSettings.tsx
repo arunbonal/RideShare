@@ -1,0 +1,141 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  User,
+  ArrowLeft,
+  LogOut,
+  Settings as SettingsIcon,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import Navbar from "../components/Navbar";
+
+const ProfileSettings: React.FC = () => {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
+  const navigateToProfile = () => {
+    navigate("/profile");
+  };
+
+  const navigateToRoleDetails = () => {
+    navigate("/profile/role-details");
+  };
+
+  if (!currentUser) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-3xl mx-auto px-4 py-8 text-center">
+          <p>Please log in to view your profile settings.</p>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center text-gray-600 mb-6 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </button>
+
+        <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+          <div className="p-6 border-b border-gray-200">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Profile Settings
+            </h1>
+          </div>
+
+          <div className="p-6">
+            <div className="flex items-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-xl font-semibold">{currentUser.name}</h2>
+                <p className="text-gray-600">{currentUser.email}</p>
+                <p className="text-gray-600">SRN: {currentUser.srn}</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">Account Settings</h3>
+
+              <div className="space-y-3">
+                <div
+                  className="flex items-center justify-between p-4 border rounded-lg cursor-pointer border-gray-300 hover:bg-gray-50"
+                  onClick={navigateToProfile}
+                >
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full bg-blue-100">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="font-medium">Manage Roles</h4>
+                      <p className="text-sm text-gray-600">
+                        Switch between driver and hitcher roles
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <ArrowLeft className="h-5 w-5 text-gray-400 transform rotate-180" />
+                  </div>
+                </div>
+
+                <div
+                  className="flex items-center justify-between p-4 border rounded-lg cursor-pointer border-gray-300 hover:bg-gray-50"
+                  onClick={navigateToRoleDetails}
+                >
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full bg-gray-100">
+                      <SettingsIcon className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="font-medium">
+                        Your Role Details (
+                        {currentUser.activeRoles.driver ? "Driver" : "Hitcher"})
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Manage your details
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <ArrowLeft className="h-5 w-5 text-gray-400 transform rotate-180" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-semibold mb-3">Account</h3>
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-red-600 hover:text-red-800 font-medium"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default ProfileSettings;

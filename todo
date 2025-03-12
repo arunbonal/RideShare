@@ -1,0 +1,11 @@
+print proper errors in controller-auth.js for invalid email, authentication error
+controller-auth.js understand from line 68
+understand trip schema
+fix start date weekly limit
+add gender field
+setup map
+set up realiability rating for drivers
+fix pickup point, drop point
+change delete to cancel rides
+make admin page
+twilio for phone verification

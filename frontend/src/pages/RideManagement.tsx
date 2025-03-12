@@ -1,0 +1,291 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import type { Ride } from "../contexts/AuthContext";
+import Navbar from "../components/Navbar";
+import { Plus } from "lucide-react";
+import axios from "axios";
+
+const RideManagement: React.FC = () => {
+  const { currentUser, allRides, setAllRides, fetchAllRides } = useAuth();
+  const navigate = useNavigate();
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [rideToCancel, setRideToCancel] = useState<{
+    index: number;
+    id: string;
+  } | null>(null);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({ show: false, message: "", type: "success" });
+
+  // Fetch all rides when component mounts
+  useEffect(() => {
+    if (currentUser?.driverProfileComplete) {
+      fetchAllRides();
+    }
+  }, [currentUser, fetchAllRides]);
+
+  // Filter rides for current driver whenever allRides changes
+  useEffect(() => {
+    if (currentUser) {
+      const driverRides = allRides.filter(
+        (ride) => ride.driver._id === currentUser.id
+      );
+      setRides(driverRides);
+    }
+  }, [allRides, currentUser]);
+
+  // Redirect to driver setup if profile is not complete
+  if (!currentUser?.driverProfileComplete) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                Complete your driver profile to manage rides.
+              </p>
+              <button
+                onClick={() => navigate("/driver/setup")}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Complete Driver Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (time24: string) => {
+    const [hours, minutes] = time24.split(":");
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${period}`;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "text-green-600";
+      case "in-progress":
+        return "text-green-600";
+      case "completed":
+        return "text-gray-600";
+      case "cancelled":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  const handleCancelClick = (index: number, rideId: string) => {
+    setRideToCancel({ index, id: rideId });
+    setShowConfirmModal(true);
+  };
+
+  const handleCancelRide = async () => {
+    if (!rideToCancel) return;
+
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/rides/${rideToCancel.id}`,
+        {
+          withCredentials: true,
+        }
+      );
+      // Update both allRides and rides states
+      setAllRides(allRides.filter((ride) => ride._id !== rideToCancel.id));
+      setRides(rides.filter((_, i) => i !== rideToCancel.index));
+      setNotification({
+        show: true,
+        message: "Ride cancelled successfully",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error canceling ride:", error);
+      setNotification({
+        show: true,
+        message: "Failed to cancel ride. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setShowConfirmModal(false);
+      setRideToCancel(null);
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setNotification((prev) => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <div className="max-w-4xl mx-auto px-4 py-8 relative">
+        {/* Notification Toast */}
+        {notification.show && (
+          <div
+            className={`fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg ${
+              notification.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            } transition-all duration-300 z-50`}
+          >
+            {notification.message}
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
+              <h3 className="text-lg font-semibold mb-4">Cancel Ride</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to cancel this ride? This action cannot be
+                undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Keep Ride
+                </button>
+                <button
+                  onClick={handleCancelRide}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Yes, Cancel Ride
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <button
+            onClick={() => navigate("/driver/dashboard")}
+            className="text-gray-600 hover:text-gray-800 mb-4"
+          >
+            ← Back to Dashboard
+          </button>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Manage Your Posted Rides</h1>
+            {rides.length > 0 && (
+              <button
+                onClick={() => navigate("/rides/create")}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Create New Ride
+              </button>
+            )}
+          </div>
+
+          <div className="bg-white shadow-md rounded-lg p-6">
+            {rides.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">
+                  You haven't posted any rides yet
+                </p>
+                <button
+                  onClick={() => navigate("/rides/create")}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create New Ride
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rides.map((ride, index) => (
+                  <div
+                    key={ride._id}
+                    className="border border-gray-200 rounded-md p-4 flex justify-between items-start"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <p className="font-medium text-blue-600">
+                          {formatDate(ride.date)}
+                        </p>
+                        <span
+                          className={`capitalize font-medium ${getStatusColor(
+                            ride.status
+                          )}`}
+                        >
+                          • {ride.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {ride.direction === "toCollege" ? (
+                          <>
+                            To College (PESU EC Campus):{" "}
+                            {formatTime(ride.toCollegeTime || "")}
+                          </>
+                        ) : (
+                          <>
+                            From College (PESU EC Campus):{" "}
+                            {formatTime(ride.fromCollegeTime || "")}
+                          </>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="flex items-center gap-4">
+                          Available Seats: {ride.availableSeats}
+                          {(ride.hitchers?.filter(
+                            (h) => h.status === "accepted"
+                          ).length || 0) > 0 && (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
+                              {
+                                ride.hitchers?.filter(
+                                  (h) => h.status === "accepted"
+                                ).length
+                              }{" "}
+                              Accepted
+                            </span>
+                          )}
+                        </span>
+                      </p>
+                      {ride.note && (
+                        <p className="text-sm text-gray-500 italic">
+                          Note: {ride.note}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <button
+                        onClick={() => handleCancelClick(index, ride._id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Cancel Ride
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default RideManagement;
