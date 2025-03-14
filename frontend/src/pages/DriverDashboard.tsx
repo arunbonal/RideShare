@@ -13,7 +13,6 @@ const DriverDashboard: React.FC = () => {
   const [driverRides, setDriverRides] = useState<Ride[]>([]);
   const [upcomingRides, setUpcomingRides] = useState<Ride[]>([]);
   const [pastRides, setPastRides] = useState<Ride[]>([]);
-
   // Fetch all rides when component mounts
   useEffect(() => {
     if (currentUser?.driverProfileComplete) {

@@ -7,14 +7,37 @@ import { format } from "date-fns";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+// Add this interface near the top of the file after imports
+interface Driver {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: string;
+}
+
+interface Ride {
+  _id: string;
+  driver: Driver;
+  from: string;
+  to: string;
+  date: string;
+  direction: "toCollege" | "fromCollege";
+  toCollegeTime?: string;
+  fromCollegeTime?: string;
+  status: string;
+  availableSeats: number;
+  note?: string;
+  hitchers?: any[];
+}
+
 const RideSearch: React.FC = () => {
   const { currentUser, allRides, fetchAllRides } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [direction, setDirection] = useState<"toCollege" | "fromCollege" | "">(
-    ""
-  );
+  const [direction, setDirection] = useState<"toCollege" | "fromCollege" | "">("");
+  const [driverGender, setDriverGender] = useState<"" | "male" | "female">("");
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -141,10 +164,15 @@ const RideSearch: React.FC = () => {
     }
   };
 
-  // Filter rides based on search criteria and exclude user's own rides
-  const filteredRides = allRides.filter((ride) => {
+  // Update the filter logic
+  const filteredRides = allRides.filter((ride: Ride) => {
     // Exclude rides where the current user is the driver
     if (ride.driver._id === currentUser?.id) {
+      return false;
+    }
+
+    // Filter by driver gender
+    if (driverGender && ride.driver.gender !== driverGender) {
       return false;
     }
 
@@ -285,7 +313,26 @@ const RideSearch: React.FC = () => {
 
           {/* Time filters */}
           {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label
+                  htmlFor="driverGender"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Driver Gender
+                </label>
+                <select
+                  id="driverGender"
+                  value={driverGender}
+                  onChange={(e) => setDriverGender(e.target.value as "" | "male" | "female")}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Any</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
               <div>
                 <label
                   htmlFor="minTime"

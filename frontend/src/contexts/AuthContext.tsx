@@ -15,6 +15,7 @@ interface User {
   email: string;
   name: string;
   srn: string;
+  gender: string;
   phone: string;
   homeAddress: string;
   activeRoles: {
@@ -53,6 +54,7 @@ export interface Ride {
     name: string;
     email: string;
     phone: string;
+    gender: string;
   };
   hitchers?: Array<{
     user: {
@@ -60,6 +62,7 @@ export interface Ride {
       name: string;
       email: string;
       phone: string;
+      gender: string;
       hitcherProfile?: {
         rating: number;
         ratingCount: number;
@@ -142,6 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       name: currentUser?.name || "",
       email: currentUser?.email || "",
       phone: currentUser?.phone || "",
+      gender: currentUser?.gender || "",
     },
     from: "",
     to: "PES University Electronic City Campus",
@@ -347,6 +351,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: currentUser?.name || "",
         email: currentUser?.email || "",
         phone: currentUser?.phone || "",
+        gender: currentUser?.gender || "",
       },
       from: currentUser?.homeAddress || "",
       to: "PES University Electronic City Campus",

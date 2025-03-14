@@ -1,14 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Car, MapPin, CreditCard, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
 
+// Add these type declarations at the top of the file
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 // First, define the type for the form data
 interface FormData {
   phone: string;
   licenseImage: string;
+  gender: string;
   vehicle: {
     model: string;
     color: string;
@@ -29,6 +37,7 @@ const DriverProfileSetup: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     phone: "",
     licenseImage: "",
+    gender: "",
     vehicle: {
       model: "",
       color: "",
@@ -39,10 +48,94 @@ const DriverProfileSetup: React.FC = () => {
     pricePerKm: undefined,
   });
 
+  const addressInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    // Only initialize when we're on the location step
+    if (currentStep !== 3) {
+      return;
+    }
+
+    let autocomplete: google.maps.places.Autocomplete | null = null;
+
+    const initAutocomplete = () => {
+      if (!addressInputRef.current || !window.google?.maps?.places) {
+        console.log('Missing dependencies:', {
+          hasRef: !!addressInputRef.current,
+          hasGoogleMaps: !!window.google?.maps,
+          hasPlaces: !!window.google?.maps?.places
+        });
+        return;
+      }
+
+    //   ESTABLISHMENT autocomplete code 
+      try {
+        // Create the autocomplete instance
+        autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+            componentRestrictions: { country: "IN" },
+            fields: ["formatted_address", "geometry", "name", "types"], // Added "types" to check for establishments
+            types: ["geocode", "establishment"]
+        });
+    
+        // Add the place changed event listener
+        if (autocomplete) {
+          autocomplete.addListener("place_changed", () => {
+              const place = autocomplete?.getPlace();
+              let address = "";
+      
+              if (place) {
+                  if (place.formatted_address) {
+                      // Use place name + formatted address for establishments
+                      address = place.name 
+                          ? `${place.name}, ${place.formatted_address}` 
+                          : place.formatted_address;
+                  }
+      
+                  setFormData(prev => ({
+                      ...prev,
+                      homeAddress: address
+                  }));
+              }
+          });
+      }
+      
+    } catch (error) {
+        console.error('Error initializing Places Autocomplete:', error);
+    }
+    };
+
+    // Try to initialize immediately if Google is already loaded
+    if (window.google?.maps?.places) {
+      console.log('Google Maps loaded, initializing immediately');
+      initAutocomplete();
+    } else {
+      console.log('Google Maps not loaded, waiting...');
+      // If not loaded, wait for the script to load
+      const checkGoogleExists = setInterval(() => {
+        if (window.google?.maps?.places) {
+          console.log('Google Maps loaded in interval');
+          initAutocomplete();
+          clearInterval(checkGoogleExists);
+        }
+      }, 100);
+
+      // Clear interval after 10 seconds if Google doesn't load
+      setTimeout(() => {
+        clearInterval(checkGoogleExists);
+        console.log('Timeout reached waiting for Google Maps');
+      }, 10000);
+    }
+
+    // Cleanup
+    return () => {
+      if (autocomplete) {
+        google.maps.event.clearInstanceListeners(autocomplete);
+      }
+    };
+  }, [currentStep]); // Add currentStep to dependencies
+
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
 
@@ -61,14 +154,70 @@ const DriverProfileSetup: React.FC = () => {
         [name]: value === "" ? undefined : Number(value),
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => {
+        return {
+          ...prev,
+          [name]: value,
+        };
+      });
     }
   };
 
   const nextStep = () => {
+    // Validate current step before proceeding
+    if (currentStep === 1) {
+      if (!formData.phone) {
+        setError("Please enter your phone number");
+        return;
+      }
+      if (!formData.gender || formData.gender === "") {
+        setError("Please select your gender");
+        return;
+      }
+      if (!formData.licenseImage) {
+        setError("Please enter your license image URL");
+        return;
+      }
+    }
+
+    // Vehicle Information validation
+    if (currentStep === 2) {
+      if (!formData.vehicle.model) {
+        setError("Please enter your vehicle model");
+        return;
+      }
+      if (!formData.vehicle.color) {
+        setError("Please enter your vehicle color");
+        return;
+      }
+      if (!formData.vehicle.registrationNumber) {
+        setError("Please enter your vehicle registration number");
+        return;
+      }
+      if (!formData.vehicle.seats) {
+        setError("Please select number of seats");
+        return;
+      }
+    }
+
+    // Location validation
+    if (currentStep === 3) {
+      if (!formData.homeAddress) {
+        setError("Please enter your home address");
+        return;
+      }
+    }
+
+    // Pricing validation
+    if (currentStep === 4) {
+      if (formData.pricePerKm === undefined || formData.pricePerKm <= 0) {
+        setError("Please enter a valid price per kilometer");
+        return;
+      }
+    }
+    
+    // Clear any existing error
+    setError(null);
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -79,6 +228,44 @@ const DriverProfileSetup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Final validation before submission
+    if (!formData.phone) {
+      setError("Please enter your phone number");
+      return;
+    }
+    if (!formData.gender || formData.gender === "") {
+      setError("Please select your gender");
+      return;
+    }
+    if (!formData.licenseImage) {
+      setError("Please enter your license image URL");
+      return;
+    }
+    if (!formData.vehicle.model) {
+      setError("Please enter your vehicle model");
+      return;
+    }
+    if (!formData.vehicle.color) {
+      setError("Please enter your vehicle color");
+      return;
+    }
+    if (!formData.vehicle.registrationNumber) {
+      setError("Please enter your vehicle registration number");
+      return;
+    }
+    if (!formData.vehicle.seats) {
+      setError("Please select number of seats");
+      return;
+    }
+    if (!formData.homeAddress) {
+      setError("Please enter your home address");
+      return;
+    }
+    if (formData.pricePerKm === undefined || formData.pricePerKm <= 0) {
+      setError("Please enter a valid price per kilometer");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -86,6 +273,7 @@ const DriverProfileSetup: React.FC = () => {
       const profileData = {
         phone: formData.phone,
         homeAddress: formData.homeAddress,
+        gender: formData.gender,
         driverProfile: {
           isActive: true,
           licenseImage: formData.licenseImage,
@@ -106,7 +294,6 @@ const DriverProfileSetup: React.FC = () => {
           hitcher: false,
         },
       };
-      
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/profile/driver`,
         profileData,
@@ -268,7 +455,7 @@ const DriverProfileSetup: React.FC = () => {
                   >
                     Phone Number
                   </label>
-                  <input
+                  <input  
                     type="tel"
                     id="phone"
                     name="phone"
@@ -279,7 +466,26 @@ const DriverProfileSetup: React.FC = () => {
                     placeholder="Enter your phone number"
                   />
                 </div>
-
+                <div>
+                  <label
+                    htmlFor="gender"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Gender
+                  </label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
                 <div>
                   <label
                     htmlFor="licenseImage"
@@ -441,6 +647,7 @@ const DriverProfileSetup: React.FC = () => {
                     Home Address
                   </label>
                   <textarea
+                    ref={addressInputRef}
                     id="homeAddress"
                     name="homeAddress"
                     value={formData.homeAddress}
@@ -448,7 +655,7 @@ const DriverProfileSetup: React.FC = () => {
                     required
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your complete home address"
+                    placeholder="Start typing your address..."
                   ></textarea>
                 </div>
 

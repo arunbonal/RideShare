@@ -19,7 +19,7 @@ exports.createRide = async (req, res) => {
 exports.getRides = async (req, res) => {
   try {
     const rides = await Ride.find()
-      .populate("driver", "name email phone")
+      .populate("driver", "name email phone gender")
       .populate("hitchers.user", "name email phone")
       .sort({ date: 1 }); // Sort by date in ascending order
     res.status(200).json({ message: "Rides fetched successfully", rides });

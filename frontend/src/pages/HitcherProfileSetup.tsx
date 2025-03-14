@@ -1,23 +1,99 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, MapPin } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 const HitcherProfileSetup: React.FC = () => {
   const { updateHitcherProfileComplete } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
     phone: "",
     homeAddress: "",
+    gender: "",
   });
 
+  const addressInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    let autocomplete: google.maps.places.Autocomplete | null = null;
+
+    const initAutocomplete = () => {
+      if (!addressInputRef.current || !window.google?.maps?.places) {
+        return;
+      }
+
+      try {
+        // Create the autocomplete instance
+        autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+            componentRestrictions: { country: "IN" },
+            fields: ["formatted_address", "geometry", "name", "types"], // Added "types" to check for establishments
+            types: ["geocode", "establishment"]
+        });
+    
+        // Add the place changed event listener
+        if (autocomplete) {
+          autocomplete.addListener("place_changed", () => {
+              const place = autocomplete?.getPlace();
+              let address = "";
+      
+              if (place) {
+                  if (place.formatted_address) {
+                      // Use place name + formatted address for establishments
+                      address = place.name 
+                          ? `${place.name}, ${place.formatted_address}` 
+                          : place.formatted_address;
+                  }
+      
+                  setFormData(prev => ({
+                      ...prev,
+                      homeAddress: address
+                  }));
+              }
+          });
+      }
+    } catch (error) {
+        console.error('Error initializing Places Autocomplete:', error);
+    }
+    };
+
+    // Try to initialize immediately if Google is already loaded
+    if (window.google?.maps?.places) {
+      initAutocomplete();
+    } else {
+      // If not loaded, wait for the script to load
+      const checkGoogleExists = setInterval(() => {
+        if (window.google?.maps?.places) {
+          initAutocomplete();
+          clearInterval(checkGoogleExists);
+        }
+      }, 100);
+
+      // Clear interval after 10 seconds if Google doesn't load
+      setTimeout(() => clearInterval(checkGoogleExists), 10000);
+    }
+
+    // Cleanup
+    return () => {
+      if (autocomplete) {
+        google.maps.event.clearInstanceListeners(autocomplete);
+      }
+    };
+  }, []);
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -28,6 +104,21 @@ const HitcherProfileSetup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate all fields
+    if (!formData.phone) {
+      setError("Please enter your phone number");
+      return;
+    }
+    if (!formData.gender || formData.gender === "") {
+      setError("Please select your gender");
+      return;
+    }
+    if (!formData.homeAddress) {
+      setError("Please enter your home address");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -46,6 +137,21 @@ const HitcherProfileSetup: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const nextStep = () => {
+    if (!formData.phone) {
+      setError("Please enter your phone number");
+      return;
+    }
+    if (!formData.gender || formData.gender === "") {
+      setError("Please select your gender");
+      return;
+    }
+    
+    // Clear any existing error
+    setError(null);
+    setCurrentStep((prev) => prev + 1);
   };
 
   // Error message component
@@ -86,6 +192,8 @@ const HitcherProfileSetup: React.FC = () => {
                   </h2>
                 </div>
 
+                
+
                 <div className="space-y-4">
                   <div>
                     <label
@@ -107,6 +215,28 @@ const HitcherProfileSetup: React.FC = () => {
                   </div>
                 </div>
               </div>
+              
+              <div>
+                <label
+                  htmlFor="gender"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Gender
+                </label>
+                <select
+                  id="gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
 
               {/* Location */}
               <div>
@@ -125,6 +255,7 @@ const HitcherProfileSetup: React.FC = () => {
                     Home Address
                   </label>
                   <textarea
+                    ref={addressInputRef}
                     id="homeAddress"
                     name="homeAddress"
                     value={formData.homeAddress}
@@ -132,7 +263,7 @@ const HitcherProfileSetup: React.FC = () => {
                     required
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Enter your complete home address"
+                    placeholder="Start typing your address..."
                   ></textarea>
                 </div>
 
@@ -144,6 +275,7 @@ const HitcherProfileSetup: React.FC = () => {
                 </div>
               </div>
 
+              
               <div className="pt-4">
                 <button
                   type="submit"
