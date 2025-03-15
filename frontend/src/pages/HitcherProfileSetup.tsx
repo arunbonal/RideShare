@@ -22,6 +22,7 @@ const HitcherProfileSetup: React.FC = () => {
     phone: "",
     homeAddress: "",
     gender: "",
+    distanceToCollege: 0,
   });
 
   const addressInputRef = useRef<HTMLTextAreaElement>(null);
@@ -48,7 +49,7 @@ const HitcherProfileSetup: React.FC = () => {
               const place = autocomplete?.getPlace();
               let address = "";
       
-              if (place) {
+              if (place && place.geometry && place.geometry.location) {
                   if (place.formatted_address) {
                       // Use place name + formatted address for establishments
                       address = place.name 
@@ -56,10 +57,38 @@ const HitcherProfileSetup: React.FC = () => {
                           : place.formatted_address;
                   }
       
-                  setFormData(prev => ({
-                      ...prev,
-                      homeAddress: address
-                  }));
+                  // Calculate distance to college
+                  const collegeLocation = { lat: 12.861203781214266, lng: 77.66466548226559 }; // PES University EC Campus coordinates
+                  const origin = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                  };
+                  
+                  const directionsService = new google.maps.DirectionsService();
+                  directionsService.route(
+                    {
+                      origin: origin,
+                      destination: collegeLocation,
+                      travelMode: google.maps.TravelMode.DRIVING,
+                    },
+                    (result, status) => {
+                      if (status === google.maps.DirectionsStatus.OK && result) {
+                        // Get distance in kilometers (rounded to 1 decimal place)
+                        const distanceInKm = Math.round((result.routes[0].legs[0].distance?.value || 0) / 100) / 10;
+                        
+                        setFormData(prev => ({
+                          ...prev,
+                          homeAddress: address,
+                          distanceToCollege: distanceInKm
+                        }));
+
+                        // Log the calculated distance
+                        console.log('Distance to college:', distanceInKm, 'km');
+                      } else {
+                        console.error('Error calculating distance:', status);
+                      }
+                    }
+                  );
               }
           });
       }
@@ -125,7 +154,14 @@ const HitcherProfileSetup: React.FC = () => {
     try {
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/profile/hitcher`,
-        formData,
+        {
+          ...formData,
+          hitcherProfileComplete: true,
+          activeRoles: {
+            driver: false,
+            hitcher: true,
+          },
+        },
         { withCredentials: true }
       );
 

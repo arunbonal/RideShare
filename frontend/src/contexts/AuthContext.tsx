@@ -18,6 +18,7 @@ interface User {
   gender: string;
   phone: string;
   homeAddress: string;
+  distanceToCollege: number;
   activeRoles: {
     driver: boolean;
     hitcher: boolean;
@@ -94,6 +95,7 @@ export interface Ride {
   direction: "toCollege" | "fromCollege";
   note?: string;
   pricePerKm: number | undefined;
+  totalFare: number;
 }
 
 interface AuthContextType {
@@ -158,6 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     note: "",
     hitchers: [],
     pricePerKm: undefined,
+    totalFare: 0,
   });
 
   // Fetch current user data from the backend
@@ -364,6 +367,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       note: "",
       hitchers: [],
       pricePerKm: undefined,
+      totalFare: 0,
     });
   }, [currentUser]);
 

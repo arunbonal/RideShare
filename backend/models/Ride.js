@@ -92,6 +92,10 @@ const RideSchema = new mongoose.Schema({
     enum: ["toCollege", "fromCollege"],
     required: true,
   },
+  totalFare: {
+    type: Number,
+    default: 0,
+  },
 });
 
 // Update the updatedAt field on save

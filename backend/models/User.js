@@ -104,6 +104,13 @@ const UserSchema = new mongoose.Schema({
   homeAddress: {
     type: String,
   },
+  distanceToCollege: {
+    type: Number,
+  },
+  reliabilityRate: {
+    type: Number,
+    default: 0,
+  },
   gender: {
     type: String,
     enum: ["male", "female"],

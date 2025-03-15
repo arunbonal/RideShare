@@ -41,6 +41,7 @@ const RideCreation: React.FC = () => {
           name: currentUser.name,
           email: currentUser.email,
           phone: currentUser.phone,
+          gender: currentUser.gender,
         },
         from: currentUser.homeAddress || "",
         availableSeats: currentUser.driverProfile?.vehicle.seats || 4,
@@ -66,12 +67,18 @@ const RideCreation: React.FC = () => {
     return `${hour.toString().padStart(2, "0")}:${minutes}`;
   };
 
-  const isTimeValid = (date: string, time12: string): boolean => {
+  const isTimeValid = (date: string, time24: string): boolean => {
     const now = new Date();
-    const time24 = convertTo24Hour(time12);
     const [hours, minutes] = time24.split(":").map(Number);
     const scheduleDateTime = new Date(date);
     scheduleDateTime.setHours(hours, minutes, 0, 0);
+
+    // If it's a future date, any time is valid
+    if (scheduleDateTime.toDateString() !== now.toDateString()) {
+      return scheduleDateTime > now;
+    }
+
+    // For today, check if the time has not passed
     return scheduleDateTime > now;
   };
 
@@ -103,16 +110,15 @@ const RideCreation: React.FC = () => {
       return;
     }
 
-    if (selectedDate.getTime() === todayDate.getTime()) {
+    // Check time validity for today's rides
+    if (selectedDate.toDateString() === todayDate.toDateString()) {
       const timeToCheck =
         ride.direction === "toCollege"
           ? ride.toCollegeTime
           : ride.fromCollegeTime;
 
-      if (!isTimeValid(ride.date, timeToCheck!)) {
-        alert(
-          "Cannot schedule rides for past times. Please select a future time."
-        );
+      if (!timeToCheck || !isTimeValid(ride.date, timeToCheck)) {
+        alert("Cannot schedule rides for past times. Please select a future time.");
         return;
       }
     }

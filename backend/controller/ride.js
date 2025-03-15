@@ -94,25 +94,35 @@ exports.acceptRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.params;
 
-    const ride = await Ride.findById(rideId);
+    const ride = await Ride.findById(rideId).populate('hitchers.user');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
 
-    const hitcher = ride.hitchers.find((h) => h.user.equals(hitcherId));
+    // Find and update the hitcher's status
+    const hitcher = ride.hitchers.find(
+      (h) => h.user && h.user._id.toString() === hitcherId
+    );
+    
     if (!hitcher) {
-      return res.status(404).json({ message: "Hitcher not found" });
+      return res.status(404).json({ message: "Hitcher not found in this ride" });
     }
 
     hitcher.status = "accepted";
+    
+    // Calculate total fare from all accepted hitchers
+    const totalFare = ride.hitchers.reduce((sum, h) => {
+      return h.status === "accepted" ? sum + (h.fare || 0) : sum;
+    }, 0);
+
+    // Add the new hitcher's fare
+    ride.totalFare = totalFare;
 
     // Update available seats
-    if (ride.availableSeats > 0 && hitcher.status === "accepted") {
-      ride.availableSeats -= 1;
-    }
+    ride.availableSeats = Math.max(0, ride.availableSeats - 1);
 
     await ride.save();
-    res.status(200).json({ message: "Ride accepted successfully" });
+    res.status(200).json({ message: "Ride request accepted successfully" });
   } catch (err) {
     console.error("Error accepting ride:", err);
     res.status(500).json({

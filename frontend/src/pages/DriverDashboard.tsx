@@ -4,6 +4,7 @@ import { Car, Plus, Calendar, Clock, Users, MapPin, List } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
+import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
 import axios from "axios";
 
@@ -66,16 +67,16 @@ const DriverDashboard: React.FC = () => {
 
   const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${
           import.meta.env.VITE_API_URL
         }/api/rides/${rideId}/${hitcherId}/accept`,
         {},
         { withCredentials: true }
       );
+      console.log("Ride accepted, response:", response.data);
       // Fetch fresh data to update the UI
       await fetchAllRides();
-      console.log("Ride accepted");
     } catch (error) {
       console.error("Error accepting request:", error);
     }
@@ -109,8 +110,26 @@ const DriverDashboard: React.FC = () => {
         hitcherRating: hitcher.user?.hitcherProfile?.rating || 0,
         pickupLocation: hitcher.pickupLocation || "Not specified",
         requestTime: hitcher.requestTime || new Date().toISOString(),
+        fare: hitcher.fare || 0,
+        rideDirection: ride.direction,
+        driverLocation: ride.from,
+        rideFrom: ride.from,
+        rideTo: ride.to,
+        // Include all accepted hitchers' locations for this ride
+        acceptedHitchersLocations: ride.hitchers
+          ?.filter(h => h.status === "accepted")
+          .map(h => h.pickupLocation)
+          .filter(Boolean) || []
       }))
   );
+
+  const formatTime = (time24: string) => {
+    const [hours, minutes] = time24.split(":");
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${period}`;
+  };
 
   return (
     <>
@@ -190,6 +209,7 @@ const DriverDashboard: React.FC = () => {
                           </h3>
                           <p className="text-gray-500">
                             {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                            
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -208,14 +228,20 @@ const DriverDashboard: React.FC = () => {
                             {ride.status.charAt(0).toUpperCase() +
                               ride.status.slice(1)}
                           </span>
+                          <br />
+                          {ride.totalFare > 0 && (
+                            <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
+                              You'll receive ₹{ride.totalFare.toFixed(2)} in Total
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center text-gray-600">
                           <Clock className="h-5 w-5 mr-2" />
                           {ride.direction === "toCollege"
-                            ? ride.toCollegeTime
-                            : ride.fromCollegeTime}
+                            ? formatTime(ride.toCollegeTime || "")
+                            : formatTime(ride.fromCollegeTime || "")}
                         </div>
                         <div className="flex items-center text-gray-600">
                           <MapPin className="h-5 w-5 mr-2" />
@@ -248,6 +274,22 @@ const DriverDashboard: React.FC = () => {
                           Note: {ride.note}
                         </p>
                       )}
+                      <p className="mt-4 text-md text-red-700">
+                          Your Current Route :
+                        </p>
+                      {/* Map Preview */}
+                      <div className="mt-4">
+                        <MapPreview
+                          startLocation={ride.from}
+                          endLocation={ride.direction === "toCollege" ? "PES University Electronic City Campus" : ride.to}
+                          userLocation={ride.hitchers
+                            ?.filter(h => h.status === "accepted" && h.pickupLocation)
+                            .map(h => h.pickupLocation)
+                            .join("|")}
+                          className="rounded-lg shadow-sm"
+                          direction={ride.direction}
+                        />
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -334,7 +376,7 @@ const DriverDashboard: React.FC = () => {
             {activeTab === "upcoming" && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Ride Requests
+                  Ride Requests ({pendingRequests.length})
                 </h2>
 
                 {pendingRequests.length > 0 ? (
@@ -349,6 +391,10 @@ const DriverDashboard: React.FC = () => {
                             <h3 className="font-medium text-gray-900">
                               {request.hitcherName}
                             </h3>
+                            <h3 className="font-medium text-gray-900">
+                            Fare : ₹ {request.fare}
+                            <br />
+                            </h3>
                             <p className="text-sm text-gray-500">
                               Rating: {request.hitcherRating.toFixed(1)}
                             </p>
@@ -359,12 +405,12 @@ const DriverDashboard: React.FC = () => {
                         </div>
 
                         <div className="space-y-2 mb-3">
-                          <div className="flex items-start">
+                          {/* <div className="flex items-start">
                             <MapPin className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
                             <p className="text-sm text-gray-600">
                               {request.pickupLocation}
                             </p>
-                          </div>
+                          </div> */}
                           <div className="flex items-start">
                             <Clock className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
                             <p className="text-sm text-gray-600">
@@ -375,6 +421,21 @@ const DriverDashboard: React.FC = () => {
                               )}
                             </p>
                           </div>
+                        </div>
+                        <p className="text-md text-red-700 mb-3">
+                          Your Route after accepting this ride :      
+                        </p>
+                        {/* Map Preview for Request */}
+                        <div className="mb-4">
+                          <MapPreview
+                            startLocation={request.driverLocation}
+                            endLocation="PES University Electronic City Campus"
+                            userLocation={[...request.acceptedHitchersLocations, request.pickupLocation].join("|")}
+                            className="rounded-lg shadow-sm"
+                            direction={request.rideDirection}
+                            isAcceptedLocation={(location) => request.acceptedHitchersLocations.includes(location)}
+                          />
+                          
                         </div>
 
                         <div className="flex space-x-2">

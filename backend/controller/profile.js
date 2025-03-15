@@ -5,7 +5,7 @@ const { getCompleteUserData } = require("../utils/userUtils");
 exports.updateDriverProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { phone, homeAddress, driverProfile, gender } = req.body;
+    const { phone, homeAddress, driverProfile, gender, distanceToCollege } = req.body;
 
     // Find the user
     const user = await User.findById(userId);
@@ -17,6 +17,7 @@ exports.updateDriverProfile = async (req, res) => {
     if (phone) user.phone = phone;
     if (homeAddress) user.homeAddress = homeAddress;
     if (gender) user.gender = gender;
+    if (distanceToCollege) user.distanceToCollege = distanceToCollege;
     // Update or create driver profile
     user.driverProfile = {
       isActive: true,
@@ -50,7 +51,7 @@ exports.updateDriverProfile = async (req, res) => {
 exports.updateHitcherProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { phone, homeAddress, gender } = req.body;
+    const { phone, homeAddress, gender, distanceToCollege } = req.body;
 
     // Find the user
     const user = await User.findById(userId);
@@ -62,6 +63,7 @@ exports.updateHitcherProfile = async (req, res) => {
     if (phone) user.phone = phone;
     if (homeAddress) user.homeAddress = homeAddress;
     if (gender) user.gender = gender;
+    if (distanceToCollege) user.distanceToCollege = distanceToCollege;
     // Update or create hitcher profile - simplified
     user.hitcherProfile = {
       isActive: true,

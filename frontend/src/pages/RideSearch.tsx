@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Clock, Filter, X, Navigation } from "lucide-react";
+import { Search, MapPin, Clock, Filter, X, Navigation, Calendar } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
@@ -29,6 +29,7 @@ interface Ride {
   availableSeats: number;
   note?: string;
   hitchers?: any[];
+  pricePerKm?: number;
 }
 
 const RideSearch: React.FC = () => {
@@ -119,11 +120,11 @@ const RideSearch: React.FC = () => {
         return;
       }
 
-      // Calculate estimated fare based on price per km
-      // For now setting a default fare, in production this should be calculated based on actual distance
-      const estimatedFare = selectedRide.pricePerKm
-        ? selectedRide.pricePerKm * 10
-        : 0; // Assuming 10km default distance
+      // Calculate estimated fare based on price per km and actual distance
+      const fare = selectedRide.pricePerKm && currentUser?.distanceToCollege
+    ? Math.round(selectedRide.pricePerKm * currentUser.distanceToCollege)
+    : 0;
+
 
       const hitcherData = {
         user: currentUser?.id,
@@ -136,7 +137,7 @@ const RideSearch: React.FC = () => {
           selectedRide.direction === "toCollege"
             ? "PES University Electronic City Campus"
             : currentUser?.homeAddress,
-        fare: estimatedFare,
+        fare: fare,
       };
 
       await axios.post(
@@ -226,6 +227,14 @@ const RideSearch: React.FC = () => {
   const selectedRideDetails = selectedRide
     ? allRides.find((ride) => ride._id === selectedRide)
     : null;
+
+    const formatTime = (time24: string) => {
+      const [hours, minutes] = time24.split(":");
+      const hour = parseInt(hours);
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${period}`;
+    };
 
   return (
     <>
@@ -411,8 +420,8 @@ const RideSearch: React.FC = () => {
                       <div className="flex items-center text-gray-600">
                         <Clock className="h-5 w-5 mr-2" />
                         {ride.direction === "toCollege"
-                          ? ride.toCollegeTime
-                          : ride.fromCollegeTime}
+                          ? formatTime(ride.toCollegeTime || "")
+                          : formatTime(ride.fromCollegeTime || "")}
                       </div>
                       <div className="flex items-center text-gray-600">
                         <MapPin className="h-5 w-5 mr-2" />
@@ -466,25 +475,71 @@ const RideSearch: React.FC = () => {
                       <h3 className="font-semibold text-gray-900 mb-3">
                         Route Details
                       </h3>
-                      <div className="space-y-2">
+                      <div className="space-y-4">
+                        {/* Start Location */}
                         <div className="flex items-start">
                           <div className="flex-shrink-0 mt-1">
                             <div className="h-2 w-2 rounded-full bg-green-500"></div>
                           </div>
-                          <div className="ml-3">
+                          <div className="ml-3 min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-900">
                               Start
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 break-words">
                               {selectedRideDetails.from}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Vertical Line */}
+                        <div className="ml-1 h-8 border-l-2 border-dashed border-gray-200"></div>
+
+                        {/* Time and Date */}
+                        <div className="mt-4 bg-gray-50 rounded-md p-3">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Clock className="h-4 w-4 mr-2" />
+                            <span>
+                              {selectedRideDetails.direction === "toCollege"
+                                ? formatTime(selectedRideDetails.toCollegeTime || "")
+                                : formatTime(selectedRideDetails.fromCollegeTime || "")}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600 mt-2">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span>
+                              {format(new Date(selectedRideDetails.date), "EEEE, MMMM d, yyyy")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Distance and Fare Information */}
+                        <div className="mt-4 bg-blue-50 rounded-md p-3">
+                          <div className="text-sm text-gray-800">
+                            <div className="flex justify-between items-center mb-2">
+                              <span>Distance:</span>
+                              <span className="font-medium">{currentUser?.distanceToCollege} km</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span>Estimated Fare:</span>
+                              <span className="font-medium">
+                                ₹{selectedRideDetails.pricePerKm && currentUser?.distanceToCollege
+                                  ? Math.round(selectedRideDetails.pricePerKm * currentUser.distanceToCollege)
+                                  : "0.00"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Fare calculated based on ₹{selectedRideDetails.pricePerKm}/km
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* Clear divider */}
+                    <div className="border-t border-gray-200 my-6"></div>
+
                     {/* Driver Information */}
-                    <div className="border-t border-gray-200 pt-6">
+                    <div className="pt-2">
                       <h3 className="font-semibold text-gray-900 mb-4">
                         Driver Information
                       </h3>
@@ -492,23 +547,18 @@ const RideSearch: React.FC = () => {
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
                           {selectedRideDetails.driver.name.charAt(0)}
                         </div>
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">
                             {selectedRideDetails.driver.name}
                           </p>
                           <p className="text-sm text-gray-500">
                             {selectedRideDetails.driver.phone}
                           </p>
-                          {/* <p className="text-sm text-gray-500">
-                            {selectedRideDetails.driver.rating}
-                          </p> */}
                         </div>
                       </div>
 
                       <button
-                        onClick={() =>
-                          handleRequestRide(selectedRideDetails._id)
-                        }
+                        onClick={() => handleRequestRide(selectedRideDetails._id)}
                         className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                       >
                         Request This Ride
