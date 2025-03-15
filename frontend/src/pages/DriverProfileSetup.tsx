@@ -29,34 +29,39 @@ interface FormData {
 }
 
 const DriverProfileSetup: React.FC = () => {
-  const { updateDriverProfileComplete } = useAuth();
+  const { updateDriverProfileComplete, currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [currentStep, setCurrentStep] = useState(1);
+  // Start from step 2 if personal details exist
+  const [currentStep, setCurrentStep] = useState(
+    currentUser?.phone && currentUser?.gender && currentUser?.homeAddress ? 2 : 1
+  );
+
   const [formData, setFormData] = useState<FormData>({
-    phone: "",
+    phone: currentUser?.phone || "",
     licenseImage: "",
-    gender: "",
+    gender: currentUser?.gender || "",
     vehicle: {
       model: "",
       color: "",
       registrationNumber: "",
       seats: 4,
     },
-    homeAddress: "",
-    distanceToCollege: 0,
+    homeAddress: currentUser?.homeAddress || "",
+    distanceToCollege: currentUser?.distanceToCollege || 0,
     pricePerKm: undefined,
   });
 
   const addressInputRef = useRef<HTMLInputElement>(null);
 
-  const [phoneNumber, setPhoneNumber] = useState("");
+  // Initialize phone verification states based on existing data
+  const [phoneNumber, setPhoneNumber] = useState(currentUser?.phone?.replace("+91", "") || "");
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(!!currentUser?.phone);
 
   useEffect(() => {
     // Only initialize when we're on the location step
@@ -210,14 +215,14 @@ const DriverProfileSetup: React.FC = () => {
         setError("Please select your gender");
         return;
       }
-      if (!formData.licenseImage) {
-        setError("Please enter your license image URL");
-        return;
-      }
     }
 
     // Vehicle Information validation
     if (currentStep === 2) {
+      if (!formData.licenseImage) {
+        setError("Please enter your license image URL");
+        return;
+      }
       if (!formData.vehicle.model) {
         setError("Please enter your vehicle model");
         return;
@@ -264,15 +269,19 @@ const DriverProfileSetup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Final validation before submission
-    if (!isPhoneVerified) {
-      setError("Please verify your phone number");
-      return;
+    // Skip personal info validation if already exists
+    if (!currentUser?.phone) {
+      if (!isPhoneVerified) {
+        setError("Please verify your phone number");
+        return;
+      }
+      if (!formData.gender || formData.gender === "") {
+        setError("Please select your gender");
+        return;
+      }
     }
-    if (!formData.gender || formData.gender === "") {
-      setError("Please select your gender");
-      return;
-    }
+
+    // Always validate vehicle and pricing info
     if (!formData.licenseImage) {
       setError("Please enter your license image URL");
       return;
@@ -307,10 +316,10 @@ const DriverProfileSetup: React.FC = () => {
 
     try {
       const profileData = {
-        phone: `+91${phoneNumber}`,  // Use the verified phone number
-        homeAddress: formData.homeAddress,
-        distanceToCollege: formData.distanceToCollege,
-        gender: formData.gender,
+        phone: currentUser?.phone || `+91${phoneNumber}`,
+        homeAddress: currentUser?.homeAddress || formData.homeAddress,
+        distanceToCollege: currentUser?.distanceToCollege || formData.distanceToCollege,
+        gender: currentUser?.gender || formData.gender,
         driverProfile: {
           isActive: true,
           licenseImage: formData.licenseImage,
@@ -328,9 +337,10 @@ const DriverProfileSetup: React.FC = () => {
         driverProfileComplete: true,
         activeRoles: {
           driver: true,
-          hitcher: false,
+          hitcher: currentUser?.activeRoles?.hitcher || false,
         },
       };
+
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/profile/driver`,
         profileData,
@@ -462,30 +472,35 @@ const DriverProfileSetup: React.FC = () => {
           </p>
         </div>
 
-        {/* Progress Steps */}
+        {/* Progress Steps - Hide personal info step if already exists */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div
-              className={`flex flex-col items-center ${
-                currentStep >= 1 ? "text-blue-600" : "text-gray-400"
-              }`}
-            >
-              <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  currentStep >= 1
-                    ? "border-blue-600 bg-blue-100"
-                    : "border-gray-300"
-                }`}
-              >
-                <span className="text-sm font-medium">1</span>
-              </div>
-              <span className="text-xs mt-1">Personal</span>
-            </div>
-            <div
-              className={`flex-1 h-1 mx-2 ${
-                currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
-              }`}
-            ></div>
+            {!currentUser?.phone && (
+              <>
+                <div
+                  className={`flex flex-col items-center ${
+                    currentStep >= 1 ? "text-blue-600" : "text-gray-400"
+                  }`}
+                >
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                      currentStep >= 1
+                        ? "border-blue-600 bg-blue-100"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">1</span>
+                  </div>
+                  <span className="text-xs mt-1">Personal</span>
+                </div>
+                <div
+                  className={`flex-1 h-1 mx-2 ${
+                    currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                ></div>
+              </>
+            )}
+            
             <div
               className={`flex flex-col items-center ${
                 currentStep >= 2 ? "text-blue-600" : "text-gray-400"
@@ -551,8 +566,8 @@ const DriverProfileSetup: React.FC = () => {
           <ErrorMessage />
           <SuccessMessage />
           <form onSubmit={handleSubmit}>
-            {/* Step 1: Personal Information */}
-            {currentStep === 1 && (
+            {/* Step 1: Personal Information - Only show if not already collected */}
+            {currentStep === 1 && !currentUser?.phone && (
               <div className="space-y-4">
                 <div className="flex items-center mb-4">
                   <div className="bg-blue-100 p-2 rounded-full">
@@ -581,24 +596,6 @@ const DriverProfileSetup: React.FC = () => {
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                   </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="licenseImage"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Driving License Image
-                  </label>
-                  <input
-                    type="text"
-                    id="licenseImage"
-                    name="licenseImage"
-                    value={formData.licenseImage}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your license image URL"
-                  />
                 </div>
                 <div>
                   <label
@@ -696,6 +693,25 @@ const DriverProfileSetup: React.FC = () => {
                   <h2 className="text-xl font-semibold ml-2">
                     Vehicle Information
                   </h2>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="licenseImage"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Driving License Image
+                  </label>
+                  <input
+                    type="text"
+                    id="licenseImage"
+                    name="licenseImage"
+                    value={formData.licenseImage}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your license image URL"
+                  />
                 </div>
 
                 <div>

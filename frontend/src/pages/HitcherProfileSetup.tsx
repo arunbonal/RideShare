@@ -12,8 +12,40 @@ declare global {
 }
 
 const HitcherProfileSetup: React.FC = () => {
-  const { updateHitcherProfileComplete } = useAuth();
+  const { updateHitcherProfileComplete, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // If user already has personal details, complete profile and redirect
+  useEffect(() => {
+    const completeHitcherProfile = async () => {
+      if (currentUser?.phone && currentUser?.gender && currentUser?.homeAddress) {
+        try {
+          await axios.post(
+            `${import.meta.env.VITE_API_URL}/api/profile/hitcher`,
+            {
+              phone: currentUser.phone,
+              gender: currentUser.gender,
+              homeAddress: currentUser.homeAddress,
+              distanceToCollege: currentUser.distanceToCollege,
+              hitcherProfileComplete: true,
+              activeRoles: {
+                driver: currentUser.activeRoles?.driver || false,
+                hitcher: true,
+              },
+            },
+            { withCredentials: true }
+          );
+          await updateHitcherProfileComplete(true);
+          navigate("/hitcher/dashboard");
+        } catch (error) {
+          console.error("Error auto-completing hitcher profile:", error);
+        }
+      }
+    };
+
+    completeHitcherProfile();
+  }, [currentUser, navigate, updateHitcherProfileComplete]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -233,7 +265,7 @@ const HitcherProfileSetup: React.FC = () => {
           phone: `+91${phoneNumber}`,
           hitcherProfileComplete: true,
           activeRoles: {
-            driver: false,
+            driver: currentUser?.activeRoles?.driver || false,
             hitcher: true,
           },
         },
@@ -284,6 +316,25 @@ const HitcherProfileSetup: React.FC = () => {
       </div>
     );
   };
+
+  // If user already has personal details, show loading state
+  if (currentUser?.phone && currentUser?.gender && currentUser?.homeAddress) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Setting up your hitcher profile...
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Please wait while we complete your profile setup
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
