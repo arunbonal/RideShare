@@ -152,7 +152,7 @@ const RideCreation: React.FC = () => {
       );
 
       resetRide();
-      navigate("/rides/manage");
+      navigate("/driver/dashboard");
     } catch (error: any) {
       console.error("Error creating ride:", error);
       // Show more specific error message

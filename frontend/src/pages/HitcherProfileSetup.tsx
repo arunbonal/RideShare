@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, MapPin } from "lucide-react";
+import { User, MapPin, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
@@ -16,16 +16,22 @@ const HitcherProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
-    phone: "",
     homeAddress: "",
     gender: "",
     distanceToCollege: 0,
   });
 
-  const addressInputRef = useRef<HTMLTextAreaElement>(null);
+  // Add phone verification states
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let autocomplete: google.maps.places.Autocomplete | null = null;
@@ -131,12 +137,80 @@ const HitcherProfileSetup: React.FC = () => {
     }));
   };
 
+  const sendVerificationCode = async () => {
+    try {
+      if (!phoneNumber) {
+        setError("Please enter your phone number");
+        return;
+      }
+
+      const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/verify/send`,
+        { phoneNumber: formattedPhoneNumber },
+        { withCredentials: true }
+      );
+      
+      if (response.data.success) {
+        setIsVerifying(true);
+        setError(null);
+        setSuccessMessage("Verification code sent successfully!");
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (error: any) {
+      console.error("Error sending code:", error);
+      let errorMessage = "Error sending verification code. Please try again.";
+      
+      // Check for specific Twilio error messages
+      if (error.response?.data?.message?.includes("unverified")) {
+        errorMessage = "This phone number is not verified in our system. For development, please use one of these test numbers: +14155552671, +14155552672, +14155552673, +14155552674, or +14155552675";
+      }
+      
+      setError(errorMessage);
+      setSuccessMessage(null);
+    }
+  };
+
+  const verifyCode = async () => {
+    try {
+      if (!verificationCode) {
+        setError("Please enter the verification code");
+        return;
+      }
+
+      const formattedPhoneNumber = `+91${phoneNumber}`;
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/verify/verify`,
+        { 
+          phoneNumber: formattedPhoneNumber,
+          code: verificationCode 
+        },
+        { withCredentials: true }
+      );
+      
+      if (response.data.success) {
+        setIsPhoneVerified(true);
+        setIsVerifying(false);
+        setError(null);
+        setSuccessMessage("Phone number verified successfully!");
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (error: any) {
+      console.error("Error verifying code:", error);
+      const errorMessage = error.response?.data?.message || "Invalid verification code. Please try again.";
+      setError(errorMessage);
+      setSuccessMessage(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate all fields
-    if (!formData.phone) {
-      setError("Please enter your phone number");
+    if (!isPhoneVerified) {
+      setError("Please verify your phone number");
       return;
     }
     if (!formData.gender || formData.gender === "") {
@@ -156,6 +230,7 @@ const HitcherProfileSetup: React.FC = () => {
         `${import.meta.env.VITE_API_URL}/api/profile/hitcher`,
         {
           ...formData,
+          phone: `+91${phoneNumber}`,
           hitcherProfileComplete: true,
           activeRoles: {
             driver: false,
@@ -176,8 +251,8 @@ const HitcherProfileSetup: React.FC = () => {
   };
 
   const nextStep = () => {
-    if (!formData.phone) {
-      setError("Please enter your phone number");
+    if (!isPhoneVerified) {
+      setError("Please verify your phone number");
       return;
     }
     if (!formData.gender || formData.gender === "") {
@@ -200,6 +275,16 @@ const HitcherProfileSetup: React.FC = () => {
     );
   };
 
+  // Success message component
+  const SuccessMessage = () => {
+    if (!successMessage) return null;
+    return (
+      <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        {successMessage}
+      </div>
+    );
+  };
+
   return (
     <>
       <Navbar />
@@ -215,6 +300,7 @@ const HitcherProfileSetup: React.FC = () => {
 
         <div className="bg-white shadow-md rounded-lg p-6">
           <ErrorMessage />
+          <SuccessMessage />
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
               {/* Personal Information */}
@@ -228,8 +314,6 @@ const HitcherProfileSetup: React.FC = () => {
                   </h2>
                 </div>
 
-                
-
                 <div className="space-y-4">
                   <div>
                     <label
@@ -238,17 +322,71 @@ const HitcherProfileSetup: React.FC = () => {
                     >
                       Phone Number
                     </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      placeholder="Enter your phone number"
-                    />
+                    <div className="mt-1 flex rounded-md shadow-sm">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="Enter your phone number"
+                        disabled={isPhoneVerified}
+                      />
+                    </div>
                   </div>
+
+                  {!isPhoneVerified && !isVerifying && (
+                    <button
+                      type="button"
+                      onClick={sendVerificationCode}
+                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Send Verification Code
+                    </button>
+                  )}
+
+                  {isVerifying && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Verification Code
+                        </label>
+                        <input
+                          type="text"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                          placeholder="Enter verification code"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={verifyCode}
+                        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        Verify Code
+                      </button>
+                    </div>
+                  )}
+
+                  {isPhoneVerified && (
+                    <div className="rounded-md bg-green-50 p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-green-800">
+                            Phone number verified successfully
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -290,17 +428,17 @@ const HitcherProfileSetup: React.FC = () => {
                   >
                     Home Address
                   </label>
-                  <textarea
-                    ref={addressInputRef}
+                  <input
+                    type="text"
                     id="homeAddress"
                     name="homeAddress"
+                    ref={addressInputRef}
                     value={formData.homeAddress}
                     onChange={handleInputChange}
                     required
-                    rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Start typing your address..."
-                  ></textarea>
+                    placeholder="Enter your home address"
+                  />
                 </div>
 
                 {/* Map placeholder */}

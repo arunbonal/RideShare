@@ -97,7 +97,7 @@ const UserProfile: React.FC = () => {
                       <Phone className="h-4 w-4 mr-1" /> Phone Number
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900">
-                      +91 {currentUser.phone}
+                      {currentUser.phone}
                     </dd>
                   </div>
                   <div className="sm:col-span-1">
