@@ -88,35 +88,38 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           <MapPin className="h-4 w-4 text-red-500 mr-1 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-xs font-medium">From</p>
-            <p className="text-sm text-gray-700">{startLocation}</p>
+            <p className="text-sm text-gray-700">
+              {direction === "fromCollege" ? startLocation : startLocation}
+            </p>
           </div>
         </div>
 
         {userLocation && userLocation.split("|").map((location, index) => (
-  <div key={index} className="flex items-start mb-2">
-    <MapPin className="h-4 w-4 text-green-500 mr-1 mt-0.5 flex-shrink-0" />
-    <div className="flex-grow">
-      <div className="flex items-center">
-        <p className="text-xs font-medium">
-          {direction === "fromCollege" ? "Drop Point" : "Pickup Point"} {userLocation.split("|").length > 1 ? `#${index + 1}` : ""}
-        </p>
-        {isAcceptedLocation(location) && (
-          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-            Accepted
-          </span>
-        )}
-      </div>
-      <p className="text-sm text-gray-700">{location}</p>
-    </div>
-  </div>
-))}
-
+          <div key={index} className="flex items-start mb-2">
+            <MapPin className="h-4 w-4 text-green-500 mr-1 mt-0.5 flex-shrink-0" />
+            <div className="flex-grow">
+              <div className="flex items-center">
+                <p className="text-xs font-medium">
+                  {direction === "fromCollege" ? "Drop Point" : "Pickup Point"} {userLocation.split("|").length > 1 ? `#${index + 1}` : ""}
+                </p>
+                {isAcceptedLocation(location) && (
+                  <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
+                    Accepted
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-700">{location}</p>
+            </div>
+          </div>
+        ))}
 
         <div className="flex items-start mb-2">
           <MapPin className="h-4 w-4 text-blue-500 mr-1 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-xs font-medium">To</p>
-            <p className="text-sm text-gray-700">{endLocation}</p>
+            <p className="text-sm text-gray-700">
+              {direction === "fromCollege" ? endLocation : endLocation}
+            </p>
           </div>
         </div>
       </div>

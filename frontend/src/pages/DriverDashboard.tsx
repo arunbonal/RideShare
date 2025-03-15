@@ -108,17 +108,18 @@ const DriverDashboard: React.FC = () => {
         rideId: ride._id,
         hitcherName: hitcher.user?.name || "Unknown User",
         hitcherRating: hitcher.user?.hitcherProfile?.rating || 0,
+        rideDirection: ride.direction,
         pickupLocation: hitcher.pickupLocation || "Not specified",
+        dropoffLocation: hitcher.dropoffLocation || "Not specified",
         requestTime: hitcher.requestTime || new Date().toISOString(),
         fare: hitcher.fare || 0,
-        rideDirection: ride.direction,
         driverLocation: ride.from,
-        rideFrom: ride.from,
-        rideTo: ride.to,
+        from: ride.from,
+        to: ride.to,
         // Include all accepted hitchers' locations for this ride
         acceptedHitchersLocations: ride.hitchers
           ?.filter(h => h.status === "accepted")
-          .map(h => h.pickupLocation)
+          .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
           .filter(Boolean) || []
       }))
   );
@@ -277,14 +278,15 @@ const DriverDashboard: React.FC = () => {
                       <p className="mt-4 text-md text-red-700">
                           Your Current Route :
                         </p>
-                      {/* Map Preview */}
+                      {/* Map Preview for Current Route */}
                       <div className="mt-4">
                         <MapPreview
-                          startLocation={ride.from}
-                          endLocation={ride.direction === "toCollege" ? "PES University Electronic City Campus" : ride.to}
+                          startLocation={ride.direction === "fromCollege" ? ride.from : ride.from}
+                          endLocation={ride.direction === "fromCollege" ? ride.to : ride.to}
                           userLocation={ride.hitchers
-                            ?.filter(h => h.status === "accepted" && h.pickupLocation)
-                            .map(h => h.pickupLocation)
+                            ?.filter(h => h.status === "accepted")
+                            .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
+                            .filter(Boolean)
                             .join("|")}
                           className="rounded-lg shadow-sm"
                           direction={ride.direction}
@@ -405,12 +407,6 @@ const DriverDashboard: React.FC = () => {
                         </div>
 
                         <div className="space-y-2 mb-3">
-                          {/* <div className="flex items-start">
-                            <MapPin className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
-                            <p className="text-sm text-gray-600">
-                              {request.pickupLocation}
-                            </p>
-                          </div> */}
                           <div className="flex items-start">
                             <Clock className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
                             <p className="text-sm text-gray-600">
@@ -425,17 +421,18 @@ const DriverDashboard: React.FC = () => {
                         <p className="text-md text-red-700 mb-3">
                           Your Route after accepting this ride :      
                         </p>
-                        {/* Map Preview for Request */}
+                        {/* Map Preview for Ride Requests */}
                         <div className="mb-4">
                           <MapPreview
-                            startLocation={request.driverLocation}
-                            endLocation="PES University Electronic City Campus"
-                            userLocation={[...request.acceptedHitchersLocations, request.pickupLocation].join("|")}
-                            className="rounded-lg shadow-sm"
+                            startLocation={request.rideDirection === "fromCollege" ? request.from : request.from}
+                            endLocation={request.rideDirection === "fromCollege" ? request.to : request.to}
+                            userLocation={[
+                              ...request.acceptedHitchersLocations,
+                              request.rideDirection === "toCollege" ? request.pickupLocation : request.dropoffLocation
+                            ].filter(Boolean).join("|")}
                             direction={request.rideDirection}
                             isAcceptedLocation={(location) => request.acceptedHitchersLocations.includes(location)}
                           />
-                          
                         </div>
 
                         <div className="flex space-x-2">
