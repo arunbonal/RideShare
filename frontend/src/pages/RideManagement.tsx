@@ -104,15 +104,17 @@ const RideManagement: React.FC = () => {
     if (!rideToCancel) return;
 
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideToCancel.id}`,
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/cancel`,
         {
-          withCredentials: true,
-        }
+          rideId: rideToCancel.id
+        },
+        { withCredentials: true }
       );
-      // Update both allRides and rides states
-      setAllRides(allRides.filter((ride) => ride._id !== rideToCancel.id));
-      setRides(rides.filter((_, i) => i !== rideToCancel.index));
+
+      // Fetch fresh data to update all components
+      await fetchAllRides();
+
       setNotification({
         show: true,
         message: "Ride cancelled successfully",
@@ -270,12 +272,14 @@ const RideManagement: React.FC = () => {
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <button
-                        onClick={() => handleCancelClick(index, ride._id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Cancel Ride
-                      </button>
+                      {ride.status === "scheduled" && (
+                        <button
+                          onClick={() => handleCancelClick(index, ride._id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Cancel Ride
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

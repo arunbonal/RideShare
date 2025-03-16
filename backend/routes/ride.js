@@ -10,12 +10,16 @@ router.post("/create", rideController.createRide);
 
 router.get("/", rideController.getRides);
 
-router.delete("/:id", rideController.deleteRide);
+// Driver canceling entire ride or hitcher canceling their request
+router.post("/cancel", rideController.cancelRide);
 
-router.post("/:id/request", rideController.requestRide);
+router.post("/request", rideController.requestRide);
 
-router.post("/:rideId/:hitcherId/accept", rideController.acceptRide);
+router.post("/accept", rideController.acceptRide);
 
-router.post("/:rideId/:hitcherId/reject", rideController.rejectRide);
+router.post("/reject", rideController.rejectRide);
+
+// Mark notification as read
+router.post("/notifications/read", rideController.markNotificationAsRead);
 
 module.exports = router;

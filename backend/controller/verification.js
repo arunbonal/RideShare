@@ -13,13 +13,11 @@ const sendVerificationCode = async (req, res) => {
   }
 
   try {
-    console.log('Attempting to send verification code to:', phoneNumber);
     const verification = await twilioClient.verify.v2
       .services(verifyServiceSid)
       .verifications
       .create({ to: phoneNumber, channel: 'sms' });
 
-    console.log('Verification status:', verification.status);
     res.json({ 
       success: true, 
       message: 'Verification code sent successfully',
@@ -48,13 +46,11 @@ const verifyCode = async (req, res) => {
   }
 
   try {
-    console.log('Attempting to verify code for:', phoneNumber);
     const verificationCheck = await twilioClient.verify.v2
       .services(verifyServiceSid)
       .verificationChecks
       .create({ to: phoneNumber, code });
 
-    console.log('Verification check status:', verificationCheck.status);
     if (verificationCheck.status === 'approved') {
       res.json({ 
         success: true, 

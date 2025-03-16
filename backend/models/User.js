@@ -1,8 +1,5 @@
 const mongoose = require("mongoose");
 
-// Define constants at the top
-const ONE_WEEK = 7 * 24 * 60 * 60 * 1000; // one week in milliseconds
-
 // Define the Driver Profile Schema
 const DriverProfileSchema = new mongoose.Schema({
   isActive: {
@@ -29,7 +26,7 @@ const DriverProfileSchema = new mongoose.Schema({
     seats: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0,
       max: 6,
       default: 4,
     },
@@ -118,9 +115,6 @@ const UserSchema = new mongoose.Schema({
   gender: {
     type: String,
     enum: ["male", "female"],
-  },
-  profileImage: {
-    type: String, // URL to stored image
   },
   createdAt: {
     type: Date,

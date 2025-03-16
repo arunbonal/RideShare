@@ -130,7 +130,7 @@ const DriverProfileSetup: React.FC = () => {
                         }));
 
                         // Log the calculated distance
-                        console.log('Distance to college:', distanceInKm, 'km');
+                        
                       } else {
                         console.error('Error calculating distance:', status);
                       }
@@ -147,14 +147,13 @@ const DriverProfileSetup: React.FC = () => {
 
     // Try to initialize immediately if Google is already loaded
     if (window.google?.maps?.places) {
-      console.log('Google Maps loaded, initializing immediately');
+      
       initAutocomplete();
     } else {
-      console.log('Google Maps not loaded, waiting...');
+
       // If not loaded, wait for the script to load
       const checkGoogleExists = setInterval(() => {
         if (window.google?.maps?.places) {
-          console.log('Google Maps loaded in interval');
           initAutocomplete();
           clearInterval(checkGoogleExists);
         }
@@ -163,7 +162,6 @@ const DriverProfileSetup: React.FC = () => {
       // Clear interval after 10 seconds if Google doesn't load
       setTimeout(() => {
         clearInterval(checkGoogleExists);
-        console.log('Timeout reached waiting for Google Maps');
       }, 10000);
     }
 

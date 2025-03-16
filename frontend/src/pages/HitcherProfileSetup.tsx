@@ -120,8 +120,6 @@ const HitcherProfileSetup: React.FC = () => {
                           distanceToCollege: distanceInKm
                         }));
 
-                        // Log the calculated distance
-                        console.log('Distance to college:', distanceInKm, 'km');
                       } else {
                         console.error('Error calculating distance:', status);
                       }

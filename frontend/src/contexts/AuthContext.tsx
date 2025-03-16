@@ -57,45 +57,37 @@ export interface Ride {
     phone: string;
     gender: string;
   };
-  hitchers?: Array<{
+  hitchers?: {
     user: {
       _id: string;
       name: string;
       email: string;
       phone: string;
-      gender: string;
-      hitcherProfile?: {
-        rating: number;
-        ratingCount: number;
-      };
     };
-    status: "pending" | "accepted" | "rejected" | "cancelled";
+    status: string;
     pickupLocation?: string;
     dropoffLocation?: string;
     fare?: number;
-    requestTime: Date;
-    // hitcherFeedback: {
-    //   rating: number;
-    //   review: string;
-    //   createdAt: Date;
-    // };
-    // driverFeedback: {
-    //   rating: number;
-    //   review: string;
-    //   createdAt: Date;
-    // };
-  }>;
+    requestTime: string;
+  }[];
+  notifications?: {
+    _id: string;
+    userId: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+  }[];
   from: string;
   to: string;
   date: string;
+  direction: "toCollege" | "fromCollege";
   toCollegeTime?: string;
   fromCollegeTime?: string;
+  status: string;
   availableSeats: number;
-  status: "scheduled" | "in-progress" | "completed" | "cancelled";
-  direction: "toCollege" | "fromCollege";
   note?: string;
-  pricePerKm: number | undefined;
-  totalFare: number;
+  pricePerKm?: number;
+  totalFare?: number;
 }
 
 interface AuthContextType {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Car, Plus, Calendar, Clock, Users, MapPin, List } from "lucide-react";
+import { Car, Plus, Calendar, Clock, Users, MapPin, List, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
@@ -8,12 +8,66 @@ import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
 import axios from "axios";
 
+interface Driver {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: string;
+  srn: string;
+  hitcherProfile?: {
+    rating: number;
+  };
+}
+
+// Define the User interface for hitchers
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: string;
+  srn?: string;
+  hitcherProfile?: {
+    rating: number;
+  };
+}
+
+// Extend the Ride interface to include totalFare as a number
+interface ExtendedRide extends Ride {
+  totalFare: number;
+  hitchers?: {
+    user: User;
+    status: string;
+    pickupLocation?: string;
+    dropoffLocation?: string;
+    fare?: number;
+    requestTime: string;
+  }[];
+}
+
 const DriverDashboard: React.FC = () => {
   const { currentUser, allRides, fetchAllRides } = useAuth();
-  const [activeTab, setActiveTab] = useState("upcoming");
-  const [driverRides, setDriverRides] = useState<Ride[]>([]);
-  const [upcomingRides, setUpcomingRides] = useState<Ride[]>([]);
-  const [pastRides, setPastRides] = useState<Ride[]>([]);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+  const [driverRides, setDriverRides] = useState<ExtendedRide[]>([]);
+  const [upcomingRides, setUpcomingRides] = useState<ExtendedRide[]>([]);
+  const [pastRides, setPastRides] = useState<ExtendedRide[]>([]);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({ show: false, message: "", type: "success" });
+  
+  // Auto-dismiss notification after 3 seconds
+  useEffect(() => {
+    if (notification.show) {
+      const timer = setTimeout(() => {
+        setNotification({ ...notification, show: false });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+  
   // Fetch all rides when component mounts
   useEffect(() => {
     if (currentUser?.driverProfileComplete) {
@@ -21,13 +75,71 @@ const DriverDashboard: React.FC = () => {
     }
   }, [currentUser, fetchAllRides]);
 
+  // Check for unread notifications
+  useEffect(() => {
+    if (currentUser) {
+      // Get already seen notification IDs from localStorage
+      const seenNotifications = JSON.parse(localStorage.getItem('seenDriverNotifications') || '[]');
+      
+      // Check for unread notifications in all rides
+      const unreadNotifications = allRides
+        .filter(ride => ride.driver._id === currentUser.id)
+        .flatMap(ride => 
+          (ride.notifications || [])
+            .filter(n => !n.read && n.userId === currentUser.id && !seenNotifications.includes(n._id))
+            .map(n => ({ 
+              _id: n._id,
+              message: n.message,
+              rideId: ride._id
+            }))
+        );
+      
+      // Show the first unread notification if any
+      if (unreadNotifications.length > 0) {
+        setNotification({
+          show: true,
+          message: unreadNotifications[0].message,
+          type: "error"
+        });
+        
+        // Mark this notification as seen locally
+        localStorage.setItem(
+          'seenDriverNotifications', 
+          JSON.stringify([...seenNotifications, unreadNotifications[0]._id])
+        );
+        
+        // Mark notification as read in the backend
+        markNotificationAsRead(unreadNotifications[0].rideId, unreadNotifications[0]._id);
+      }
+    }
+  }, [allRides, currentUser]);
+
+  const markNotificationAsRead = async (rideId: string, notificationId: string) => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/notifications/read`,
+        {
+          rideId,
+          notificationId
+        },
+        { withCredentials: true }
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
   // Filter rides for the current driver and separate into upcoming and past
   useEffect(() => {
     if (currentUser) {
       // Filter rides for current driver
       const currentDriverRides = allRides.filter(
         (ride) => ride.driver._id === currentUser.id
-      );
+      ).map(ride => ({
+        ...ride,
+        totalFare: ride.totalFare || 0
+      })) as ExtendedRide[];
+      
       setDriverRides(currentDriverRides);
 
       const now = new Date();
@@ -36,11 +148,15 @@ const DriverDashboard: React.FC = () => {
       const upcoming = currentDriverRides
         .filter((ride) => {
           const rideDate = new Date(ride.date);
+          // First check if the ride is not cancelled
+          if (ride.status === "cancelled") {
+            return false;
+          }
+          // Then check the date and status
           return (
             rideDate > now ||
             (rideDate.toDateString() === now.toDateString() &&
-              ride.status !== "completed" &&
-              ride.status !== "cancelled")
+              ride.status === "scheduled")
           );
         })
         .sort(
@@ -51,9 +167,9 @@ const DriverDashboard: React.FC = () => {
         .filter((ride) => {
           const rideDate = new Date(ride.date);
           return (
+            ride.status === "cancelled" ||  // Show cancelled rides in past
             rideDate < now ||
-            ride.status === "completed" ||
-            ride.status === "cancelled"
+            ride.status === "completed"
           );
         })
         .sort(
@@ -67,14 +183,14 @@ const DriverDashboard: React.FC = () => {
 
   const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
     try {
-      const response = await axios.post(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/rides/${rideId}/${hitcherId}/accept`,
-        {},
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/accept`,
+        {
+          rideId,
+          hitcherId
+        },
         { withCredentials: true }
       );
-      console.log("Ride accepted, response:", response.data);
       // Fetch fresh data to update the UI
       await fetchAllRides();
     } catch (error) {
@@ -85,18 +201,26 @@ const DriverDashboard: React.FC = () => {
   const handleRejectRequest = async (rideId: string, hitcherId: string) => {
     try {
       await axios.post(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/rides/${rideId}/${hitcherId}/reject`,
-        {},
+        `${import.meta.env.VITE_API_URL}/api/rides/reject`,
+        {
+          rideId,
+          hitcherId
+        },
         { withCredentials: true }
       );
       // Fetch fresh data to update the UI
       await fetchAllRides();
-      console.log("Ride rejected");
     } catch (error) {
       console.error("Error rejecting request:", error);
     }
+  };
+
+  const formatTime = (time24: string) => {
+    const [hours, minutes] = time24.split(":");
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${period}`;
   };
 
   // Get pending requests from upcoming rides
@@ -104,10 +228,12 @@ const DriverDashboard: React.FC = () => {
     (ride.hitchers || [])
       .filter((hitcher) => hitcher.status === "pending" && hitcher.user)
       .map((hitcher) => ({
-        hitcherId: hitcher.user?._id || "",
+        hitcherId: hitcher.user._id,
         rideId: ride._id,
-        hitcherName: hitcher.user?.name || "Unknown User",
-        hitcherRating: hitcher.user?.hitcherProfile?.rating || 0,
+        hitcherName: hitcher.user.name,
+        hitcherGender: hitcher.user.gender || "Not specified",
+        hitcherSRN: hitcher.user.srn ? `${hitcher.user.srn.slice(0, -3)}XXX` : undefined,
+        hitcherRating: hitcher.user.hitcherProfile?.rating || 0,
         rideDirection: ride.direction,
         pickupLocation: hitcher.pickupLocation || "Not specified",
         dropoffLocation: hitcher.dropoffLocation || "Not specified",
@@ -124,18 +250,29 @@ const DriverDashboard: React.FC = () => {
       }))
   );
 
-  const formatTime = (time24: string) => {
-    const [hours, minutes] = time24.split(":");
-    const hour = parseInt(hours);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${period}`;
-  };
-
   return (
     <>
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Notification Toast */}
+        {notification.show && (
+          <div
+            className={`fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg ${
+              notification.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            } transition-all duration-300 z-50 flex items-center`}
+          >
+            <span>{notification.message}</span>
+            <button
+              onClick={() => setNotification({ ...notification, show: false })}
+              className="ml-3 text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -226,8 +363,10 @@ const DriverDashboard: React.FC = () => {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {ride.status.charAt(0).toUpperCase() +
-                              ride.status.slice(1)}
+                            {ride.status === "cancelled" 
+                              ? "Cancelled by You"
+                              : ride.status.charAt(0).toUpperCase() +
+                                ride.status.slice(1)}
                           </span>
                           <br />
                           {ride.totalFare > 0 && (
@@ -275,6 +414,36 @@ const DriverDashboard: React.FC = () => {
                           Note: {ride.note}
                         </p>
                       )}
+                      
+                      {/* Accepted Hitchers Section */}
+                      {ride.hitchers && ride.hitchers.filter(h => h.status === "accepted").length > 0 && (
+                        <div className="mt-4 border-t pt-4">
+                          <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
+                          <div className="space-y-3">
+                            {ride.hitchers
+                              .filter(h => h.status === "accepted")
+                              .map((hitcher, index) => (
+                                <div key={index} className="bg-gray-50 p-3 rounded-md">
+                                  <div className="flex justify-between">
+                                    <div>
+                                      <p className="font-medium">{hitcher.user.name}</p>
+                                      <p className="text-sm text-gray-600">{hitcher.user.phone}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm text-gray-600">
+                                        {ride.direction === "toCollege" 
+                                          ? `Pickup: ${hitcher.pickupLocation}` 
+                                          : `Dropoff: ${hitcher.dropoffLocation}`}
+                                      </p>
+                                      <p className="text-sm font-medium text-green-600">₹{hitcher.fare}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                      
                       <p className="mt-4 text-md text-red-700">
                           Your Current Route :
                         </p>
@@ -336,16 +505,18 @@ const DriverDashboard: React.FC = () => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {ride.status.charAt(0).toUpperCase() +
-                          ride.status.slice(1)}
+                        {ride.status === "cancelled"
+                          ? "Cancelled by You"
+                          : ride.status.charAt(0).toUpperCase() +
+                            ride.status.slice(1)}
                       </span>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center text-gray-600">
                         <Clock className="h-5 w-5 mr-2" />
                         {ride.direction === "toCollege"
-                          ? ride.toCollegeTime
-                          : ride.fromCollegeTime}
+                          ? formatTime(ride.toCollegeTime || "")
+                          : formatTime(ride.fromCollegeTime || "")}
                       </div>
                       <div className="flex items-center text-gray-600">
                         <MapPin className="h-5 w-5 mr-2" />
@@ -391,14 +562,25 @@ const DriverDashboard: React.FC = () => {
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h3 className="font-medium text-gray-900">
-                              {request.hitcherName}
+                              Hitcher Request
                             </h3>
                             <h3 className="font-medium text-gray-900">
                             Fare : ₹ {request.fare}
                             <br />
                             </h3>
+                            <p className="text-sm text-gray-600">
+                              Gender: {request.hitcherGender ? request.hitcherGender.charAt(0).toUpperCase() + request.hitcherGender.slice(1) : 'Not specified'}
+                            </p>
+                            {request.hitcherSRN && (
+                              <p className="text-sm text-gray-600">
+                                SRN: {request.hitcherSRN}
+                              </p>
+                            )}
                             <p className="text-sm text-gray-500">
                               Rating: {request.hitcherRating.toFixed(1)}
+                            </p>
+                            <p className="text-xs text-gray-500 italic mt-2">
+                              Hitcher's name and phone number will be visible once you accept the ride request
                             </p>
                           </div>
                           <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">

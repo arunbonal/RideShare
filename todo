@@ -1,6 +1,7 @@
 print proper errors in controller-auth.js for invalid email, authentication error
 set up realiability rating for drivers
-change delete to cancel rides
 make admin page
-twilio for phone verification
-fix maps for "from college"
+driving license fix
+est time of arrival to pickup point for hitcher
+ride in progress, completed
+feedback, rating, report issues

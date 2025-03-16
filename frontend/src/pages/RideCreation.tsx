@@ -56,17 +56,6 @@ const RideCreation: React.FC = () => {
   maxDate.setDate(maxDate.getDate() + 7);
   const maxDateString = maxDate.toISOString().split("T")[0];
 
-  const convertTo24Hour = (time12: string): string => {
-    const [time, period] = time12.split(" ");
-    let [hours, minutes] = time.split(":");
-    let hour = parseInt(hours);
-
-    if (period === "PM" && hour !== 12) hour += 12;
-    if (period === "AM" && hour === 12) hour = 0;
-
-    return `${hour.toString().padStart(2, "0")}:${minutes}`;
-  };
-
   const isTimeValid = (date: string, time24: string): boolean => {
     const now = new Date();
     const [hours, minutes] = time24.split(":").map(Number);
@@ -426,6 +415,9 @@ const RideCreation: React.FC = () => {
                 <MessageSquare className="inline-block w-4 h-4 mr-2" />
                 Additional Notes (optional)
               </label>
+              <p className=" text-sm text-gray-500">
+              Avoid sharing personal details like your name or phone number to prevent spam. Relevant details will be shared once you accept a request.
+              </p>
               <textarea
                 value={ride.note}
                 onChange={(e) =>

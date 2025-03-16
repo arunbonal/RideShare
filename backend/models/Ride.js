@@ -14,7 +14,7 @@ const RideSchema = new mongoose.Schema({
       },
       status: {
         type: String,
-        enum: ["pending", "accepted", "rejected", "cancelled"],
+        enum: ["pending", "accepted", "rejected", "cancelled", "completed", "cancelled-by-driver"],
         default: "pending",
       },
       rating: {
@@ -32,6 +32,30 @@ const RideSchema = new mongoose.Schema({
         type: Number,
       },
       requestTime: {
+        type: Date,
+        default: Date.now,
+      },
+      gender: {
+        type: String,
+        enum: ["male", "female", "other"]
+      }
+    },
+  ],
+  notifications: [
+    {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      message: {
+        type: String,
+        required: true,
+      },
+      read: {
+        type: Boolean,
+        default: false,
+      },
+      createdAt: {
         type: Date,
         default: Date.now,
       },
@@ -79,9 +103,6 @@ const RideSchema = new mongoose.Schema({
     type: String,
     enum: ["scheduled", "in-progress", "completed", "cancelled"],
     default: "scheduled",
-  },
-  route: {
-    type: String, // Could be a polyline or GeoJSON in a production app
   },
   createdAt: {
     type: Date,

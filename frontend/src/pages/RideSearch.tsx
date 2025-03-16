@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Clock, Filter, X, Navigation, Calendar } from "lucide-react";
+import { Search, MapPin, Clock, Filter, X, Navigation, Calendar, Car } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
@@ -14,6 +14,13 @@ interface Driver {
   email: string;
   phone: string;
   gender: string;
+  srn?: string;
+  driverProfile?: {
+    vehicle: {
+      model: string;
+      color: string;
+    }
+  }
 }
 
 interface Ride {
@@ -30,6 +37,14 @@ interface Ride {
   note?: string;
   hitchers?: any[];
   pricePerKm?: number;
+  vehicleModel?: string;
+  vehicleColor?: string;
+}
+
+interface SearchParams {
+  date: string;
+  direction: "toCollege" | "fromCollege";
+  time: string;
 }
 
 const RideSearch: React.FC = () => {
@@ -47,10 +62,17 @@ const RideSearch: React.FC = () => {
   const [minTime, setMinTime] = useState("");
   const [maxTime, setMaxTime] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedRide, setSelectedRide] = useState<string | null>(null);
+  const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
+  const [selectedRideDetails, setSelectedRideDetails] = useState<Ride | null>(null);
+  const [searchParams, setSearchParams] = useState<SearchParams>({
+    date: "",
+    direction: "toCollege",
+    time: "",
+  });
   const rideListRef = useRef<HTMLDivElement>(null);
   const previewSidebarRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
 
   // Add these date calculations near the top of the component
   const today = new Date().toISOString().split("T")[0];
@@ -63,9 +85,83 @@ const RideSearch: React.FC = () => {
     fetchAllRides();
   }, [fetchAllRides]);
 
+  // Filter rides when component mounts or when allRides or filters change
+  useEffect(() => {
+    if (currentUser) {
+      const filtered = allRides.filter((ride: Ride) => {
+        // Exclude cancelled rides and rides where user is already a hitcher
+        if (
+          ride.status === "cancelled" ||
+          ride.hitchers?.some((h) => h.user?._id === currentUser.id)
+        ) {
+          return false;
+        }
+
+        // Exclude rides where the current user is the driver
+        if (ride.driver._id === currentUser?.id) {
+          return false;
+        }
+
+        // Filter by driver gender
+        if (driverGender && ride.driver.gender !== driverGender) {
+          return false;
+        }
+
+        // Filter by search query (location)
+        if (
+          searchQuery &&
+          !ride.from.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !ride.to.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+
+        // Filter by direction
+        if (direction && ride.direction !== direction) {
+          return false;
+        }
+
+        // Filter by date
+        if (selectedDate) {
+          const rideDate = new Date(ride.date).toISOString().split("T")[0];
+          if (rideDate !== selectedDate) {
+            return false;
+          }
+        }
+
+        // Filter by time range
+        if (minTime) {
+          const rideTime =
+            ride.direction === "toCollege"
+              ? ride.toCollegeTime
+              : ride.fromCollegeTime;
+          if (rideTime && rideTime < minTime) {
+            return false;
+          }
+        }
+
+        if (maxTime) {
+          const rideTime =
+            ride.direction === "toCollege"
+              ? ride.toCollegeTime
+              : ride.fromCollegeTime;
+          if (rideTime && rideTime > maxTime) {
+            return false;
+          }
+        }
+
+        // Only show scheduled rides with available seats
+        return ride.status === "scheduled" && ride.availableSeats > 0;
+      });
+
+      setFilteredRides(filtered);
+    }
+  }, [allRides, currentUser, searchQuery, direction, selectedDate, minTime, maxTime, driverGender]);
+
   // Deselect ride when any search parameter changes
   useEffect(() => {
-    setSelectedRide(null);
+    setSelectedRideId(null);
+    setSelectedRideDetails(null);
   }, [searchQuery, selectedDate, direction, minTime, maxTime]);
 
   // Update the click outside handler
@@ -73,7 +169,7 @@ const RideSearch: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (
-        selectedRide && // Only check if there's a selected ride
+        selectedRideId && // Only check if there's a selected ride
         !rideListRef.current?.contains(target) &&
         !previewSidebarRef.current?.contains(target) &&
         !searchBarRef.current?.contains(target) &&
@@ -81,7 +177,8 @@ const RideSearch: React.FC = () => {
         !target.closest("select") && // Prevent deselection when clicking any select
         !target.closest("button") // Prevent deselection when clicking any button
       ) {
-        setSelectedRide(null);
+        setSelectedRideId(null);
+        setSelectedRideDetails(null);
       }
     };
 
@@ -89,7 +186,7 @@ const RideSearch: React.FC = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [selectedRide]);
+  }, [selectedRideId]);
 
   // Add useEffect for notification auto-dismiss
   useEffect(() => {
@@ -127,6 +224,7 @@ const RideSearch: React.FC = () => {
 
 
       const hitcherData = {
+        rideId,
         user: currentUser?.id,
         status: "pending",
         pickupLocation:
@@ -138,10 +236,11 @@ const RideSearch: React.FC = () => {
             ? "PES University Electronic City Campus"
             : currentUser?.homeAddress,
         fare: fare,
+        gender: currentUser?.gender
       };
 
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/request`,
+        `${import.meta.env.VITE_API_URL}/api/rides/request`,
         hitcherData,
         { withCredentials: true }
       );
@@ -165,76 +264,13 @@ const RideSearch: React.FC = () => {
     }
   };
 
-  // Update the filter logic
-  const filteredRides = allRides.filter((ride: Ride) => {
-    // Exclude rides where the current user is the driver
-    if (ride.driver._id === currentUser?.id) {
-      return false;
-    }
-
-    // Filter by driver gender
-    if (driverGender && ride.driver.gender !== driverGender) {
-      return false;
-    }
-
-    // Filter by search query (location)
-    if (
-      searchQuery &&
-      !ride.from.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !ride.to.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-
-    // Filter by direction
-    if (direction && ride.direction !== direction) {
-      return false;
-    }
-
-    // Filter by date
-    if (selectedDate) {
-      const rideDate = new Date(ride.date).toISOString().split("T")[0];
-      if (rideDate !== selectedDate) {
-        return false;
-      }
-    }
-
-    // Filter by time range
-    if (minTime) {
-      const rideTime =
-        ride.direction === "toCollege"
-          ? ride.toCollegeTime
-          : ride.fromCollegeTime;
-      if (rideTime && rideTime < minTime) {
-        return false;
-      }
-    }
-
-    if (maxTime) {
-      const rideTime =
-        ride.direction === "toCollege"
-          ? ride.toCollegeTime
-          : ride.fromCollegeTime;
-      if (rideTime && rideTime > maxTime) {
-        return false;
-      }
-    }
-
-    // Only show scheduled rides with available seats
-    return ride.status === "scheduled" && ride.availableSeats > 0;
-  });
-
-  const selectedRideDetails = selectedRide
-    ? allRides.find((ride) => ride._id === selectedRide)
-    : null;
-
-    const formatTime = (time24: string) => {
-      const [hours, minutes] = time24.split(":");
-      const hour = parseInt(hours);
-      const period = hour >= 12 ? "PM" : "AM";
-      const hour12 = hour % 12 || 12;
-      return `${hour12}:${minutes} ${period}`;
-    };
+  const formatTime = (time24: string) => {
+    const [hours, minutes] = time24.split(":");
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${period}`;
+  };
 
   return (
     <>
@@ -396,9 +432,12 @@ const RideSearch: React.FC = () => {
                   <div
                     key={ride._id}
                     className={`bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all ${
-                      selectedRide === ride._id ? "ring-2 ring-blue-500" : ""
+                      selectedRideId === ride._id ? "ring-2 ring-blue-500" : ""
                     }`}
-                    onClick={() => setSelectedRide(ride._id)}
+                    onClick={() => {
+                      setSelectedRideId(ride._id);
+                      setSelectedRideDetails(ride);
+                    }}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -464,7 +503,7 @@ const RideSearch: React.FC = () => {
                     <MapPreview
                       startLocation={selectedRideDetails.from}
                       endLocation={selectedRideDetails.to}
-                      userLocation={currentUser?.homeAddress}
+                      userLocation={currentUser?.homeAddress ? `${currentUser.homeAddress} (Your Address)` : currentUser?.homeAddress}
                       direction={selectedRideDetails.direction}
                     />
                   </div>
@@ -516,16 +555,13 @@ const RideSearch: React.FC = () => {
                         <div className="mt-4 bg-blue-50 rounded-md p-3">
                           <div className="text-sm text-gray-800">
                             <div className="flex justify-between items-center mb-2">
-                              <span>Distance:</span>
-                              <span className="font-medium">{currentUser?.distanceToCollege} km</span>
+                              <span>Distance: {currentUser?.distanceToCollege} km</span>
+          
                             </div>
                             <div className="flex justify-between items-center">
-                              <span>Estimated Fare:</span>
-                              <span className="font-medium">
-                                ₹{selectedRideDetails.pricePerKm && currentUser?.distanceToCollege
+                              <span>Fare: ₹{selectedRideDetails.pricePerKm && currentUser?.distanceToCollege
                                   ? Math.round(selectedRideDetails.pricePerKm * currentUser.distanceToCollege)
-                                  : "0.00"}
-                              </span>
+                                  : "0.00"}</span>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
                               Fare calculated based on ₹{selectedRideDetails.pricePerKm}/km
@@ -545,14 +581,28 @@ const RideSearch: React.FC = () => {
                       </h3>
                       <div className="flex items-center mb-6">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                          {selectedRideDetails.driver.name.charAt(0)}
+                          <Car className="h-5 w-5 text-gray-500" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-medium truncate">
-                            {selectedRideDetails.driver.name}
+                            {selectedRideDetails.driver.driverProfile?.vehicle?.model && 
+                             selectedRideDetails.driver.driverProfile?.vehicle?.color ? 
+                              `Vehicle: ${selectedRideDetails.driver.driverProfile.vehicle.model} (${selectedRideDetails.driver.driverProfile.vehicle.color})` : 
+                              'Vehicle details not available'}
                           </p>
-                          <p className="text-sm text-gray-500">
-                            {selectedRideDetails.driver.phone}
+                          <p className="text-sm text-gray-600">
+                            Gender: {selectedRideDetails.driver.gender ? selectedRideDetails.driver.gender.charAt(0).toUpperCase() + selectedRideDetails.driver.gender.slice(1) : 'Not specified'}
+                          </p>
+                          {selectedRideDetails.driver.srn && (
+                            <p className="text-sm text-gray-600">
+                              SRN: {selectedRideDetails.driver.srn.slice(0, -3) + 'XXX'}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500 italic mt-2">
+                            Driver's name, phone number and vehicle's registration number will be visible once your ride request is accepted
+                          </p>
+                          <p className="text-sm text-gray-500 italic mt-2">
+                            Note: Your name and phone number will not be shown to the driver until they accept your ride request.
                           </p>
                         </div>
                       </div>
