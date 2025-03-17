@@ -9,3 +9,11 @@ load more button to fetch more rides (for hitcher)
 handle invalid number
 editable address, phone, vehicle details
 ride accepted notification is in red
+add back button to pricing page in driverprofilesetup
+add defualt "-" during vehicle reg number entry
+space b/w +91 and number in user profile
+
+when there is only 1 seat left in a driver's ride, and a hitcher requests, and the driver accepts, it's giving validation error for availableSeats
+so what i want you to do is, if one seat is remaining and driver accepts a hitcher ride (for the last seat), assign the hitcher and remove that ride from ridesearch
+also, if any of the accepted hitchers cancel, a seat is vacated, so put it back to ridesearch
+also, you're not giving me the option of "apply now" anymore, why is that, it's so hard and confusing for me to manually find and make changes. give the option now and double-check the files you propose a change for
