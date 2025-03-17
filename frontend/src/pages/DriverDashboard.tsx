@@ -427,7 +427,7 @@ const DriverDashboard: React.FC = () => {
                                   <div className="flex justify-between">
                                     <div>
                                       <p className="font-medium">{hitcher.user.name}</p>
-                                      <p className="text-sm text-gray-600">{hitcher.user.phone}</p>
+                                      <p className="text-sm text-gray-600">{hitcher.user.phone.replace(/^(\+91)(\d+)$/, '$1 $2')}</p>
                                     </div>
                                     <div className="text-right">
                                       <p className="text-sm text-gray-600">

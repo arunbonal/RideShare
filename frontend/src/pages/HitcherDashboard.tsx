@@ -7,20 +7,6 @@ import { format } from "date-fns";
 import { Ride } from "../contexts/AuthContext";
 import axios from "axios";
 
-interface Hitcher {
-  user: {
-    _id: string;
-    name: string;
-    email: string;
-    phone: string;
-  };
-  status: "pending" | "accepted" | "rejected" | "cancelled" | "cancelled-by-driver";
-  pickupLocation?: string;
-  dropoffLocation?: string;
-  fare?: number;
-  requestTime: Date;
-}
-
 // Extend the driver interface to include driverProfile
 interface ExtendedRide extends Ride {
   driver: {
@@ -520,13 +506,16 @@ const HitcherDashboard: React.FC = () => {
                                 <span className="font-medium">Name:</span> {ride.driver.name}
                               </p>
                               <p className="text-sm">
-                                <span className="font-medium">Phone:</span> {ride.driver.phone}
+                                <span className="font-medium">Phone:</span> {ride.driver.phone.replace(/^(\+91)(\d+)$/, '$1 $2')}
                               </p>
                               {ride.driver.driverProfile?.vehicle && (
                                 <p className="text-sm">
                                   <span className="font-medium">Vehicle Registration:</span> {ride.driver.driverProfile.vehicle.registrationNumber}
                                 </p>
                               )}
+                              <p className="text-sm">
+                                <span className="font-medium">Fare:</span> ₹{hitcherInfo.fare || 0}
+                              </p>
                             </div>
                           </div>
                         )}
