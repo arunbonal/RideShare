@@ -5,6 +5,7 @@ driving license fix
 est time of arrival to pickup point for hitcher
 ride in progress, completed
 feedback, rating, report issues
-map display while entering address
 load more button to fetch more rides (for hitcher)
 handle invalid number
+editable address, phone, vehicle details
+ride accepted notification is in red

@@ -63,49 +63,75 @@ const DriverProfileSetup: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(!!currentUser?.phone);
 
+  // Add these state variables to store map and marker references
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    // Only initialize when we're on the location step
-    if (currentStep !== 3) {
-      return;
-    }
-
     let autocomplete: google.maps.places.Autocomplete | null = null;
-
-    const initAutocomplete = () => {
-      if (!addressInputRef.current || !window.google?.maps?.places) {
-        console.log('Missing dependencies:', {
-          hasRef: !!addressInputRef.current,
-          hasGoogleMaps: !!window.google?.maps,
-          hasPlaces: !!window.google?.maps?.places
-        });
-        return;
-      }
-
-    //   ESTABLISHMENT autocomplete code 
-      try {
-        // Create the autocomplete instance
-        autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-            componentRestrictions: { country: "IN" },
-            fields: ["formatted_address", "geometry", "name", "types"], // Added "types" to check for establishments
-            types: ["geocode", "establishment"]
-        });
     
-        // Add the place changed event listener
-        if (autocomplete) {
-          autocomplete.addListener("place_changed", () => {
-              const place = autocomplete?.getPlace();
-              let address = "";
-      
-              if (place && place.geometry && place.geometry.location) {
+    // Only initialize when on the location step
+    if (currentStep === 3) {
+      const initAutocomplete = () => {
+        if (!addressInputRef.current || !window.google?.maps?.places) {
+          return;
+        }
+
+        try {
+          // Create the autocomplete instance
+          autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+            componentRestrictions: { country: "IN" },
+            fields: ["formatted_address", "geometry", "name", "types"],
+            types: ["geocode", "establishment"]
+          });
+    
+          // Initialize the map if mapRef is available
+          if (mapRef.current) {
+            // Create new map
+            const newMap = new google.maps.Map(mapRef.current, {
+              center: { lat: 12.861203781214266, lng: 77.66466548226559 }, // PES University EC Campus
+              zoom: 12,
+              mapTypeControl: false,
+            });
+            
+            // Create a marker but don't set position yet
+            const newMarker = new google.maps.Marker({
+              map: newMap,
+              draggable: false,
+              visible: false
+            });
+            
+            setMap(newMap);
+            setMarker(newMarker);
+            
+            // Add the place changed event listener
+            if (autocomplete) {
+              autocomplete.addListener("place_changed", () => {
+                const place = autocomplete?.getPlace();
+                let address = "";
+    
+                if (place && place.geometry && place.geometry.location) {
                   if (place.formatted_address) {
-                      // Use place name + formatted address for establishments
-                      address = place.name 
-                          ? `${place.name}, ${place.formatted_address}` 
-                          : place.formatted_address;
+                    // Use place name + formatted address for establishments
+                    address = place.name 
+                      ? `${place.name}, ${place.formatted_address}` 
+                      : place.formatted_address;
                   }
-      
+    
+                  // Update map and marker position
+                  const position = {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                  };
+                  
+                  newMap.setCenter(position);
+                  newMap.setZoom(15);
+                  newMarker.setPosition(position);
+                  newMarker.setVisible(true);
+                  
                   // Calculate distance to college
-                  const collegeLocation = { lat: 12.861203781214266, lng: 77.66466548226559 }; // PES University EC Campus coordinates
+                  const collegeLocation = { lat: 12.861203781214266, lng: 77.66466548226559 };
                   const origin = {
                     lat: place.geometry.location.lat(),
                     lng: place.geometry.location.lng()
@@ -128,50 +154,44 @@ const DriverProfileSetup: React.FC = () => {
                           homeAddress: address,
                           distanceToCollege: distanceInKm
                         }));
-
-                        // Log the calculated distance
-                        
                       } else {
                         console.error('Error calculating distance:', status);
                       }
                     }
                   );
-              }
-          });
-      }
-      
-    } catch (error) {
-        console.error('Error initializing Places Autocomplete:', error);
-    }
-    };
-
-    // Try to initialize immediately if Google is already loaded
-    if (window.google?.maps?.places) {
-      
-      initAutocomplete();
-    } else {
-
-      // If not loaded, wait for the script to load
-      const checkGoogleExists = setInterval(() => {
-        if (window.google?.maps?.places) {
-          initAutocomplete();
-          clearInterval(checkGoogleExists);
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error initializing Places Autocomplete:', error);
         }
-      }, 100);
+      };
 
-      // Clear interval after 10 seconds if Google doesn't load
-      setTimeout(() => {
-        clearInterval(checkGoogleExists);
-      }, 10000);
+      // Try to initialize immediately if Google is already loaded
+      if (window.google?.maps?.places) {
+        initAutocomplete();
+      } else {
+        // If not loaded, wait for the script to load
+        const checkGoogleExists = setInterval(() => {
+          if (window.google?.maps?.places) {
+            initAutocomplete();
+            clearInterval(checkGoogleExists);
+          }
+        }, 100);
+
+        // Clear interval after 10 seconds if Google doesn't load
+        setTimeout(() => clearInterval(checkGoogleExists), 10000);
+      }
     }
 
     // Cleanup
     return () => {
-      if (autocomplete) {
-        google.maps.event.clearInstanceListeners(autocomplete);
+      if (autocomplete && window.google?.maps?.event) {
+        window.google.maps.event.clearInstanceListeners(autocomplete);
       }
     };
-  }, [currentStep]); // Add currentStep to dependencies
+  }, [currentStep]); // Only depend on currentStep
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -842,11 +862,13 @@ const DriverProfileSetup: React.FC = () => {
                   />
                 </div>
 
-                {/* Map placeholder - in a real app, this would be a Google Map for address selection */}
-                <div className="border border-gray-300 rounded-md h-48 bg-gray-100 flex items-center justify-center">
-                  <p className="text-gray-500 text-sm">
-                    Map would be displayed here for address selection
-                  </p>
+                {/* Replace the map placeholder with actual map */}
+                <div 
+                  ref={mapRef}
+                  className="border border-gray-300 rounded-md bg-gray-100 mt-4"
+                  style={{ width: '100%', height: '300px' }}
+                >
+                  {/* Map will be rendered here */}
                 </div>
 
                 <div className="pt-4 flex justify-between">
