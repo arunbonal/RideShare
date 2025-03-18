@@ -41,12 +41,6 @@ interface Ride {
   vehicleColor?: string;
 }
 
-interface SearchParams {
-  date: string;
-  direction: "toCollege" | "fromCollege";
-  time: string;
-}
-
 const RideSearch: React.FC = () => {
   const { currentUser, allRides, fetchAllRides } = useAuth();
   const navigate = useNavigate();
@@ -64,11 +58,6 @@ const RideSearch: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
   const [selectedRideDetails, setSelectedRideDetails] = useState<Ride | null>(null);
-  const [searchParams, setSearchParams] = useState<SearchParams>({
-    date: "",
-    direction: "toCollege",
-    time: "",
-  });
   const rideListRef = useRef<HTMLDivElement>(null);
   const previewSidebarRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
@@ -542,6 +531,10 @@ const RideSearch: React.FC = () => {
                                 ? formatTime(selectedRideDetails.toCollegeTime || "")
                                 : formatTime(selectedRideDetails.fromCollegeTime || "")}
                             </span>
+                          
+                          </div>
+                          <div className="text-xs text-red-500 mb-2">
+                          (This is the time that the driver will leave from their home, you can contact them and coordinate the pickup time once your ride is accepted)
                           </div>
                           <div className="flex items-center text-sm text-gray-600 mt-2">
                             <Calendar className="h-4 w-4 mr-2" />

@@ -97,7 +97,7 @@ const RideSchema = new mongoose.Schema({
   availableSeats: {
     type: Number,
     required: true,
-    min: 1,
+    min: 0,
   },
   status: {
     type: String,
@@ -117,6 +117,13 @@ const RideSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  statusHistory: {
+    type: [{
+      status: String,
+      changedAt: Date
+    }],
+    default: []
+  }
 });
 
 // Update the updatedAt field on save

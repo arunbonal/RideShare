@@ -208,6 +208,13 @@ const HitcherProfileSetup: React.FC = () => {
         return;
       }
 
+      // Validate phone number
+      const phoneRegex = /^[6-9]\d{9}$/; // Indian mobile number pattern (10 digits, starting with 6, 7, 8, or 9)
+      if (!phoneRegex.test(phoneNumber)) {
+        setError("Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9)");
+        return;
+      }
+
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/verify/send`,

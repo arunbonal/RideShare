@@ -132,6 +132,16 @@ const RideCreation: React.FC = () => {
         note: ride.note || "",
         passengers: [],
         pricePerKm: Number(ride.pricePerKm),
+        // Add a combined datetime field to help with proper sorting
+        datetime: (() => {
+          const dt = new Date(ride.date);
+          const time = ride.direction === "toCollege" ? ride.toCollegeTime : ride.fromCollegeTime;
+          if (time) {
+            const [hours, minutes] = time.split(":").map(Number);
+            dt.setHours(hours, minutes, 0, 0);
+          }
+          return dt.toISOString();
+        })()
       };
 
       await axios.post(

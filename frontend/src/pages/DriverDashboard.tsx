@@ -142,44 +142,104 @@ const DriverDashboard: React.FC = () => {
       
       setDriverRides(currentDriverRides);
 
-      const now = new Date();
+      const { upcomingRides, pastRides } = filterRides(currentDriverRides);
 
-      // Separate into upcoming and past rides
-      const upcoming = currentDriverRides
-        .filter((ride) => {
-          const rideDate = new Date(ride.date);
-          // First check if the ride is not cancelled
-          if (ride.status === "cancelled") {
-            return false;
-          }
-          // Then check the date and status
-          return (
-            rideDate > now ||
-            (rideDate.toDateString() === now.toDateString() &&
-              ride.status === "scheduled")
-          );
-        })
-        .sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-
-      const past = currentDriverRides
-        .filter((ride) => {
-          const rideDate = new Date(ride.date);
-          return (
-            ride.status === "cancelled" ||  // Show cancelled rides in past
-            rideDate < now ||
-            ride.status === "completed"
-          );
-        })
-        .sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
-      setUpcomingRides(upcoming);
-      setPastRides(past);
+      setUpcomingRides(upcomingRides);
+      setPastRides(pastRides);
     }
   }, [allRides, currentUser]);
+
+  // When filtering rides into past and upcoming categories
+  const filterRides = (rides: ExtendedRide[]): { upcomingRides: ExtendedRide[], pastRides: ExtendedRide[] } => {
+    const now = new Date();
+    
+    // Check for rides that need status updates
+    rides.forEach(ride => {
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+        
+        // Set ride to "in-progress" if time has passed but within 2 hours
+        const twoHoursAfterRide = new Date(rideDate);
+        twoHoursAfterRide.setHours(twoHoursAfterRide.getHours() + 2);
+        
+        if (now >= rideDate && now < twoHoursAfterRide && ride.status === "scheduled") {
+          // Update ride status to in-progress
+          updateRideStatus(ride._id, "in-progress");
+          ride.status = "in-progress"; // Update local state immediately
+        } 
+        // Set ride to "completed" if more than 2 hours have passed
+        else if (now >= twoHoursAfterRide && (ride.status === "scheduled" || ride.status === "in-progress")) {
+          // Update ride status to completed
+          updateRideStatus(ride._id, "completed");
+          ride.status = "completed"; // Update local state immediately
+        }
+      }
+    });
+    
+    const upcomingRides = rides.filter((ride: ExtendedRide) => {
+      // Create a datetime by combining the date with the appropriate time
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Consider in-progress rides as upcoming
+      return (rideDate >= now || ride.status === "in-progress") && ride.status !== "cancelled" && ride.status !== "completed";
+    });
+    
+    const pastRides = rides.filter((ride: ExtendedRide) => {
+      // Create a datetime by combining the date with the appropriate time
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+        
+        // If more than 2 hours have passed since ride time, consider it past
+        const twoHoursAfterRide = new Date(rideDate);
+        twoHoursAfterRide.setHours(twoHoursAfterRide.getHours() + 2);
+        
+        return now >= twoHoursAfterRide || ride.status === "cancelled" || ride.status === "completed";
+      }
+      
+      // For rides without time, compare just the date
+      return rideDate < now || ride.status === "cancelled" || ride.status === "completed";
+    });
+    
+    return { upcomingRides, pastRides };
+  };
+
+  // Function to update ride status on the backend
+  const updateRideStatus = async (rideId: string, status: "scheduled" | "in-progress" | "completed" | "cancelled") => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/update-status`,
+        {
+          rideId,
+          status
+        },
+        { withCredentials: true }
+      );
+      // No need to fetch all rides here as it would cause UI flicker
+      // Status is already updated in local state
+    } catch (error) {
+      console.error(`Error updating ride status to ${status}:`, error);
+    }
+  };
 
   const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
     try {

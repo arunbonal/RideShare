@@ -22,4 +22,7 @@ router.post("/reject", rideController.rejectRide);
 // Mark notification as read
 router.post("/notifications/read", rideController.markNotificationAsRead);
 
+// Update ride status (in-progress, completed)
+router.post("/update-status", rideController.updateRideStatus);
+
 module.exports = router;

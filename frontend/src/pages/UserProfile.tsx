@@ -97,7 +97,7 @@ const UserProfile: React.FC = () => {
                       <Phone className="h-4 w-4 mr-1" /> Phone Number
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900">
-                      {currentUser.phone.replace(/^(\+91)(\d+)$/, '$1 $2') || ""}
+                      {currentUser.phone ? currentUser.phone.replace(/^(\+91)(\d+)$/, '$1 $2') : ""}
                     </dd>
                   </div>
                   <div className="sm:col-span-1">

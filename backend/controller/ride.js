@@ -277,3 +277,50 @@ exports.markNotificationAsRead = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error marking notification as read' });
   }
 };
+
+exports.updateRideStatus = async (req, res) => {
+  try {
+    const { rideId, status } = req.body;
+    
+    if (!['scheduled', 'in-progress', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid status. Must be one of: scheduled, in-progress, completed, cancelled' 
+      });
+    }
+    
+    // Find and update the ride
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return res.status(404).json({ success: false, message: 'Ride not found' });
+    }
+    
+    // Only allow specific transitions:
+    // scheduled -> in-progress, scheduled -> completed, scheduled -> cancelled
+    // in-progress -> completed, in-progress -> cancelled
+    const validTransition = 
+      (ride.status === 'scheduled' && ['in-progress', 'completed', 'cancelled'].includes(status)) ||
+      (ride.status === 'in-progress' && ['completed', 'cancelled'].includes(status)) ||
+      (ride.status === status); // Allow setting to same status (idempotent)
+    
+    if (!validTransition) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status transition from ${ride.status} to ${status}`
+      });
+    }
+    
+    ride.status = status;
+    await ride.save();
+    
+    res.json({ 
+      success: true, 
+      message: `Ride status updated to ${status}`,
+      ride
+    });
+    
+  } catch (error) {
+    console.error('Error updating ride status:', error);
+    res.status(500).json({ success: false, message: 'Error updating ride status' });
+  }
+};

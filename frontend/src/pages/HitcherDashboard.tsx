@@ -158,62 +158,137 @@ const HitcherDashboard: React.FC = () => {
         markNotificationAsRead(unreadNotifications[0].rideId, unreadNotifications[0]._id);
       }
 
-      // Separate into upcoming and past rides
-      const upcoming = currentHitcherRides
-        .filter((ride) => {
-          const rideDate = new Date(ride.date);
-          
-          // Find the current user's hitcher info
-          const hitcherInfo = ride.hitchers?.find(
-            (h) => h.user?._id === currentUser?.id
-          );
-          
-          // Exclude rides that are cancelled, rejected, or where the hitcher status is cancelled/cancelled-by-driver
-          if (
-            ride.status === "cancelled" || 
-            hitcherInfo?.status === "cancelled" || 
-            hitcherInfo?.status === "rejected" ||
-            (hitcherInfo?.status as string) === "cancelled-by-driver"
-          ) {
-            return false;
-          }
-          
-          return (
-            rideDate > now ||
-            (rideDate.toDateString() === now.toDateString() &&
-              ride.status !== "completed")
-          );
-        })
-        .sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-
-      const past = currentHitcherRides
-        .filter((ride) => {
-          const rideDate = new Date(ride.date);
-          
-          // Find the current user's hitcher info
-          const hitcherInfo = ride.hitchers?.find(
-            (h) => h.user?._id === currentUser?.id
-          );
-          
-          return (
-            rideDate < now ||
-            ride.status === "completed" ||
-            ride.status === "cancelled" ||
-            hitcherInfo?.status === "cancelled" ||
-            hitcherInfo?.status === "rejected" ||
-            (hitcherInfo?.status as string) === "cancelled-by-driver"
-          );
-        })
-        .sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
+      // Use the same filtering logic for both upcoming and past rides
+      const { upcomingRides: upcoming, pastRides: past } = filterRides(currentHitcherRides);
+      
       setUpcomingRides(upcoming);
       setPastRides(past);
     }
   }, [allRides, currentUser]);
+
+  // When filtering rides into past and upcoming categories
+  const filterRides = (rides: ExtendedRide[]): { upcomingRides: ExtendedRide[], pastRides: ExtendedRide[] } => {
+    const now = new Date();
+    
+    // Check for rides that need status updates
+    rides.forEach(ride => {
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+        
+        // Set ride to "in-progress" if time has passed but within 2 hours
+        const twoHoursAfterRide = new Date(rideDate);
+        twoHoursAfterRide.setHours(twoHoursAfterRide.getHours() + 2);
+        
+        if (now >= rideDate && now < twoHoursAfterRide && ride.status === "scheduled") {
+          // Ride is happening now
+          updateRideStatus(ride._id, "in-progress");
+          ride.status = "in-progress"; // Update local state immediately
+        } 
+        // Set ride to "completed" if more than 2 hours have passed
+        else if (now >= twoHoursAfterRide && (ride.status === "scheduled" || ride.status === "in-progress")) {
+          // Ride is completed
+          updateRideStatus(ride._id, "completed");
+          ride.status = "completed"; // Update local state immediately
+        }
+      }
+    });
+    
+    const upcomingRides = rides.filter((ride: ExtendedRide) => {
+      // Find the current user's hitcher info
+      const hitcherInfo = ride.hitchers?.find(
+        (h) => h.user?._id === currentUser?.id
+      );
+      
+      // Exclude rides that are cancelled, rejected, or where the hitcher status is cancelled/cancelled-by-driver
+      if (
+        ride.status === "cancelled" || 
+        ride.status === "completed" || 
+        hitcherInfo?.status === "cancelled" || 
+        hitcherInfo?.status === "rejected" ||
+        (hitcherInfo?.status as string) === "cancelled-by-driver"
+      ) {
+        return false;
+      }
+      
+      // Create a datetime by combining the date with the appropriate time
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Consider in-progress rides as upcoming
+      return rideDate >= now || ride.status === "in-progress";
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const pastRides = rides.filter((ride: ExtendedRide) => {
+      // Find the current user's hitcher info
+      const hitcherInfo = ride.hitchers?.find(
+        (h) => h.user?._id === currentUser?.id
+      );
+      
+      // Include rides that are cancelled/rejected in past rides
+      if (
+        ride.status === "cancelled" || 
+        ride.status === "completed" ||
+        hitcherInfo?.status === "cancelled" || 
+        hitcherInfo?.status === "rejected" ||
+        (hitcherInfo?.status as string) === "cancelled-by-driver"
+      ) {
+        return true;
+      }
+      
+      // Create a datetime by combining the date with the appropriate time
+      const rideDate = new Date(ride.date);
+      const timeString = ride.direction === "toCollege" 
+        ? ride.toCollegeTime 
+        : ride.fromCollegeTime;
+      
+      if (timeString) {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        rideDate.setHours(hours, minutes, 0, 0);
+        
+        // If more than 2 hours have passed since ride time, consider it past
+        const twoHoursAfterRide = new Date(rideDate);
+        twoHoursAfterRide.setHours(twoHoursAfterRide.getHours() + 2);
+        
+        return now >= twoHoursAfterRide;
+      }
+      
+      // For rides without time, compare just the date
+      return rideDate < now;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    return { upcomingRides, pastRides };
+  };
+
+  // Function to update ride status on the backend
+  const updateRideStatus = async (rideId: string, status: "scheduled" | "in-progress" | "completed" | "cancelled") => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/update-status`,
+        {
+          rideId,
+          status
+        },
+        { withCredentials: true }
+      );
+      // No need to fetch all rides here as it would cause UI flicker
+      // Status is already updated in local state
+    } catch (error) {
+      console.error(`Error updating ride status to ${status}:`, error);
+    }
+  };
 
   const handleCancelClick = (rideId: string, hitcherId: string) => {
     setConfirmModal({
@@ -398,6 +473,16 @@ const HitcherDashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              ) : activeTab === "past" && pastRides.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    No past rides
+                  </h3>
+                  <p className="text-gray-500">
+                    Your ride history will appear here.
+                  </p>
+                </div>
               ) : (
                 (activeTab === "upcoming" ? upcomingRides : pastRides).map(
                   (ride) => {
@@ -424,14 +509,22 @@ const HitcherDashboard: React.FC = () => {
                           </div>
                           <span
                             className={`px-2 py-1 text-sm font-medium rounded-full ${
-                              hitcherInfo.status === "accepted"
+                              ride.status === "in-progress"
+                                ? "bg-blue-100 text-blue-800"
+                                : ride.status === "completed"
+                                ? "bg-gray-100 text-gray-800"
+                                : hitcherInfo.status === "accepted"
                                 ? "bg-green-100 text-green-800"
                                 : hitcherInfo.status === "pending"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {(hitcherInfo.status as string) === "cancelled-by-driver" 
+                            {ride.status === "in-progress" 
+                              ? "In Progress"
+                              : ride.status === "completed"
+                              ? "Completed"
+                              : (hitcherInfo.status as string) === "cancelled-by-driver" 
                               ? "Cancelled by Driver" 
                               : hitcherInfo.status === "cancelled"
                               ? "Cancelled by You"
@@ -498,7 +591,7 @@ const HitcherDashboard: React.FC = () => {
                         <br />
                         
                         {/* Driver Details Section - Only show when ride is accepted */}
-                        {hitcherInfo.status === 'accepted' && (
+                        {(hitcherInfo.status === 'accepted' || ride.status === 'in-progress') && (
                           <div className="mt-2 mb-4 bg-blue-50 p-3 rounded-md">
                             <h4 className="font-medium text-gray-900 mb-2">Driver Details:</h4>
                             <div className="space-y-2">
@@ -520,7 +613,7 @@ const HitcherDashboard: React.FC = () => {
                           </div>
                         )}
                         
-                        {hitcherInfo.status === 'accepted' && (
+                        {(hitcherInfo.status === 'accepted' && ride.status !== 'in-progress') && (
                           <button
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"

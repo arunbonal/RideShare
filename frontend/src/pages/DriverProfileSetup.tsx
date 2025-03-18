@@ -87,23 +87,23 @@ const DriverProfileSetup: React.FC = () => {
           });
     
           // Initialize the map if mapRef is available
-          if (mapRef.current) {
+      if (mapRef.current) {
             // Create new map
             const newMap = new google.maps.Map(mapRef.current, {
               center: { lat: 12.861203781214266, lng: 77.66466548226559 }, // PES University EC Campus
               zoom: 12,
               mapTypeControl: false,
             });
-            
-            // Create a marker but don't set position yet
+        
+        // Create a marker but don't set position yet
             const newMarker = new google.maps.Marker({
-              map: newMap,
+          map: newMap,
               draggable: false,
               visible: false
-            });
+        });
             
             setMap(newMap);
-            setMarker(newMarker);
+        setMarker(newMarker);
             
             // Add the place changed event listener
             if (autocomplete) {
@@ -246,8 +246,8 @@ const DriverProfileSetup: React.FC = () => {
     } else {
       setFormData((prev) => {
         return {
-          ...prev,
-          [name]: value,
+        ...prev,
+        [name]: value,
         };
       });
     }
@@ -415,6 +415,13 @@ const DriverProfileSetup: React.FC = () => {
         return;
       }
 
+      // Validate phone number
+      const phoneRegex = /^[6-9]\d{9}$/; // Indian mobile number pattern (10 digits, starting with 6, 7, 8, or 9)
+      if (!phoneRegex.test(phoneNumber)) {
+        setError("Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9)");
+        return;
+      }
+
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/verify/send`,
@@ -526,27 +533,27 @@ const DriverProfileSetup: React.FC = () => {
           <div className="flex items-center justify-between">
             {!currentUser?.phone && (
               <>
-                <div
-                  className={`flex flex-col items-center ${
-                    currentStep >= 1 ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                      currentStep >= 1
-                        ? "border-blue-600 bg-blue-100"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">1</span>
-                  </div>
-                  <span className="text-xs mt-1">Personal</span>
-                </div>
-                <div
-                  className={`flex-1 h-1 mx-2 ${
-                    currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                ></div>
+            <div
+              className={`flex flex-col items-center ${
+                currentStep >= 1 ? "text-blue-600" : "text-gray-400"
+              }`}
+            >
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                  currentStep >= 1
+                    ? "border-blue-600 bg-blue-100"
+                    : "border-gray-300"
+                }`}
+              >
+                <span className="text-sm font-medium">1</span>
+              </div>
+              <span className="text-xs mt-1">Personal</span>
+            </div>
+            <div
+              className={`flex-1 h-1 mx-2 ${
+                currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
+              }`}
+            ></div>
               </>
             )}
             
@@ -657,19 +664,19 @@ const DriverProfileSetup: React.FC = () => {
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
                       +91
                     </span>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Enter your phone number"
+                    placeholder="Enter your phone number"
                       disabled={isPhoneVerified}
-                    />
+                  />
                   </div>
                 </div>
-                
+
 
                 {!isPhoneVerified && !isVerifying && (
                   <button
@@ -686,15 +693,15 @@ const DriverProfileSetup: React.FC = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
                         Verification Code
-                      </label>
-                      <input
-                        type="text"
+                  </label>
+                  <input
+                    type="text"
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
                         className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="Enter verification code"
-                      />
-                    </div>
+                  />
+                </div>
                     <button
                       type="button"
                       onClick={verifyCode}
