@@ -193,6 +193,37 @@ const DriverProfileSetup: React.FC = () => {
     };
   }, [currentStep]); // Only depend on currentStep
 
+  const formatVehicleRegistration = (input: string): string => {
+    // Remove any non-alphanumeric characters
+    const cleaned = input.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    
+    if (cleaned.length <= 2) {
+      // First two characters (state code)
+      return cleaned;
+    } else if (cleaned.length <= 4) {
+      // State code + district code
+      return `${cleaned.substring(0, 2)}-${cleaned.substring(2)}`;
+    } else if (cleaned.length <= 6) {
+      // State + district + series
+      return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
+    } else {
+      // Complete format
+      return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4, 6)}-${cleaned.substring(6, 10)}`;
+    }
+  };
+
+  const handleVehicleRegistrationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatVehicleRegistration(e.target.value);
+    
+    setFormData((prev) => ({
+      ...prev,
+      vehicle: {
+        ...prev.vehicle,
+        registrationNumber: formattedValue,
+      },
+    }));
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -782,7 +813,7 @@ const DriverProfileSetup: React.FC = () => {
                     id="vehicleRegistration"
                     name="vehicle.registrationNumber"
                     value={formData.vehicle.registrationNumber}
-                    onChange={handleInputChange}
+                    onChange={handleVehicleRegistrationChange}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., KA-01-AB-1234"
@@ -947,7 +978,14 @@ const DriverProfileSetup: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-6 flex justify-between">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    Back
+                  </button>
                   <SubmitButton />
                 </div>
               </div>
