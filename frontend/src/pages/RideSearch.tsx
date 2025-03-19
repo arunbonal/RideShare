@@ -253,7 +253,9 @@ const RideSearch: React.FC = () => {
     }
   };
 
-  const formatTime = (time24: string) => {
+  const formatTime = (time24: string | undefined) => {
+    if (!time24) return "Time not specified";
+    
     const [hours, minutes] = time24.split(":");
     const hour = parseInt(hours);
     const period = hour >= 12 ? "PM" : "AM";
@@ -448,8 +450,8 @@ const RideSearch: React.FC = () => {
                       <div className="flex items-center text-gray-600">
                         <Clock className="h-5 w-5 mr-2" />
                         {ride.direction === "toCollege"
-                          ? formatTime(ride.toCollegeTime || "")
-                          : formatTime(ride.fromCollegeTime || "")}
+                          ? formatTime(ride.toCollegeTime)
+                          : formatTime(ride.fromCollegeTime)}
                       </div>
                       <div className="flex items-center text-gray-600">
                         <MapPin className="h-5 w-5 mr-2" />
@@ -528,14 +530,13 @@ const RideSearch: React.FC = () => {
                             <Clock className="h-4 w-4 mr-2" />
                             <span>
                               {selectedRideDetails.direction === "toCollege"
-                                ? formatTime(selectedRideDetails.toCollegeTime || "")
-                                : formatTime(selectedRideDetails.fromCollegeTime || "")}
+                                ? formatTime(selectedRideDetails.toCollegeTime)
+                                : formatTime(selectedRideDetails.fromCollegeTime)}
                             </span>
-                          
                           </div>
-                          <div className="text-xs text-red-500 mb-2">
+                          {selectedRideDetails.direction === "toCollege" && <div className="text-xs text-red-500 mb-2">
                           (This is the time that the driver will leave from their home, you can contact them and coordinate the pickup time once your ride is accepted)
-                          </div>
+                          </div>}
                           <div className="flex items-center text-sm text-gray-600 mt-2">
                             <Calendar className="h-4 w-4 mr-2" />
                             <span>

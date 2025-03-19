@@ -110,6 +110,7 @@ interface AuthContextType {
   allRides: Ride[];
   setAllRides: React.Dispatch<React.SetStateAction<Ride[]>>;
   fetchAllRides: () => Promise<void>;
+  refreshUserData: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -397,6 +398,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       allRides,
       setAllRides,
       fetchAllRides,
+      refreshUserData: fetchUserData,
     }),
     [
       currentUser,
@@ -413,6 +415,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       resetRide,
       allRides,
       fetchAllRides,
+      fetchUserData,
     ]
   );
 

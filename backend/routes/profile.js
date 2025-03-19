@@ -12,6 +12,9 @@ router.get("/", profileController.getUserProfile);
 // Update driver profile
 router.post("/driver", profileController.updateDriverProfile);
 
+// Update driver vehicle and pricing only
+router.post("/driver/update", profileController.updateDriverVehicleAndPricing);
+
 // Update hitcher profile
 router.post("/hitcher", profileController.updateHitcherProfile);
 

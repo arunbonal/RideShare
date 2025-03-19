@@ -47,6 +47,52 @@ exports.updateDriverProfile = async (req, res) => {
   }
 };
 
+// Update driver vehicle and pricing
+exports.updateDriverVehicleAndPricing = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { vehicle, pricePerKm } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if driver profile exists
+    if (!user.driverProfile) {
+      return res.status(400).json({ message: "Driver profile not found" });
+    }
+
+    // Update vehicle information
+    if (vehicle) {
+      user.driverProfile.vehicle = {
+        ...user.driverProfile.vehicle,
+        ...vehicle
+      };
+    }
+
+    // Update price per km
+    if (pricePerKm !== undefined) {
+      user.driverProfile.pricePerKm = pricePerKm;
+    }
+
+    // Save the updated user
+    await user.save();
+
+    // Return the updated profile
+    const updatedUserData = await getCompleteUserData(userId);
+
+    res.status(200).json({
+      message: "Vehicle and pricing updated successfully",
+      user: updatedUserData
+    });
+  } catch (error) {
+    console.error("Error updating vehicle and pricing:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // Update hitcher profile\
 exports.updateHitcherProfile = async (req, res) => {
   try {

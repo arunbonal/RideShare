@@ -590,8 +590,10 @@ const HitcherDashboard: React.FC = () => {
                         )}
                         <br />
                         
-                        {/* Driver Details Section - Only show when ride is accepted */}
-                        {(hitcherInfo.status === 'accepted' || ride.status === 'in-progress') && (
+                        {/* Driver Details Section - Only show when ride is accepted/in-progress and not in past rides section */}
+                        {(hitcherInfo.status === 'accepted' || ride.status === 'in-progress') && 
+                          activeTab !== "past" && 
+                          ride.status !== "completed" && (
                           <div className="mt-2 mb-4 bg-blue-50 p-3 rounded-md">
                             <h4 className="font-medium text-gray-900 mb-2">Driver Details:</h4>
                             <div className="space-y-2">
@@ -613,21 +615,13 @@ const HitcherDashboard: React.FC = () => {
                           </div>
                         )}
                         
-                        {(hitcherInfo.status === 'accepted' && ride.status !== 'in-progress') && (
+                        {/* Only show cancel button for accepted rides that are scheduled and in upcoming tab */}
+                        {(hitcherInfo.status === 'accepted' && ride.status !== 'in-progress' && ride.status !== 'completed' && activeTab === "upcoming") && (
                           <button
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
                             Cancel Ride
-                          </button>
-                        )}
-                        
-                        {hitcherInfo.status === 'pending' && (
-                          <button
-                            onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                          >
-                            Cancel Request
                           </button>
                         )}
                       </div>
