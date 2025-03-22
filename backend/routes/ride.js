@@ -25,4 +25,6 @@ router.post("/notifications/read", rideController.markNotificationAsRead);
 // Update ride status (in-progress, completed)
 router.post("/update-status", rideController.updateRideStatus);
 
+router.post("/calculate-reliability-impact", rideController.calculateReliabilityImpact);
+
 module.exports = router;

@@ -121,10 +121,16 @@ exports.cancelRide = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to update ride' });
     }
 
+    // Return the updated user data
     res.json({ 
       success: true, 
       message: hitcherId ? 'Ride request cancelled successfully' : 'Ride cancelled successfully',
-      ride: updatedRide
+      ride: updatedRide,
+      user: {
+        id: updatedRide.driver._id,
+        hitcherProfile: updatedRide.driver.hitcherProfile,
+        driverProfile: updatedRide.driver.driverProfile
+      }
     });
 
   } catch (error) {
@@ -377,5 +383,36 @@ exports.updateRideStatus = async (req, res) => {
   } catch (error) {
     console.error('Error updating ride status:', error);
     res.status(500).json({ success: false, message: 'Error updating ride status' });
+  }
+};
+
+exports.calculateReliabilityImpact = async (req, res) => {
+  try {
+    const { userId, userType } = req.body;
+    const user = await User.findById(userId);
+    
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    let currentRate, newRate;
+    
+    if (userType === 'driver' && user.driverProfile) {
+      currentRate = user.driverProfile.reliabilityRate;
+      // Calculate penalty similar to CANCEL_ACCEPTED_RIDE in UserSchema
+      const acceptedPenalty = Math.min(10, 100 / (user.driverProfile.totalRidesCreated || 1) * 20);
+      newRate = Math.max(0, currentRate - acceptedPenalty);
+    } 
+    else if (userType === 'hitcher' && user.hitcherProfile) {
+      currentRate = user.hitcherProfile.reliabilityRate;
+      const acceptedPenalty = Math.min(10, 100 / (user.hitcherProfile.totalRidesRequested || 1) * 20);
+      newRate = Math.max(0, currentRate - acceptedPenalty);
+    } 
+    else {
+      return res.status(400).json({ error: 'Invalid user type or profile' });
+    }
+    
+    res.json({ currentRate, newRate });
+  } catch (error) {
+    console.error("Error calculating reliability impact:", error);
+    res.status(500).json({ error: 'Server error' });
   }
 };

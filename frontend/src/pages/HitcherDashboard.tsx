@@ -28,7 +28,7 @@ interface ExtendedRide extends Ride {
 }
 
 const HitcherDashboard: React.FC = () => {
-  const { currentUser, allRides, fetchAllRides } = useAuth();
+  const { currentUser, allRides, fetchAllRides, refreshUserData } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [hitcherRides, setHitcherRides] = useState<ExtendedRide[]>([]);
@@ -54,6 +54,11 @@ const HitcherDashboard: React.FC = () => {
     rideId: "",
     hitcherId: ""
   });
+
+  const [reliabilityImpact, setReliabilityImpact] = useState<{
+    currentRate: number | null;
+    newRate: number | null;
+  }>({ currentRate: null, newRate: null });
 
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -97,8 +102,6 @@ const HitcherDashboard: React.FC = () => {
         )
       ) as ExtendedRide[];
       setHitcherRides(currentHitcherRides);
-
-      const now = new Date();
 
       // Check for newly cancelled rides by driver
       // Get already notified ride IDs from localStorage
@@ -291,12 +294,51 @@ const HitcherDashboard: React.FC = () => {
     }
   };
 
-  const handleCancelClick = (rideId: string, hitcherId: string) => {
-    setConfirmModal({
-      show: true,
-      rideId,
-      hitcherId
-    });
+  const handleCancelClick = async (rideId: string, hitcherId: string) => {
+    try {
+      // Get the ride to check if it's accepted
+      const ride = hitcherRides.find(r => r._id === rideId);
+      const hitcherInfo = ride?.hitchers?.find(h => h.user._id === hitcherId);
+      
+      if (hitcherInfo?.status === 'accepted') {
+        // Calculate reliability impact for accepted rides
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/rides/calculate-reliability-impact`,
+          { 
+            userId: currentUser?.id,
+            userType: 'hitcher',
+            actionType: 'CANCEL_ACCEPTED_RIDE'
+          },
+          { withCredentials: true }
+        );
+        
+        setReliabilityImpact({
+          currentRate: response.data.currentRate,
+          newRate: response.data.newRate
+        });
+      } else {
+        // No penalty for pending rides
+        setReliabilityImpact({
+          currentRate: currentUser?.hitcherProfile?.reliabilityRate || 100,
+          newRate: currentUser?.hitcherProfile?.reliabilityRate || 100
+        });
+      }
+      
+      // Show the modal
+      setConfirmModal({
+        show: true,
+        rideId,
+        hitcherId
+      });
+    } catch (error) {
+      console.error('Error calculating reliability impact:', error);
+      // Show modal anyway
+      setConfirmModal({
+        show: true,
+        rideId,
+        hitcherId
+      });
+    }
   };
 
   const handleConfirmCancel = async () => {
@@ -312,6 +354,12 @@ const HitcherDashboard: React.FC = () => {
       );
 
       if (response.data.success) {
+        // Update local user with new reliability rate from response
+        if (response.data.user) {
+          // Update AuthContext with new user data
+          await refreshUserData();
+        }
+        
         // Refresh rides data
         await fetchAllRides();
         
@@ -331,6 +379,7 @@ const HitcherDashboard: React.FC = () => {
     } finally {
       // Close the modal
       setConfirmModal({ show: false, rideId: "", hitcherId: "" });
+      setReliabilityImpact({ currentRate: null, newRate: null });
     }
   };
 
@@ -350,31 +399,62 @@ const HitcherDashboard: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Confirmation Modal */}
         {confirmModal.show && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Cancel Ride
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to cancel this ride? This action cannot be undone.
-              </p>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setConfirmModal({ show: false, rideId: "", hitcherId: "" })}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  No, Keep Ride
-                </button>
-                <button
-                  onClick={handleConfirmCancel}
-                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
-                >
-                  Yes, Cancel Ride
-                </button>
-              </div>
-            </div>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+      <h3 className="text-lg font-medium text-gray-900 mb-4">
+        Cancel Ride
+      </h3>
+      <p className="text-gray-600 mb-4">
+        Are you sure you want to cancel this ride? This action cannot be undone.
+      </p>
+      
+      {/* Add reliability impact information */}
+      {reliabilityImpact.currentRate !== reliabilityImpact.newRate && (
+        <div className="mb-6 p-3 bg-yellow-50 rounded-md">
+          <p className="font-medium text-gray-900 mb-2">Reliability Impact:</p>
+          <div className="flex justify-between items-center">
+            <span>Current Reliability:</span>
+            <span className={`font-medium ${
+              reliabilityImpact.currentRate && reliabilityImpact.currentRate >= 85 ? 'text-green-600' : 
+              reliabilityImpact.currentRate && reliabilityImpact.currentRate >= 70 ? 'text-yellow-600' : 
+              'text-red-600'
+            }`}>
+              {reliabilityImpact.currentRate?.toFixed(1)}%
+            </span>
           </div>
-        )}
+          <div className="flex justify-between items-center mt-1">
+            <span>After Cancellation:</span>
+            <span className={`font-medium ${
+              reliabilityImpact.newRate && reliabilityImpact.newRate >= 85 ? 'text-green-600' : 
+              reliabilityImpact.newRate && reliabilityImpact.newRate >= 70 ? 'text-yellow-600' : 
+              'text-red-600'
+            }`}>
+              {reliabilityImpact.newRate?.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex justify-end space-x-3">
+        <button
+          onClick={() => {
+            setConfirmModal({ show: false, rideId: "", hitcherId: "" });
+            setReliabilityImpact({ currentRate: null, newRate: null });
+          }}
+          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+        >
+          No, Keep Ride
+        </button>
+        <button
+          onClick={handleConfirmCancel}
+          className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+        >
+          Yes, Cancel Ride
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Notification Toast */}
         {notification.show && (

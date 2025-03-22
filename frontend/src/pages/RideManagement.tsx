@@ -7,7 +7,7 @@ import { Plus } from "lucide-react";
 import axios from "axios";
 
 const RideManagement: React.FC = () => {
-  const { currentUser, allRides, setAllRides, fetchAllRides } = useAuth();
+  const { currentUser, allRides, setAllRides, fetchAllRides, refreshUserData } = useAuth();
   const navigate = useNavigate();
   const [rides, setRides] = useState<Ride[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -20,6 +20,10 @@ const RideManagement: React.FC = () => {
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
+  const [reliabilityImpact, setReliabilityImpact] = useState<{
+    currentRate: number | null;
+    newRate: number | null;
+  }>({ currentRate: null, newRate: null });
 
   // Fetch all rides when component mounts
   useEffect(() => {
@@ -95,9 +99,45 @@ const RideManagement: React.FC = () => {
     }
   };
 
-  const handleCancelClick = (index: number, rideId: string) => {
-    setRideToCancel({ index, id: rideId });
-    setShowConfirmModal(true);
+  const handleCancelClick = async (index: number, rideId: string) => {
+    try {
+      // Get the ride to check if any hitchers are accepted
+      const ride = rides[index];
+      const hasAcceptedHitchers = ride.hitchers?.some(h => h.status === "accepted");
+      
+      if (hasAcceptedHitchers) {
+        // Calculate reliability impact for rides with accepted hitchers
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/rides/calculate-reliability-impact`,
+          { 
+            userId: currentUser?.id,
+            userType: 'driver',
+            actionType: 'CANCEL_ACCEPTED_RIDE'
+          },
+          { withCredentials: true }
+        );
+        
+        setReliabilityImpact({
+          currentRate: response.data.currentRate,
+          newRate: response.data.newRate
+        });
+      } else {
+        // No penalty for rides with no accepted hitchers
+        setReliabilityImpact({
+          currentRate: currentUser?.driverProfile?.reliabilityRate || 100,
+          newRate: currentUser?.driverProfile?.reliabilityRate || 100
+        });
+      }
+      
+      // Show the modal
+      setRideToCancel({ index, id: rideId });
+      setShowConfirmModal(true);
+    } catch (error) {
+      console.error('Error calculating reliability impact:', error);
+      // Show modal anyway
+      setRideToCancel({ index, id: rideId });
+      setShowConfirmModal(true);
+    }
   };
 
   const handleCancelRide = async () => {
@@ -111,6 +151,11 @@ const RideManagement: React.FC = () => {
         },
         { withCredentials: true }
       );
+
+      // Update local user data with the new reliability rate
+      if (response.data.user) {
+        await refreshUserData(); // Make sure to add refreshUserData to the destructured useAuth()
+      }
 
       // Fetch fresh data to update all components
       await fetchAllRides();
@@ -130,6 +175,7 @@ const RideManagement: React.FC = () => {
     } finally {
       setShowConfirmModal(false);
       setRideToCancel(null);
+      setReliabilityImpact({ currentRate: null, newRate: null });
       // Hide notification after 3 seconds
       setTimeout(() => {
         setNotification((prev) => ({ ...prev, show: false }));
@@ -159,13 +205,45 @@ const RideManagement: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
               <h3 className="text-lg font-semibold mb-4">Cancel Ride</h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-4">
                 Are you sure you want to cancel this ride? This action cannot be
                 undone.
               </p>
+
+              {/* Add reliability impact information */}
+              {reliabilityImpact.currentRate !== reliabilityImpact.newRate && (
+                <div className="mb-6 p-3 bg-yellow-50 rounded-md">
+                  <p className="font-medium text-gray-900 mb-2">Reliability Impact:</p>
+                  <div className="flex justify-between items-center">
+                    <span>Current Reliability:</span>
+                    <span className={`font-medium ${
+                      reliabilityImpact.currentRate && reliabilityImpact.currentRate >= 85 ? 'text-green-600' : 
+                      reliabilityImpact.currentRate && reliabilityImpact.currentRate >= 70 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {reliabilityImpact.currentRate?.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span>After Cancellation:</span>
+                    <span className={`font-medium ${
+                      reliabilityImpact.newRate && reliabilityImpact.newRate >= 85 ? 'text-green-600' : 
+                      reliabilityImpact.newRate && reliabilityImpact.newRate >= 70 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {reliabilityImpact.newRate?.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setRideToCancel(null);
+                    setReliabilityImpact({ currentRate: null, newRate: null });
+                  }}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Keep Ride
