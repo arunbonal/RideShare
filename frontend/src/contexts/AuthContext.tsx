@@ -55,6 +55,7 @@ interface User {
     cancelledAcceptedRides: number;
     cancelledPendingRides: number;
   } | null;
+  isAdmin: boolean;
 }
 
 // Updated Ride interface to match the backend schema

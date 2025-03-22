@@ -4,8 +4,28 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import React, { ReactNode } from "react";
+
+// AdminRoute component to protect admin routes
+interface AdminRouteProps {
+  children: ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { loading, isAuthenticated, currentUser } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated || !currentUser?.isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 // Pages
 import Login from "./pages/Login";
@@ -21,6 +41,7 @@ import UserProfile from "./pages/UserProfile";
 import ProfileSettings from "./pages/ProfileSettings";
 import RoleDetails from "./pages/RoleDetails";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -120,6 +141,15 @@ function App() {
                   <RoleDetails />
                 </ProtectedRoute>
               }
+            />
+            {/* Admin route */}
+            <Route 
+              path="/admin" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

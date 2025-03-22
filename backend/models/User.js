@@ -177,6 +177,10 @@ const UserSchema = new mongoose.Schema({
       default: false,
     },
   },
+  isAdmin: {
+    type: Boolean,
+    default: false
+  }
 });
 
 // Method to update driver reliability rate

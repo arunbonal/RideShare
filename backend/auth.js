@@ -1,7 +1,9 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
+const Admin = require("./models/Admin");
 require("dotenv").config();
+
 // Serialize user into the session
 passport.serializeUser((user, done) => {
   done(null, user.id);
@@ -30,30 +32,40 @@ passport.use(
       try {
         // Extract email from profile
         const email = profile.emails[0].value;
-        const srn = email.split("@")[0].toUpperCase();
+        
+        // Check if user is an admin
+        const admin = await Admin.findOne({ email });
+        const isAdmin = !!admin;
+        
+        // For non-admin users, apply the PESU email validation
+        if (!isAdmin) {
+          if (!email.endsWith("@pesu.pes.edu")) {
+            return done(null, false, {
+              message: "Only PES University email addresses are allowed",
+            });
+          }
 
-        // Check if email is from PES University
-        if (!email.endsWith("@pesu.pes.edu")) {
-          return done(null, false, {
-            message: "Only PES University email addresses are allowed",
-          });
-        }
-
-        if (email[3] !== "2") {
-          return done(null, false, {
-            message:
-              "Only PESU Electronic City Campus students are allowed to register at the moment",
-          });
+          if (email[3] !== "2") {
+            return done(null, false, {
+              message: "Only PESU Electronic City Campus students are allowed to register",
+            });
+          }
         }
 
         // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });
 
         if (user) {
+          // Update isAdmin status if necessary
+          if (user.isAdmin !== isAdmin) {
+            user.isAdmin = isAdmin;
+            await user.save();
+          }
           return done(null, user);
         }
 
-        // Create new user if doesn't exist
+        // Create new user
+        const srn = email.endsWith("@pesu.pes.edu") ? email.split("@")[0].toUpperCase() : null;
         user = new User({
           googleId: profile.id,
           email: email,
@@ -65,6 +77,7 @@ passport.use(
           },
           driverProfileComplete: false,
           hitcherProfileComplete: false,
+          isAdmin: isAdmin // Set isAdmin field
         });
 
         await user.save();

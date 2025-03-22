@@ -7,6 +7,11 @@ exports.googleCallback = (req, res) => {
     return res.redirect(`${process.env.CLIENT_URL}/?error=invalid-email`);
   }
 
+  // Check if user is an admin - bypass email validation for admins
+  if (req.user.isAdmin) {
+    return res.redirect(`${process.env.CLIENT_URL}/admin`);
+  }
+
   // Check if email is from PES domain and electronic City Campus
   if (!req.user.email?.endsWith("@pesu.pes.edu") || req.user.email[3] !== "2") {
     req.logout((err) => {

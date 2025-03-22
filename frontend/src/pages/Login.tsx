@@ -29,6 +29,12 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && currentUser) {
+      // Check if user is an admin
+      if (currentUser.isAdmin) {
+        navigate("/admin");
+        return;
+      }
+
       // Check if user has any active roles
       const hasActiveRoles =
         currentUser.activeRoles?.driver || currentUser.activeRoles?.hitcher;
