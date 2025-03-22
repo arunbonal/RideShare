@@ -3,6 +3,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const Admin = require("./models/Admin");
 require("dotenv").config();
+const { getCollege } = require("./utils/userUtils");
 
 // Serialize user into the session
 passport.serializeUser((user, done) => {
@@ -38,19 +39,13 @@ passport.use(
         const isAdmin = !!admin;
         
         // For non-admin users, apply the PESU email validation
-        if (!isAdmin) {
-          if (!email.endsWith("@pesu.pes.edu")) {
-            return done(null, false, {
-              message: "Only PES University email addresses are allowed",
-            });
-          }
-
-          if (email[3] !== "2") {
-            return done(null, false, {
-              message: "Only PESU Electronic City Campus students are allowed to register",
-            });
-          }
-        }
+        // if (!isAdmin) {
+        //   if (!email.endsWith("@pesu.pes.edu")) {
+        //     return done(null, false, {
+        //       message: "Only PES University email addresses are allowed",
+        //     });
+        //   }
+        // }
 
         // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });
@@ -65,12 +60,15 @@ passport.use(
         }
 
         // Create new user
-        const srn = email.endsWith("@pesu.pes.edu") ? email.split("@")[0].toUpperCase() : null;
+        // const srn = email.endsWith("@pesu.pes.edu") ? email.split("@")[0].toUpperCase() : null;
+        const srn = email.split("@")[0].toUpperCase();
+        const college = getCollege(email);
         user = new User({
           googleId: profile.id,
           email: email,
           name: profile.displayName,
           srn: srn,
+          college: college,
           activeRoles: {
             driver: false,
             hitcher: false,

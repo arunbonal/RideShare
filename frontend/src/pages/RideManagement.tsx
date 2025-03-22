@@ -316,12 +316,12 @@ const RideManagement: React.FC = () => {
                       <p className="text-sm text-gray-600">
                         {ride.direction === "toCollege" ? (
                           <>
-                            To College (PESU EC Campus):{" "}
+                            To College ({currentUser?.college}) :{" "}
                             {formatTime(ride.toCollegeTime || "")}
                           </>
                         ) : (
                           <>
-                            From College (PESU EC Campus):{" "}
+                            From College ({currentUser?.college}) :{" "}
                             {formatTime(ride.fromCollegeTime || "")}
                           </>
                         )}

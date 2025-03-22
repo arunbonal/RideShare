@@ -164,13 +164,6 @@ const RideCreation: React.FC = () => {
     }
   };
 
-  // // MapPreview component remains the same
-  // const MapPreview: React.FC<{ direction: RideSchedule["direction"] }> = ({
-  //   direction,
-  // }) => {
-  //   // ... existing MapPreview code ...
-  // };
-
   return (
     <>
       <Navbar />
@@ -247,10 +240,10 @@ const RideCreation: React.FC = () => {
                     from:
                       newDirection === "toCollege"
                         ? currentUser?.homeAddress || ""
-                        : "PES University Electronic City Campus",
+                        : currentUser?.college || "",
                     to:
                       newDirection === "toCollege"
-                        ? "PES University Electronic City Campus"
+                        ? currentUser?.college || ""
                         : currentUser?.homeAddress || "",
                   });
                 }}

@@ -130,15 +130,19 @@ const UserSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    // unique: true,
+    unique: true,
   },
   isPhoneVerified: {
     type: Boolean,
     default: false
   },
+  college: {
+    type: String,
+    enum: ["PES University Ring Road Campus", "PES University Electronic City Campus"],
+  },
   srn: {
     type: String,
-    unique: true,
+    // unique: true,
   },
   homeAddress: {
     type: String,

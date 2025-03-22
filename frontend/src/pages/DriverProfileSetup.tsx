@@ -88,9 +88,15 @@ const DriverProfileSetup: React.FC = () => {
     
           // Initialize the map if mapRef is available
       if (mapRef.current) {
+            const centerCoordinates = currentUser?.college === "PES University Electronic City Campus"
+            ? { lat: 12.8614567, lng: 77.6598372, }
+            : currentUser?.college === "PES University Ring Road Campus"
+            ? { lat: 12.9350592, lng: 77.535673 }
+            : { lat: 12.8614567, lng: 77.6598372, };  //default to EC campus
+
             // Create new map
             const newMap = new google.maps.Map(mapRef.current, {
-              center: { lat: 12.861203781214266, lng: 77.66466548226559 }, // PES University EC Campus
+              center: centerCoordinates,
               zoom: 12,
               mapTypeControl: false,
             });
@@ -131,7 +137,11 @@ const DriverProfileSetup: React.FC = () => {
                   newMarker.setVisible(true);
                   
                   // Calculate distance to college
-                  const collegeLocation = { lat: 12.861203781214266, lng: 77.66466548226559 };
+                  const collegeLocation = currentUser?.college === "PES University Electronic City Campus"
+                  ? { lat: 12.8614567, lng: 77.6598372, }
+                  : currentUser?.college === "PES University Ring Road Campus"
+                  ? { lat: 12.9350592, lng: 77.535673 }
+                  : { lat: 12.8614567, lng: 77.6598372, }; // Default to PES University EC Campus
                   const origin = {
                     lat: place.geometry.location.lat(),
                     lng: place.geometry.location.lng()

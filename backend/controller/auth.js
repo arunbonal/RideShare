@@ -12,16 +12,16 @@ exports.googleCallback = (req, res) => {
     return res.redirect(`${process.env.CLIENT_URL}/admin`);
   }
 
-  // Check if email is from PES domain and electronic City Campus
-  if (!req.user.email?.endsWith("@pesu.pes.edu") || req.user.email[3] !== "2") {
-    req.logout((err) => {
-      if (err) {
-        console.error("Error logging out:", err);
-      }
-      res.redirect(`${process.env.CLIENT_URL}/?error=invalid-email`);
-    });
-    return;
-  }
+  // // Check if email is from PES domain
+  // if (!req.user.email?.endsWith("@pesu.pes.edu")) {
+  //   req.logout((err) => {
+  //     if (err) {
+  //       console.error("Error logging out:", err);
+  //     }
+  //     res.redirect(`${process.env.CLIENT_URL}/?error=invalid-email`);
+  //   });
+  //   return;
+  // }
 
   // Check if user has any active roles
   const hasActiveRoles =

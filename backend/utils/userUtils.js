@@ -17,4 +17,13 @@ const getCompleteUserData = async (userId) => {
   }
 };
 
-module.exports = { getCompleteUserData };
+const getCollege = (email) => {
+  if (email[3] === "1") {
+    return "PES University Ring Road Campus";
+  } else if (email[3] === "2") {
+    return "PES University Electronic City Campus";
+  }
+  return null;
+};
+
+module.exports = { getCompleteUserData, getCollege };

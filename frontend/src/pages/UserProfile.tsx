@@ -69,7 +69,7 @@ const UserProfile: React.FC = () => {
                     {currentUser.name}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    PES University Electronic City Campus
+                    {currentUser.college}
                   </p>
                 </div>
               </div>

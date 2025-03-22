@@ -90,8 +90,7 @@ const Login: React.FC = () => {
             PES University Carpooling
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Share rides with fellow students at PES University Electronic City
-            Campus
+            Share rides with fellow students at PES University
           </p>
         </div>
 

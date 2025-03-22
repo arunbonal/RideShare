@@ -24,8 +24,8 @@ exports.createRide = async (req, res) => {
 exports.getRides = async (req, res) => {
   try {
     const rides = await Ride.find()
-      .populate("driver", "name email phone gender srn driverProfile.vehicle.model driverProfile.vehicle.color driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
-      .populate("hitchers.user", "name email phone gender srn hitcherProfile.rating hitcherProfile.reliabilityRate")
+      .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.color driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
+      .populate("hitchers.user", "name email phone gender srn college hitcherProfile.rating hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order
     res.status(200).json({ message: "Rides fetched successfully", rides });
   } catch (err) {
@@ -143,7 +143,7 @@ exports.requestRide = async (req, res) => {
   try {
     const { rideId, user, pickupLocation, dropoffLocation, fare, status, gender } = req.body;
 
-    const ride = await Ride.findById(rideId);
+    const ride = await Ride.findById(rideId).populate('driver', 'college');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
@@ -158,10 +158,17 @@ exports.requestRide = async (req, res) => {
         .json({ message: "You have already requested this ride" });
     }
 
-    // Get the user's information to include gender
+    // Get the user's information to include gender and check campus
     const hitcherUser = await User.findById(user);
     if (!hitcherUser) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Make sure the driver and hitcher are from the same campus
+    if (ride.driver.college !== hitcherUser.college) {
+      return res.status(400).json({ 
+        message: "You can only request rides from drivers at your campus"
+      });
     }
 
     // Add the hitcher request to the ride

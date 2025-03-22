@@ -14,10 +14,4 @@ router.get('/users', adminController.getUsers);
 // Get all rides (admin only)
 router.get('/rides', adminController.getRides);
 
-// Add an admin
-router.post('/add-admin', adminController.addAdmin);
-
-// Remove an admin
-router.post('/remove-admin', adminController.removeAdmin);
-
-module.exports = router; 
+module.exports = router;

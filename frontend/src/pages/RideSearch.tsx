@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-// Add this interface near the top of the file after imports
+// Define interface for Driver that includes college
 interface Driver {
   _id: string;
   name: string;
@@ -25,9 +25,10 @@ interface Driver {
   }
 }
 
-interface Ride {
+// Use this as a type reference but we'll work with AuthContext's Ride type
+interface RideWithCollegeInfo {
   _id: string;
-  driver: Driver;
+  driver: Driver & { college?: string }; // Make college optional since it might come from backend
   from: string;
   to: string;
   date: string;
@@ -59,11 +60,11 @@ const RideSearch: React.FC = () => {
   const [maxTime, setMaxTime] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
-  const [selectedRideDetails, setSelectedRideDetails] = useState<Ride | null>(null);
+  const [selectedRideDetails, setSelectedRideDetails] = useState<RideWithCollegeInfo | null>(null);
   const rideListRef = useRef<HTMLDivElement>(null);
   const previewSidebarRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
-  const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
+  const [filteredRides, setFilteredRides] = useState<RideWithCollegeInfo[]>([]);
 
   // Add these date calculations near the top of the component
   const today = new Date().toISOString().split("T")[0];
@@ -79,7 +80,12 @@ const RideSearch: React.FC = () => {
   // Filter rides when component mounts or when allRides or filters change
   useEffect(() => {
     if (currentUser) {
-      const filtered = allRides.filter((ride: Ride) => {
+      const filtered = allRides.filter((ride) => {
+        // Skip rides that have invalid data
+        if (!ride || !ride.driver) {
+          return false;
+        }
+        
         // Exclude cancelled rides and rides where user is already a hitcher
         if (
           ride.status === "cancelled" ||
@@ -90,6 +96,13 @@ const RideSearch: React.FC = () => {
 
         // Exclude rides where the current user is the driver
         if (ride.driver._id === currentUser?.id) {
+          return false;
+        }
+
+        // Ensure driver is from the same campus as the hitcher
+        // Access the driver's college property safely
+        const driverCollege = (ride.driver as any).college;
+        if (driverCollege && currentUser.college && driverCollege !== currentUser.college) {
           return false;
         }
 
@@ -145,7 +158,8 @@ const RideSearch: React.FC = () => {
         return ride.status === "scheduled" && ride.availableSeats > 0;
       });
 
-      setFilteredRides(filtered);
+      // Cast the filtered rides to RideWithCollegeInfo[] for type safety
+      setFilteredRides(filtered as unknown as RideWithCollegeInfo[]);
     }
   }, [allRides, currentUser, searchQuery, direction, selectedDate, minTime, maxTime, driverGender]);
 
@@ -208,6 +222,17 @@ const RideSearch: React.FC = () => {
         return;
       }
 
+      // Before requesting, ensure the driver is from the same campus
+      const driverCollege = (selectedRide.driver as any).college;
+      if (driverCollege && currentUser?.college && driverCollege !== currentUser.college) {
+        setNotification({
+          show: true,
+          message: "You can only request rides from drivers at your campus",
+          type: "error",
+        });
+        return;
+      }
+
       // Calculate estimated fare based on price per km and actual distance
       const fare = selectedRide.pricePerKm && currentUser?.distanceToCollege
     ? Math.round(selectedRide.pricePerKm * currentUser.distanceToCollege)
@@ -221,10 +246,10 @@ const RideSearch: React.FC = () => {
         pickupLocation:
           selectedRide.direction === "toCollege"
             ? currentUser?.homeAddress
-            : "PES University Electronic City Campus",
+            : currentUser?.college,
         dropoffLocation:
           selectedRide.direction === "toCollege"
-            ? "PES University Electronic City Campus"
+            ? currentUser?.college
             : currentUser?.homeAddress,
         fare: fare,
         gender: currentUser?.gender
@@ -292,7 +317,7 @@ const RideSearch: React.FC = () => {
             Find Available Rides
           </h1>
           <p className="text-gray-600">
-            Search for rides to and from PES University Electronic City Campus
+            Search for rides to and from {currentUser?.college}
           </p>
         </div>
 
@@ -429,7 +454,7 @@ const RideSearch: React.FC = () => {
                     }`}
                     onClick={() => {
                       setSelectedRideId(ride._id);
-                      setSelectedRideDetails(ride);
+                      setSelectedRideDetails(ride as RideWithCollegeInfo);
                     }}
                   >
                     <div className="flex justify-between items-start mb-4">

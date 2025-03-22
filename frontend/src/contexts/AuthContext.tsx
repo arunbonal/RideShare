@@ -15,6 +15,7 @@ interface User {
   email: string;
   name: string;
   srn: string;
+  college: string;
   gender: string;
   phone: string;
   homeAddress: string;
@@ -164,8 +165,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       phone: currentUser?.phone || "",
       gender: currentUser?.gender || "",
     },
-    from: "",
-    to: "PES University Electronic City Campus",
+    from: currentUser?.homeAddress || "",
+    to: currentUser?.college || "",
     date: "",
     direction: "toCollege",
     toCollegeTime: "08:00",
@@ -195,6 +196,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
   }, []);
+
+  // useEffect to update ride state when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setRide((prevRide) => ({
+        ...prevRide,
+        to: currentUser.college || "",
+      }));
+    }
+  }, [currentUser]);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -372,7 +383,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         gender: currentUser?.gender || "",
       },
       from: currentUser?.homeAddress || "",
-      to: "PES University Electronic City Campus",
+      to: currentUser?.college || "",
       date: "",
       direction: "toCollege",
       toCollegeTime: "08:00",
