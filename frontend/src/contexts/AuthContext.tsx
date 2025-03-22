@@ -38,12 +38,22 @@ interface User {
     };
     pricePerKm: number;
     ratingCount: number;
+    reliabilityRate: number;
+    completedRides: number;
+    totalRidesCreated: number;
+    cancelledAcceptedRides: number;
+    cancelledNonAcceptedRides: number;
   } | null;
   hitcherProfile: {
     isActive: boolean;
     completedTripsAsHitcher: number;
     rating: number;
     ratingCount: number;
+    reliabilityRate: number;
+    completedRides: number;
+    totalRidesRequested: number;
+    cancelledAcceptedRides: number;
+    cancelledPendingRides: number;
   } | null;
 }
 
@@ -56,6 +66,14 @@ export interface Ride {
     email: string;
     phone: string;
     gender: string;
+    driverProfile?: {
+      reliabilityRate: number;
+      vehicle?: {
+        model: string;
+        color: string;
+        registrationNumber: string;
+      };
+    };
   };
   hitchers?: {
     user: {
@@ -63,6 +81,9 @@ export interface Ride {
       name: string;
       email: string;
       phone: string;
+      hitcherProfile?: {
+        reliabilityRate: number;
+      };
     };
     status: string;
     pickupLocation?: string;

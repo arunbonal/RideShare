@@ -36,9 +36,11 @@ const DriverProfileSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
-  completedTripsAsDriver: {
+  reliabilityRate: {
     type: Number,
-    default: 0,
+    default: 100, // Starting at 100% reliability
+    min: 0,
+    max: 100,
   },
   rating: {
     type: Number,
@@ -47,6 +49,23 @@ const DriverProfileSchema = new mongoose.Schema({
     default: 0,
   },
   ratingCount: {
+    type: Number,
+    default: 0,
+  },
+  // New fields for tracking reliability metrics
+  completedRides: {
+    type: Number,
+    default: 0,
+  },
+  totalRidesCreated: {
+    type: Number,
+    default: 0,
+  },
+  cancelledAcceptedRides: {
+    type: Number,
+    default: 0,
+  },
+  cancelledNonAcceptedRides: {
     type: Number,
     default: 0,
   },
@@ -58,9 +77,11 @@ const HitcherProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  completedTripsAsHitcher: {
+  reliabilityRate: {
     type: Number,
-    default: 0,
+    default: 100, // Starting at 100% reliability
+    min: 0,
+    max: 100,
   },
   rating: {
     type: Number,
@@ -69,6 +90,23 @@ const HitcherProfileSchema = new mongoose.Schema({
     default: 0,
   },
   ratingCount: {
+    type: Number,
+    default: 0,
+  },
+  // New fields for tracking reliability metrics
+  completedRides: {
+    type: Number,
+    default: 0,
+  },
+  totalRidesRequested: {
+    type: Number,
+    default: 0,
+  },
+  cancelledAcceptedRides: {
+    type: Number,
+    default: 0,
+  },
+  cancelledPendingRides: {
     type: Number,
     default: 0,
   },
@@ -108,10 +146,6 @@ const UserSchema = new mongoose.Schema({
   distanceToCollege: {
     type: Number,
   },
-  reliabilityRate: {
-    type: Number,
-    default: 0,
-  },
   gender: {
     type: String,
     enum: ["male", "female"],
@@ -144,5 +178,85 @@ const UserSchema = new mongoose.Schema({
     },
   },
 });
+
+// Method to update driver reliability rate
+UserSchema.statics.updateDriverReliability = async function(userId, action) {
+  const user = await this.findById(userId);
+  if (!user || !user.driverProfile) return;
+
+  switch(action) {
+    case 'RIDE_CREATED':
+      user.driverProfile.totalRidesCreated += 1;
+      break;
+    
+    case 'RIDE_COMPLETED':
+      user.driverProfile.completedRides += 1;
+      break;
+    
+    case 'CANCEL_ACCEPTED_RIDE':
+      user.driverProfile.cancelledAcceptedRides += 1;
+      // Decrease reliability rate - heavier penalty
+      const acceptedPenalty = Math.min(10, 100 / (user.driverProfile.totalRidesCreated || 1) * 20);
+      user.driverProfile.reliabilityRate = Math.max(0, user.driverProfile.reliabilityRate - acceptedPenalty);
+      break;
+    
+    case 'CANCEL_NON_ACCEPTED_RIDE':
+      user.driverProfile.cancelledNonAcceptedRides += 1;
+      // No penalty as per requirements
+      break;
+  }
+
+  // Recalculate overall reliability rate
+  if (user.driverProfile.totalRidesCreated > 0) {
+    // Gradually increase reliability for consistent good behavior
+    if (action === 'RIDE_COMPLETED') {
+      const improvement = Math.min(3, (100 - user.driverProfile.reliabilityRate) * 0.15);
+      user.driverProfile.reliabilityRate = Math.min(100, user.driverProfile.reliabilityRate + improvement);
+    }
+  }
+
+  await user.save();
+  return user;
+};
+
+// Method to update hitcher reliability rate
+UserSchema.statics.updateHitcherReliability = async function(userId, action) {
+  const user = await this.findById(userId);
+  if (!user || !user.hitcherProfile) return;
+
+  switch(action) {
+    case 'RIDE_REQUESTED':
+      user.hitcherProfile.totalRidesRequested += 1;
+      break;
+    
+    case 'RIDE_COMPLETED':
+      user.hitcherProfile.completedRides += 1;
+      break;
+    
+    case 'CANCEL_ACCEPTED_RIDE':
+      user.hitcherProfile.cancelledAcceptedRides += 1;
+      // Decrease reliability rate - significant penalty
+      const acceptedPenalty = Math.min(10, 100 / (user.hitcherProfile.totalRidesRequested || 1) * 20);
+      user.hitcherProfile.reliabilityRate = Math.max(0, user.hitcherProfile.reliabilityRate - acceptedPenalty);
+      break;
+    
+    case 'CANCEL_PENDING_RIDE':
+      user.hitcherProfile.cancelledPendingRides += 1;
+      // No penalty as per requirements
+      break;
+  }
+
+  // Recalculate overall reliability rate
+  if (user.hitcherProfile.totalRidesRequested > 0) {
+    // Gradually increase reliability for consistent good behavior
+    if (action === 'RIDE_COMPLETED') {
+      const improvement = Math.min(3, (100 - user.hitcherProfile.reliabilityRate) * 0.15);
+      user.hitcherProfile.reliabilityRate = Math.min(100, user.hitcherProfile.reliabilityRate + improvement);
+    }
+  }
+
+  await user.save();
+  return user;
+};
 
 module.exports = mongoose.model("User", UserSchema);

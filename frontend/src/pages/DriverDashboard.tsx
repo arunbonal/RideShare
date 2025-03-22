@@ -30,6 +30,7 @@ interface User {
   srn?: string;
   hitcherProfile?: {
     rating: number;
+    reliabilityRate: number;
   };
 }
 
@@ -243,7 +244,7 @@ const DriverDashboard: React.FC = () => {
 
   const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/rides/accept`,
         {
           rideId,
@@ -251,10 +252,21 @@ const DriverDashboard: React.FC = () => {
         },
         { withCredentials: true }
       );
+      
       // Fetch fresh data to update the UI
       await fetchAllRides();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accepting request:", error);
+      // Check if the error is due to a cancelled request
+      if (error.response?.data?.alreadyCancelled) {
+        setNotification({
+          show: true,
+          message: "This ride request has already been cancelled by the hitcher.",
+          type: "error"
+        });
+        // Refresh rides to get the updated status
+        await fetchAllRides();
+      }
     }
   };
 
@@ -294,6 +306,7 @@ const DriverDashboard: React.FC = () => {
         hitcherGender: hitcher.user.gender || "Not specified",
         hitcherSRN: hitcher.user.srn ? `${hitcher.user.srn.slice(0, -3)}XXX` : undefined,
         hitcherRating: hitcher.user.hitcherProfile?.rating || 0,
+        hitcherReliability: hitcher.user.hitcherProfile?.reliabilityRate || 100,
         rideDirection: ride.direction,
         pickupLocation: hitcher.pickupLocation || "Not specified",
         dropoffLocation: hitcher.dropoffLocation || "Not specified",
@@ -638,6 +651,15 @@ const DriverDashboard: React.FC = () => {
                             )}
                             <p className="text-sm text-gray-500">
                               Rating: {request.hitcherRating.toFixed(1)}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Reliability: <span className={`font-medium ${
+                                request.hitcherReliability > 80 ? 'text-green-600' : 
+                                request.hitcherReliability > 60 ? 'text-yellow-600' : 
+                                'text-red-600'
+                              }`}>
+                                {request.hitcherReliability.toFixed(1)}%
+                              </span>
                             </p>
                             <p className="text-xs text-gray-500 italic mt-2">
                               Hitcher's name and phone number will be visible once you accept the ride request

@@ -16,10 +16,12 @@ interface Driver {
   gender: string;
   srn?: string;
   driverProfile?: {
-    vehicle: {
+    vehicle?: {
       model: string;
       color: string;
-    }
+      registrationNumber?: string;
+    };
+    reliabilityRate?: number;
   }
 }
 
@@ -590,6 +592,17 @@ const RideSearch: React.FC = () => {
                           {selectedRideDetails.driver.srn && (
                             <p className="text-sm text-gray-600">
                               SRN: {selectedRideDetails.driver.srn.slice(0, -3) + 'XXX'}
+                            </p>
+                          )}
+                          {selectedRideDetails.driver.driverProfile?.reliabilityRate !== undefined && (
+                            <p className="text-sm text-gray-600">
+                              Reliability: <span className={`font-medium ${
+                                selectedRideDetails.driver.driverProfile.reliabilityRate > 80 ? 'text-green-600' : 
+                                selectedRideDetails.driver.driverProfile.reliabilityRate > 60 ? 'text-yellow-600' : 
+                                'text-red-600'
+                              }`}>
+                                {selectedRideDetails.driver.driverProfile.reliabilityRate.toFixed(1)}%
+                              </span>
                             </p>
                           )}
                           <p className="text-sm text-gray-500 italic mt-2">

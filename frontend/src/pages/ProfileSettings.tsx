@@ -61,14 +61,40 @@ const ProfileSettings: React.FC = () => {
           </div>
 
           <div className="p-6">
-            <div className="flex items-center mb-6">
-              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-                <User className="h-8 w-8 text-blue-600" />
+            <div className="flex items-start mb-6">
+              <div className="flex-shrink-0">
+                <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-blue-600" />
+                </div>
               </div>
               <div className="ml-4">
-                <h2 className="text-xl font-semibold">{currentUser.name}</h2>
+                <h2 className="text-xl font-bold">{currentUser.name}</h2>
                 <p className="text-gray-600">{currentUser.email}</p>
                 <p className="text-gray-600">SRN: {currentUser.srn}</p>
+                {currentUser.activeRoles.driver && currentUser.driverProfile && (
+                  <p className="text-sm mt-2 font-medium">
+                    <span className="text-gray-600">Driver Reliability: </span>
+                    <span className={`${
+                      currentUser.driverProfile.reliabilityRate > 80 ? 'text-green-600' : 
+                      currentUser.driverProfile.reliabilityRate > 60 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {currentUser.driverProfile.reliabilityRate.toFixed(1)}%
+                    </span>
+                  </p>
+                )}
+                {currentUser.activeRoles.hitcher && currentUser.hitcherProfile && (
+                  <p className="text-sm mt-2 font-medium">
+                    <span className="text-gray-600">Hitcher Reliability: </span>
+                    <span className={`${
+                      currentUser.hitcherProfile.reliabilityRate > 90 ? 'text-green-600' : 
+                      currentUser.hitcherProfile.reliabilityRate > 70 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {currentUser.hitcherProfile.reliabilityRate.toFixed(1)}%
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
 

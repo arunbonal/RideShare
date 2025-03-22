@@ -1,9 +1,14 @@
 const Ride = require("../models/Ride");
+const User = require("../models/User");
 
 exports.createRide = async (req, res) => {
   try {
     const newRide = new Ride(req.body);
     const savedRide = await newRide.save();
+
+    // Update driver reliability metrics
+    await User.updateDriverReliability(savedRide.driver, 'RIDE_CREATED');
+
     res
       .status(200)
       .json({ message: "Ride created successfully", ride: savedRide });
@@ -19,8 +24,8 @@ exports.createRide = async (req, res) => {
 exports.getRides = async (req, res) => {
   try {
     const rides = await Ride.find()
-      .populate("driver", "name email phone gender srn driverProfile.vehicle.model driverProfile.vehicle.color driverProfile.vehicle.registrationNumber")
-      .populate("hitchers.user", "name email phone gender srn hitcherProfile.rating")
+      .populate("driver", "name email phone gender srn driverProfile.vehicle.model driverProfile.vehicle.color driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
+      .populate("hitchers.user", "name email phone gender srn hitcherProfile.rating hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order
     res.status(200).json({ message: "Rides fetched successfully", rides });
   } catch (err) {
@@ -74,10 +79,26 @@ exports.cancelRide = async (req, res) => {
           read: false,
           createdAt: new Date()
         });
+
+        // Update hitcher reliability - they cancelled an accepted ride
+        await User.updateHitcherReliability(hitcherId, 'CANCEL_ACCEPTED_RIDE');
+      } else {
+        // Hitcher cancelled a pending ride - no reliability penalty
+        await User.updateHitcherReliability(hitcherId, 'CANCEL_PENDING_RIDE');
       }
     } else {
       // Driver is canceling the entire ride
       ride.status = 'cancelled';
+
+      // Check if there are any accepted hitchers
+      const hasAcceptedHitchers = ride.hitchers && ride.hitchers.some(h => h.status === 'accepted');
+      
+      // Update driver reliability based on whether there were accepted hitchers
+      if (hasAcceptedHitchers) {
+        await User.updateDriverReliability(ride.driver._id, 'CANCEL_ACCEPTED_RIDE');
+      } else {
+        await User.updateDriverReliability(ride.driver._id, 'CANCEL_NON_ACCEPTED_RIDE');
+      }
 
       // Update all pending and accepted hitchers to cancelled-by-driver
       if (ride.hitchers && ride.hitchers.length > 0) {
@@ -132,7 +153,6 @@ exports.requestRide = async (req, res) => {
     }
 
     // Get the user's information to include gender
-    const User = require("../models/User");
     const hitcherUser = await User.findById(user);
     if (!hitcherUser) {
       return res.status(404).json({ message: "User not found" });
@@ -148,6 +168,9 @@ exports.requestRide = async (req, res) => {
       requestTime: new Date(),
       gender: gender || hitcherUser.gender // Use provided gender or get from user
     });
+
+    // Update hitcher reliability
+    await User.updateHitcherReliability(user, 'RIDE_REQUESTED');
 
     await ride.save();
     res.status(200).json({ message: "Ride request sent successfully" });
@@ -176,6 +199,14 @@ exports.acceptRide = async (req, res) => {
     
     if (!hitcher) {
       return res.status(404).json({ message: "Hitcher not found in this ride" });
+    }
+
+    // Check if the hitcher has already cancelled their request
+    if (hitcher.status === "cancelled") {
+      return res.status(400).json({ 
+        message: "Cannot accept this request as the hitcher has already cancelled it",
+        alreadyCancelled: true
+      });
     }
 
     hitcher.status = "accepted";
@@ -311,6 +342,30 @@ exports.updateRideStatus = async (req, res) => {
     }
     
     ride.status = status;
+    
+    // If the ride is completed, update reliability metrics for driver and all accepted hitchers
+    if (status === 'completed') {
+      // Update driver completion metrics
+      await User.updateDriverReliability(ride.driver, 'RIDE_COMPLETED');
+      
+      // Update all accepted hitchers' completion metrics
+      if (ride.hitchers && ride.hitchers.length > 0) {
+        const acceptedHitchers = ride.hitchers.filter(h => h.status === 'accepted');
+        for (const hitcher of acceptedHitchers) {
+          await User.updateHitcherReliability(hitcher.user, 'RIDE_COMPLETED');
+        }
+      }
+    } else if (status === 'cancelled') {
+      // Handle cancellation reliability similar to cancelRide function
+      const hasAcceptedHitchers = ride.hitchers && ride.hitchers.some(h => h.status === 'accepted');
+      
+      if (hasAcceptedHitchers) {
+        await User.updateDriverReliability(ride.driver, 'CANCEL_ACCEPTED_RIDE');
+      } else {
+        await User.updateDriverReliability(ride.driver, 'CANCEL_NON_ACCEPTED_RIDE');
+      }
+    }
+    
     await ride.save();
     
     res.json({ 

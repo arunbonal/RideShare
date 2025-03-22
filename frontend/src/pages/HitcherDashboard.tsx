@@ -16,6 +16,7 @@ interface ExtendedRide extends Ride {
     phone: string;
     gender: string;
     driverProfile?: {
+      reliabilityRate: number;
       vehicle?: {
         model: string;
         color: string;
@@ -615,8 +616,11 @@ const HitcherDashboard: React.FC = () => {
                           </div>
                         )}
                         
-                        {/* Only show cancel button for accepted rides that are scheduled and in upcoming tab */}
-                        {(hitcherInfo.status === 'accepted' && ride.status !== 'in-progress' && ride.status !== 'completed' && activeTab === "upcoming") && (
+                        {/* Show cancel button for both pending and accepted rides in upcoming tab */}
+                        {((hitcherInfo.status === 'accepted' || hitcherInfo.status === 'pending') && 
+                          ride.status !== 'in-progress' && 
+                          ride.status !== 'completed' && 
+                          activeTab === "upcoming") && (
                           <button
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
