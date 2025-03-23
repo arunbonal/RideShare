@@ -87,8 +87,8 @@ const ProfileSettings: React.FC = () => {
                   <p className="text-sm mt-2 font-medium">
                     <span className="text-gray-600">Hitcher Reliability: </span>
                     <span className={`${
-                      currentUser.hitcherProfile.reliabilityRate > 90 ? 'text-green-600' : 
-                      currentUser.hitcherProfile.reliabilityRate > 70 ? 'text-yellow-600' : 
+                      currentUser.hitcherProfile.reliabilityRate > 80 ? 'text-green-600' : 
+                      currentUser.hitcherProfile.reliabilityRate > 60 ? 'text-yellow-600' : 
                       'text-red-600'
                     }`}>
                       {currentUser.hitcherProfile.reliabilityRate.toFixed(1)}%

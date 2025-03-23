@@ -6,10 +6,10 @@ load more button to fetch more rides (for hitcher)
 in ride request, driver should know which ride is being requested
 fromCollegeTime not displaying in rideSearch
 handle unrefreshed conditions
-color of rr in profile settings
 remove admin management tab
 add phone no., remove srn, 
 add edit and delete privileges
+profile admin approval
 
 
 
