@@ -58,6 +58,16 @@ const DriverDashboard: React.FC = () => {
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
+  const [requestModal, setRequestModal] = useState<{
+    show: boolean;
+    rideId: string;
+  }>(
+    {
+      show: false,
+      rideId: ""
+    }
+  );
+  const [currentRequestIndex, setCurrentRequestIndex] = useState(0);
   
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -255,6 +265,19 @@ const DriverDashboard: React.FC = () => {
       
       // Fetch fresh data to update the UI
       await fetchAllRides();
+      
+      // Show success notification
+      setNotification({
+        show: true,
+        message: "Request accepted successfully",
+        type: "success"
+      });
+      
+      // Check if this was the last request for this ride
+      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
+      if (remainingRequests.length === 0) {
+        closeRequestModal();
+      }
     } catch (error: any) {
       console.error("Error accepting request:", error);
       // Check if the error is due to a cancelled request
@@ -280,8 +303,22 @@ const DriverDashboard: React.FC = () => {
         },
         { withCredentials: true }
       );
+      
       // Fetch fresh data to update the UI
       await fetchAllRides();
+      
+      // Show success notification
+      setNotification({
+        show: true,
+        message: "Request declined successfully",
+        type: "success"
+      });
+      
+      // Check if this was the last request for this ride
+      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
+      if (remainingRequests.length === 0) {
+        closeRequestModal();
+      }
     } catch (error) {
       console.error("Error rejecting request:", error);
     }
@@ -322,6 +359,50 @@ const DriverDashboard: React.FC = () => {
           .filter(Boolean) || []
       }))
   );
+
+  // Add function to get requests for a specific ride
+  const getRequestsForRide = (rideId: string) => {
+    return pendingRequests.filter(request => request.rideId === rideId);
+  };
+
+  // Add closeModal function
+  const closeRequestModal = () => {
+    setRequestModal({
+      show: false,
+      rideId: ""
+    });
+    setCurrentRequestIndex(0);
+  };
+
+  // Add function to handle next and previous navigation in modal
+  const handleRequestNavigation = (direction: "next" | "prev") => {
+    const requests = getRequestsForRide(requestModal.rideId);
+    
+    if (direction === "next") {
+      setCurrentRequestIndex(prev => 
+        prev === requests.length - 1 ? 0 : prev + 1
+      );
+    } else {
+      setCurrentRequestIndex(prev => 
+        prev === 0 ? requests.length - 1 : prev - 1
+      );
+    }
+  };
+
+  // Add effect to ensure currentRequestIndex is valid
+  useEffect(() => {
+    if (requestModal.show) {
+      const requests = getRequestsForRide(requestModal.rideId);
+      // If current index is out of bounds, reset to 0 or close modal if empty
+      if (currentRequestIndex >= requests.length) {
+        if (requests.length > 0) {
+          setCurrentRequestIndex(0);
+        } else {
+          closeRequestModal();
+        }
+      }
+    }
+  }, [pendingRequests, requestModal, currentRequestIndex]);
 
   return (
     <>
@@ -373,9 +454,9 @@ const DriverDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {/* Main content */}
-          <div className="lg:col-span-2">
+          <div>
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-6">
               <nav className="flex -mb-px">
@@ -534,6 +615,22 @@ const DriverDashboard: React.FC = () => {
                           direction={ride.direction}
                         />
                       </div>
+
+                      {getRequestsForRide(ride._id).length > 0 && (
+                        <button
+                          onClick={() => {
+                            setRequestModal({
+                              show: true,
+                              rideId: ride._id
+                            });
+                            setCurrentRequestIndex(0);
+                          }}
+                          className="mt-4 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
+                        >
+                          <Users className="h-5 w-5 mr-2" />
+                          View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                        </button>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -615,130 +712,181 @@ const DriverDashboard: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Sidebar */}
-          <div>
-            {/* Ride requests - only show for upcoming rides */}
-            {activeTab === "upcoming" && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Ride Requests ({pendingRequests.length})
-                </h2>
-
-                {pendingRequests.length > 0 ? (
-                  <div className="space-y-4">
-                    {pendingRequests.map((request) => (
-                      <div
-                        key={request.hitcherId}
-                        className="border border-gray-200 rounded-md p-4"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-medium text-gray-900">
-                              Hitcher Request
-                            </h3>
-                            <h3 className="font-medium text-gray-900">
-                            Fare : ₹ {request.fare}
-                            <br />
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              Gender: {request.hitcherGender ? request.hitcherGender.charAt(0).toUpperCase() + request.hitcherGender.slice(1) : 'Not specified'}
-                            </p>
-                            {request.hitcherSRN && (
-                              <p className="text-sm text-gray-600">
-                                SRN: {request.hitcherSRN}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-500">
-                              Rating: {request.hitcherRating.toFixed(1)}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Reliability: <span className={`font-medium ${
-                                request.hitcherReliability > 80 ? 'text-green-600' : 
-                                request.hitcherReliability > 60 ? 'text-yellow-600' : 
-                                'text-red-600'
-                              }`}>
-                                {request.hitcherReliability.toFixed(1)}%
-                              </span>
-                            </p>
-                            <p className="text-xs text-gray-500 italic mt-2">
-                              Hitcher's name and phone number will be visible once you accept the ride request
-                            </p>
-                          </div>
-                          <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                            Pending
-                          </span>
-                        </div>
-
-                        <div className="space-y-2 mb-3">
-                          <div className="flex items-start">
-                            <Clock className="h-4 w-4 text-gray-500 mr-1 mt-0.5" />
-                            <p className="text-sm text-gray-600">
-                              Requested{" "}
-                              {format(
-                                new Date(request.requestTime),
-                                "MMM d, h:mm a"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-md text-red-700 mb-3">
-                          Your Route after accepting this ride :      
-                        </p>
-                        {/* Map Preview for Ride Requests */}
-                        <div className="mb-4">
-                          <MapPreview
-                            startLocation={request.rideDirection === "fromCollege" ? request.from : request.from}
-                            endLocation={request.rideDirection === "fromCollege" ? request.to : request.to}
-                            userLocation={[
-                              ...request.acceptedHitchersLocations,
-                              request.rideDirection === "toCollege" ? request.pickupLocation : request.dropoffLocation
-                            ].filter(Boolean).join("|")}
-                            direction={request.rideDirection}
-                            isAcceptedLocation={(location) => request.acceptedHitchersLocations.includes(location)}
-                          />
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() =>
-                              handleAcceptRequest(
-                                request.rideId,
-                                request.hitcherId
-                              )
-                            }
-                            className="flex-1 bg-green-600 text-white px-3 py-1.5 rounded text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleRejectRequest(
-                                request.rideId,
-                                request.hitcherId
-                              )
-                            }
-                            className="flex-1 bg-white text-gray-700 px-3 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">
-                      No pending ride requests
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
+      {/* Request Modal */}
+      {requestModal.show && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full max-h-90vh overflow-y-auto">
+            {(() => {
+              // Get the current request and ride
+              const requests = getRequestsForRide(requestModal.rideId);
+              const ride = upcomingRides.find(r => r._id === requestModal.rideId);
+              
+              // Automatically close modal if there are no requests
+              if (requests.length === 0) {
+                // Use setTimeout to avoid state updates during render
+                setTimeout(() => {
+                  closeRequestModal();
+                }, 0);
+                
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-lg text-gray-700 mb-4">All requests have been processed</p>
+                    <button
+                      onClick={closeRequestModal}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                    >
+                      Close
+                    </button>
+                  </div>
+                );
+              }
+              
+              if (!ride) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-lg text-gray-700 mb-4">Ride not found</p>
+                    <button
+                      onClick={closeRequestModal}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                    >
+                      Close
+                    </button>
+                  </div>
+                );
+              }
+              
+              const currentRequest = requests[currentRequestIndex];
+              
+              return (
+                <>
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Ride Requests ({currentRequestIndex + 1}/{requests.length})
+                    </h2>
+                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {ride.direction === "toCollege" ? "To College" : "From College"} · 
+                      {format(new Date(ride.date), " EEE, MMM d")} · 
+                      {ride.direction === "toCollege" 
+                        ? formatTime(ride.toCollegeTime || "") 
+                        : formatTime(ride.fromCollegeTime || "")}
+                    </div>
+                  </div>
+                  
+                  <div
+                    key={currentRequest.hitcherId}
+                    className="border border-gray-200 rounded-md p-4"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          Hitcher Request
+                        </h3>
+                        <h3 className="font-medium text-gray-900">
+                          Fare: ₹{currentRequest.fare}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Gender: {currentRequest.hitcherGender ? currentRequest.hitcherGender.charAt(0).toUpperCase() + currentRequest.hitcherGender.slice(1) : 'Not specified'}
+                        </p>
+                        {currentRequest.hitcherSRN && (
+                          <p className="text-sm text-gray-600">
+                            SRN: {currentRequest.hitcherSRN}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600">
+                          Rating: {currentRequest.hitcherRating.toFixed(1)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Reliability: <span className={`font-medium ${
+                            currentRequest.hitcherReliability > 80 ? 'text-green-600' : 
+                            currentRequest.hitcherReliability > 60 ? 'text-yellow-600' : 
+                            'text-red-600'
+                          }`}>
+                            {currentRequest.hitcherReliability.toFixed(1)}%
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500 italic mt-2">
+                          Hitcher's name and phone number will be visible once you accept the ride request
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-end">
+                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm mb-2">
+                          Pending
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          Requested {format(new Date(currentRequest.requestTime), "MMM d, h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-md text-red-700 mb-3">
+                      Your Route after accepting this ride:
+                    </p>
+                    
+                    {/* Map Preview for Ride Request */}
+                    <div className="mb-4">
+                      <MapPreview
+                        startLocation={currentRequest.rideDirection === "fromCollege" ? currentRequest.from : currentRequest.from}
+                        endLocation={currentRequest.rideDirection === "fromCollege" ? currentRequest.to : currentRequest.to}
+                        userLocation={[
+                          ...currentRequest.acceptedHitchersLocations,
+                          currentRequest.rideDirection === "toCollege" ? currentRequest.pickupLocation : currentRequest.dropoffLocation
+                        ].filter(Boolean).join("|")}
+                        direction={currentRequest.rideDirection}
+                        isAcceptedLocation={(location) => currentRequest.acceptedHitchersLocations.includes(location)}
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-3 mt-4">
+                      <button
+                        onClick={() => handleAcceptRequest(currentRequest.rideId, currentRequest.hitcherId)}
+                        className="flex-1 bg-green-600 text-white px-3 py-2 rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                      >
+                        Accept Request
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(currentRequest.rideId, currentRequest.hitcherId)}
+                        className="flex-1 bg-white text-gray-700 px-3 py-2 rounded-md text-sm border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                      >
+                        Decline Request
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 flex justify-between items-center">
+                    <button
+                      onClick={() => handleRequestNavigation("prev")}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
+                      disabled={requests.length <= 1}
+                    >
+                      Previous Request
+                    </button>
+                    
+                    <button
+                      onClick={closeRequestModal}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
+                    >
+                      Close
+                    </button>
+                    
+                    <button
+                      onClick={() => handleRequestNavigation("next")}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
+                      disabled={requests.length <= 1}
+                    >
+                      Next Request
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </>
   );
 };

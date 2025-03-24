@@ -117,6 +117,11 @@ const RideCreation: React.FC = () => {
       return;
     }
 
+    if (ride.availableSeats > 6) {
+      alert("Cannot schedule rides for more than 6 passengers");
+      return;
+    }
+
     try {
       // Format the ride data to match the backend schema
       const rideData = {
@@ -431,8 +436,8 @@ const RideCreation: React.FC = () => {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 rows={3}
-                placeholder="Be there at the pickup point in time...
-                "
+                placeholder= {`Be there at the pickup point in time...\nMeet me at the parking lot at the scheduled time...`}
+
               />
             </div>
 

@@ -624,21 +624,28 @@ const HitcherDashboard: React.FC = () => {
                           </div>
                           {activeTab === "past" ? (
                             <>
-                              <div className="flex items-center text-gray-600">
-                                <MapPin className="h-5 w-5 mr-2" />
-                                Your Address: {hitcherInfo.pickupLocation || hitcherInfo.dropoffLocation || "Not specified"}
-                              </div>
-                              {ride.direction === "toCollege" && (
-                                <div className="flex items-center text-gray-600">
-                                  <MapPin className="h-5 w-5 mr-2" />
-                                  To: {ride.to}
-                                </div>
-                              )}
-                              {ride.direction === "fromCollege" && (
-                                <div className="flex items-center text-gray-600">
-                                  <MapPin className="h-5 w-5 mr-2" />
-                                  From: {ride.from}
-                                </div>
+                              {ride.direction === "toCollege" ? (
+                                <>
+                                  <div className="flex items-center text-gray-600">
+                                    <MapPin className="h-5 w-5 mr-2" />
+                                    From: {hitcherInfo.pickupLocation || "Your Address"}
+                                  </div>
+                                  <div className="flex items-center text-gray-600">
+                                    <MapPin className="h-5 w-5 mr-2" />
+                                    To: {ride.to}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center text-gray-600">
+                                    <MapPin className="h-5 w-5 mr-2" />
+                                    From: {ride.from}
+                                  </div>
+                                  <div className="flex items-center text-gray-600">
+                                    <MapPin className="h-5 w-5 mr-2" />
+                                    To: {hitcherInfo.dropoffLocation || "Your Address"}
+                                  </div>
+                                </>
                               )}
                             </>
                           ) : (
