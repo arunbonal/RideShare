@@ -42,6 +42,7 @@ import ProfileSettings from "./pages/ProfileSettings";
 import RoleDetails from "./pages/RoleDetails";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminUserDetails from "./pages/AdminUserDetails";
 
 function App() {
   return (
@@ -148,6 +149,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users/:id" 
+              element={
+                <AdminRoute>
+                  <AdminUserDetails />
                 </AdminRoute>
               } 
             />

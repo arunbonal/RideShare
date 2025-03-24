@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Clock, Filter, X, Navigation, Calendar, Car } from "lucide-react";
+import { Search, MapPin, Clock, Filter, X, Navigation, Calendar, Car, XCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
@@ -61,8 +61,9 @@ const RideSearch: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
   const [selectedRideDetails, setSelectedRideDetails] = useState<RideWithCollegeInfo | null>(null);
+  const [showRideDetailsModal, setShowRideDetailsModal] = useState(false);
   const rideListRef = useRef<HTMLDivElement>(null);
-  const previewSidebarRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
   const [filteredRides, setFilteredRides] = useState<RideWithCollegeInfo[]>([]);
   const [ridesLoaded, setRidesLoaded] = useState(false);
@@ -112,12 +113,28 @@ const RideSearch: React.FC = () => {
           return false;
         }
         
-        // Exclude cancelled rides and rides where user is already a hitcher
-        if (
-          ride.status === "cancelled" ||
-          ride.hitchers?.some((h) => h.user?._id === currentUser.id)
-        ) {
+        // Get hitcher status if user has requested this ride
+        const hitcherStatus = ride.hitchers?.find(h => h.user?._id === currentUser.id)?.status;
+        
+        // If the ride is accepted, show a notification to the user
+        if (hitcherStatus === "accepted" && !localStorage.getItem(`ride-accepted-${ride._id}`)) {
+          setNotification({
+            show: true,
+            message: "One of your ride requests has been accepted!",
+            type: "success"
+          });
+          // Store in localStorage to prevent showing the notification again
+          localStorage.setItem(`ride-accepted-${ride._id}`, "true");
+        }
+        
+        // Exclude cancelled rides
+        if (ride.status === "cancelled") {
           return false;
+        }
+        
+        // Show rides the user is already part of (with status)
+        if (hitcherStatus) {
+          return true;
         }
 
         // Exclude rides where the current user is the driver
@@ -200,21 +217,17 @@ const RideSearch: React.FC = () => {
     setSelectedRideDetails(null);
   }, [searchQuery, selectedDate, direction, minTime, maxTime]);
 
-  // Update the click outside handler
+  // Update the click outside handler to work with modal
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (
-        selectedRideId && // Only check if there's a selected ride
+        modalRef.current && 
+        !modalRef.current.contains(target) &&
         !rideListRef.current?.contains(target) &&
-        !previewSidebarRef.current?.contains(target) &&
-        !searchBarRef.current?.contains(target) &&
-        !target.closest("input") && // Prevent deselection when clicking any input
-        !target.closest("select") && // Prevent deselection when clicking any select
-        !target.closest("button") // Prevent deselection when clicking any button
+        showRideDetailsModal
       ) {
-        setSelectedRideId(null);
-        setSelectedRideDetails(null);
+        closeRideDetailsModal();
       }
     };
 
@@ -222,7 +235,21 @@ const RideSearch: React.FC = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [selectedRideId]);
+  }, [showRideDetailsModal]);
+
+  // Close modal function
+  const closeRideDetailsModal = () => {
+    setShowRideDetailsModal(false);
+    setSelectedRideId(null);
+    setSelectedRideDetails(null);
+  };
+
+  // Update the function to open the modal when a ride is selected
+  const handleRideSelection = (ride: RideWithCollegeInfo) => {
+    setSelectedRideId(ride._id);
+    setSelectedRideDetails(ride);
+    setShowRideDetailsModal(true);
+  };
 
   // Add useEffect for notification auto-dismiss
   useEffect(() => {
@@ -470,212 +497,82 @@ const RideSearch: React.FC = () => {
             </div>
 
             {filteredRides.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Ride listings */}
-                <div
-                  className={`${
-                    filteredRides.length > 0 ? "lg:col-span-2" : "lg:col-span-3"
-                  }`}
-                  ref={rideListRef}
-                >
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    {filteredRides.length}{" "}
-                    {filteredRides.length === 1 ? "Ride" : "Rides"} Available
-                  </h2>
+              <div className="space-y-6" ref={rideListRef}>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  {filteredRides.length}{" "}
+                  {filteredRides.length === 1 ? "Ride" : "Rides"} Available
+                </h2>
 
-                  <div className="space-y-6">
-                    {filteredRides.map((ride) => (
-                      <div
-                        key={ride._id}
-                        className={`bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all ${
-                          selectedRideId === ride._id ? "ring-2 ring-blue-500" : ""
-                        }`}
-                        onClick={() => {
-                          setSelectedRideId(ride._id);
-                          setSelectedRideDetails(ride as RideWithCollegeInfo);
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">
-                              {ride.direction === "toCollege"
-                                ? "To College"
-                                : "From College"}
-                            </h3>
-                            <p className="text-gray-500">
-                              {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                            </p>
-                          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredRides.map((ride) => (
+                    <div
+                      key={ride._id}
+                      className="bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all hover:shadow-lg border border-gray-200 hover:border-blue-300"
+                      onClick={() => handleRideSelection(ride)}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {ride.direction === "toCollege"
+                              ? "To College"
+                              : "From College"}
+                          </h3>
+                          <p className="text-gray-500">
+                            {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          {/* Show request status if user has requested this ride */}
+                          {ride.hitchers?.some(h => h.user?._id === currentUser?.id) && (
+                            <span className={`mb-2 px-2 py-1 text-xs font-medium rounded-full ${
+                              ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "accepted"
+                                ? "bg-green-100 text-green-800"
+                                : ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}>
+                              {ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "accepted"
+                                ? "Accepted"
+                                : ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "pending"
+                                ? "Pending"
+                                : "Rejected"}
+                            </span>
+                          )}
                           <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full">
                             {ride.availableSeats} seats left
                           </span>
                         </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center text-gray-600">
-                            <Clock className="h-5 w-5 mr-2" />
-                            {ride.direction === "toCollege"
-                              ? formatTime(ride.toCollegeTime)
-                              : formatTime(ride.fromCollegeTime)}
-                          </div>
-                          <div className="flex items-center text-gray-600">
-                            <MapPin className="h-5 w-5 mr-2" />
-                            From: {ride.from}
-                          </div>
-                          <div className="flex items-center text-gray-600">
-                            <MapPin className="h-5 w-5 mr-2" />
-                            To: {ride.to}
-                          </div>
-                        </div>
-
-                        {ride.note && (
-                          <p className="mt-4 text-sm text-gray-500 italic">
-                            Note: {ride.note}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Selected ride details - Only show if there are rides available */}
-                {selectedRideDetails && (
-                  <div ref={previewSidebarRef}>
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-4">
-                      {/* Map Preview */}
-                      <div className="h-48 bg-gray-100 relative">
-                        <MapPreview
-                          startLocation={selectedRideDetails.from}
-                          endLocation={selectedRideDetails.to}
-                          userLocation={currentUser?.homeAddress ? `${currentUser.homeAddress} (Your Address)` : currentUser?.homeAddress}
-                          direction={selectedRideDetails.direction}
-                        />
                       </div>
 
-                      <div className="p-6">
-                        {/* Route Information */}
-                        <div className="mb-6">
-                          <h3 className="font-semibold text-gray-900 mb-3">
-                            Route Details
-                          </h3>
-                          <div className="space-y-4">
-                            {/* Start Location */}
-                            <div className="flex items-start">
-                              <div className="flex-shrink-0 mt-1">
-                                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                              </div>
-                              <div className="ml-3 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  Start
-                                </p>
-                                <p className="text-sm text-gray-500 break-words">
-                                  {selectedRideDetails.from}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Vertical Line */}
-                            <div className="ml-1 h-8 border-l-2 border-dashed border-gray-200"></div>
-
-                            {/* Time and Date */}
-                            <div className="mt-4 bg-gray-50 rounded-md p-3">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-2" />
-                                <span>
-                                  {selectedRideDetails.direction === "toCollege"
-                                    ? formatTime(selectedRideDetails.toCollegeTime)
-                                    : formatTime(selectedRideDetails.fromCollegeTime)}
-                                </span>
-                              </div>
-                              {selectedRideDetails.direction === "toCollege" && <div className="text-xs text-red-500 mb-2">
-                              (This is the time that the driver will leave from their home, you can contact them and coordinate the pickup time once your ride is accepted)
-                              </div>}
-                              <div className="flex items-center text-sm text-gray-600 mt-2">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                <span>
-                                  {format(new Date(selectedRideDetails.date), "EEEE, MMMM d, yyyy")}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Distance and Fare Information */}
-                            <div className="mt-4 bg-blue-50 rounded-md p-3">
-                              <div className="text-sm text-gray-800">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span>Distance: {currentUser?.distanceToCollege} km</span>
-            
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span>Fare: ₹{selectedRideDetails.pricePerKm && currentUser?.distanceToCollege
-                                      ? Math.round(selectedRideDetails.pricePerKm * currentUser.distanceToCollege)
-                                      : "0.00"}</span>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                  Fare calculated based on ₹{selectedRideDetails.pricePerKm}/km
-                                </p>
-                              </div>
-                            </div>
-                          </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-600">
+                          <Clock className="h-5 w-5 mr-2" />
+                          {ride.direction === "toCollege"
+                            ? formatTime(ride.toCollegeTime)
+                            : formatTime(ride.fromCollegeTime)}
                         </div>
-
-                        {/* Clear divider */}
-                        <div className="border-t border-gray-200 my-6"></div>
-
-                        {/* Driver Information */}
-                        <div className="pt-2">
-                          <h3 className="font-semibold text-gray-900 mb-4">
-                            Driver Information
-                          </h3>
-                          <div className="flex items-center mb-6">
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                              <Car className="h-5 w-5 text-gray-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium truncate">
-                                {selectedRideDetails.driver.driverProfile?.vehicle?.model && 
-                                 selectedRideDetails.driver.driverProfile?.vehicle?.color ? 
-                                  `Vehicle: ${selectedRideDetails.driver.driverProfile.vehicle.model} (${selectedRideDetails.driver.driverProfile.vehicle.color})` : 
-                                  'Vehicle details not available'}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Gender: {selectedRideDetails.driver.gender ? selectedRideDetails.driver.gender.charAt(0).toUpperCase() + selectedRideDetails.driver.gender.slice(1) : 'Not specified'}
-                              </p>
-                              {selectedRideDetails.driver.srn && (
-                                <p className="text-sm text-gray-600">
-                                  SRN: {selectedRideDetails.driver.srn.slice(0, -3) + 'XXX'}
-                                </p>
-                              )}
-                              {selectedRideDetails.driver.driverProfile?.reliabilityRate !== undefined && (
-                                <p className="text-sm text-gray-600">
-                                  Reliability: <span className={`font-medium ${
-                                    selectedRideDetails.driver.driverProfile.reliabilityRate > 80 ? 'text-green-600' : 
-                                    selectedRideDetails.driver.driverProfile.reliabilityRate > 60 ? 'text-yellow-600' : 
-                                    'text-red-600'
-                                  }`}>
-                                    {selectedRideDetails.driver.driverProfile.reliabilityRate.toFixed(1)}%
-                                  </span>
-                                </p>
-                              )}
-                              <p className="text-sm text-gray-500 italic mt-2">
-                                Driver's name, phone number and vehicle's registration number will be visible once your ride request is accepted
-                              </p>
-                              <p className="text-sm text-gray-500 italic mt-2">
-                                Note: Your name and phone number will not be shown to the driver until they accept your ride request.
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => handleRequestRide(selectedRideDetails._id)}
-                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                          >
-                            Request This Ride
-                          </button>
+                        <div className="flex items-center text-gray-600">
+                          <MapPin className="h-5 w-5 mr-2" />
+                          From: {ride.from}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <MapPin className="h-5 w-5 mr-2" />
+                          To: {ride.to}
                         </div>
                       </div>
+
+                      {ride.note && ride.note.length > 50 ? (
+                        <p className="mt-4 text-sm text-gray-500 italic">
+                          Note: {ride.note.substring(0, 50)}...
+                        </p>
+                      ) : ride.note ? (
+                        <p className="mt-4 text-sm text-gray-500 italic">
+                          Note: {ride.note}
+                        </p>
+                      ) : null}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6 text-center">
@@ -704,6 +601,186 @@ const RideSearch: React.FC = () => {
             <p className="text-gray-500">
               Please select a date to see available rides for that day
             </p>
+          </div>
+        )}
+
+        {/* Ride Details Modal */}
+        {showRideDetailsModal && selectedRideDetails && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 overflow-y-auto p-4">
+            <div 
+              ref={modalRef}
+              className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Close button */}
+              <div className="sticky top-0 bg-white z-10 p-4 border-b flex justify-between items-center">
+                <h3 className="text-xl font-semibold">Ride Details</h3>
+                <button 
+                  onClick={closeRideDetailsModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {/* Map Preview - Properly contained with enough space */}
+                <div className="relative mb-8">
+                  <MapPreview
+                    startLocation={selectedRideDetails.from}
+                    endLocation={selectedRideDetails.to}
+                    userLocation={currentUser?.homeAddress || ""}
+                    direction={selectedRideDetails.direction}
+                    className="shadow-sm rounded-lg overflow-hidden"
+                    hitcherNames={currentUser ? [currentUser.name] : []}
+                    hitcherPhones={currentUser ? [currentUser.phone] : []}
+                  />
+                </div>
+
+                {/* Time and Date section */}
+                <div className="bg-gray-50 rounded-md p-3 mb-6">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span>
+                      {selectedRideDetails.direction === "toCollege"
+                        ? formatTime(selectedRideDetails.toCollegeTime)
+                        : formatTime(selectedRideDetails.fromCollegeTime)}
+                    </span>
+                  </div>
+                  {selectedRideDetails.direction === "toCollege" && (
+                    <div className="text-xs text-red-500 mt-1">
+                      (This is the time that the driver will leave from their home)
+                    </div>
+                  )}
+                  <div className="flex items-center text-sm text-gray-600 mt-2">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span>
+                      {format(new Date(selectedRideDetails.date), "EEEE, MMMM d, yyyy")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    {/* Distance and Fare Information */}
+                    <h3 className="font-semibold text-gray-900 mb-3">
+                      Fare Details
+                    </h3>
+                    <div className="bg-blue-50 rounded-md p-4">
+                      <div className="text-sm text-gray-800 space-y-2">
+                        <div>
+                          <span>Distance: </span>
+                          <span className="font-medium">{currentUser?.distanceToCollege} km</span>
+                        </div>
+                        <div>
+                          <span>Rate: </span>
+                          <span className="font-medium">₹{selectedRideDetails.pricePerKm}/km</span>
+                        </div>
+                        <div className="pt-2 border-t border-blue-100">
+                          <span className="font-medium">Fare: </span>
+                          <span className="font-bold text-lg">
+                            ₹{selectedRideDetails.pricePerKm && currentUser?.distanceToCollege
+                                ? Math.round(selectedRideDetails.pricePerKm * currentUser.distanceToCollege)
+                                : "0.00"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    {/* Driver Information */}
+                    <h3 className="font-semibold text-gray-900 mb-3">
+                      Driver Information
+                    </h3>
+                    <div className="bg-gray-50 rounded-md p-4">
+                      <div className="flex items-center mb-4">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                          <Car className="h-5 w-5 text-gray-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">
+                            {selectedRideDetails.driver.driverProfile?.vehicle?.model && 
+                             selectedRideDetails.driver.driverProfile?.vehicle?.color ? 
+                              `${selectedRideDetails.driver.driverProfile.vehicle.model} (${selectedRideDetails.driver.driverProfile.vehicle.color})` : 
+                              'Vehicle details not available'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600">
+                          Gender: {selectedRideDetails.driver.gender ? selectedRideDetails.driver.gender.charAt(0).toUpperCase() + selectedRideDetails.driver.gender.slice(1) : 'Not specified'}
+                        </p>
+                        {selectedRideDetails.driver.srn && (
+                          <p className="text-sm text-gray-600">
+                            SRN: {selectedRideDetails.driver.srn.slice(0, -3) + 'XXX'}
+                          </p>
+                        )}
+                        {selectedRideDetails.driver.driverProfile?.reliabilityRate !== undefined && (
+                          <p className="text-sm text-gray-600">
+                            Reliability: <span className={`font-medium ${
+                              selectedRideDetails.driver.driverProfile.reliabilityRate > 80 ? 'text-green-600' : 
+                              selectedRideDetails.driver.driverProfile.reliabilityRate > 60 ? 'text-yellow-600' : 
+                              'text-red-600'
+                            }`}>
+                              {selectedRideDetails.driver.driverProfile.reliabilityRate.toFixed(1)}%
+                            </span>
+                          </p>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 italic mt-3">
+                        Driver's name, phone and registration number will be visible after request is accepted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedRideDetails.note && (
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-900 mb-2">Driver's Note</h3>
+                    <div className="bg-yellow-50 p-3 rounded-md text-sm text-gray-700">
+                      {selectedRideDetails.note}
+                    </div>
+                  </div>
+                )}
+
+                {/* Get hitcher status if user has requested this ride */}
+                {(() => {
+                  const hitcherStatus = selectedRideDetails.hitchers?.find(h => h.user?._id === currentUser?.id)?.status;
+                  
+                  if (hitcherStatus) {
+                    return (
+                      <button
+                        disabled
+                        className={`w-full px-4 py-3 rounded-md font-medium ${
+                          hitcherStatus === "accepted"
+                            ? "bg-green-600 text-white"
+                            : hitcherStatus === "pending"
+                            ? "bg-yellow-600 text-white"
+                            : "bg-red-600 text-white"
+                        }`}
+                      >
+                        {hitcherStatus === "accepted"
+                          ? "Ride Accepted"
+                          : hitcherStatus === "pending"
+                          ? "Request Pending"
+                          : "Request Declined"}
+                      </button>
+                    );
+                  }
+                  
+                  return (
+                    <button
+                      onClick={() => handleRequestRide(selectedRideDetails._id)}
+                      className="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium"
+                    >
+                      Request This Ride
+                    </button>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         )}
       </div>

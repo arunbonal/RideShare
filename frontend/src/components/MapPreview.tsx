@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, UserCircle } from "lucide-react";
 
 interface MapPreviewProps {
   startLocation: string;
@@ -9,6 +9,10 @@ interface MapPreviewProps {
   direction?: "toCollege" | "fromCollege"; // Add direction prop
   onRouteCalculated?: (route: google.maps.DirectionsResult) => void;
   isAcceptedLocation?: (location: string) => boolean; // New prop to check if a location is already accepted
+  hitcherNames?: string[]; // Array of hitcher names matching the locations
+  hitcherPhones?: string[]; // Array of hitcher phone numbers matching the locations
+  hitcherFares?: number[]; // Array of fares for each hitcher
+  showHitcherDetails?: boolean; // Whether to show hitcher details (name/phone) on hover
 }
 
 const MapPreview: React.FC<MapPreviewProps> = ({
@@ -19,6 +23,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   className = "",
   onRouteCalculated,
   isAcceptedLocation = () => false, // Default to false if not provided
+  hitcherNames = [],
+  hitcherPhones = [],
+  hitcherFares = [],
+  showHitcherDetails = true, // Default to true to maintain backwards compatibility
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -77,49 +85,101 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     calculateAndDisplayRoute();
   }, [map, directionsRenderer, startLocation, endLocation, userLocation]);
 
+  // Parse user locations
+  const userLocations = userLocation ? userLocation.split("|") : [];
+
+  // Get first name only for display
+  const getFirstName = (fullName: string) => {
+    return fullName.split(' ')[0];
+  };
+
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
       {/* Google Map */}
       <div ref={mapRef} className="h-48 w-full" />
 
-      {/* Location details panel */}
-      <div className="p-3 bg-white">
-        <div className="flex items-start mb-2">
-          <MapPin className="h-4 w-4 text-red-500 mr-1 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs font-medium">From</p>
-            <p className="text-sm text-gray-700">
-              {direction === "fromCollege" ? startLocation : startLocation}
-            </p>
-          </div>
-        </div>
-
-        {userLocation && userLocation.split("|").map((location, index) => (
-          <div key={index} className="flex items-start mb-2">
-            <MapPin className="h-4 w-4 text-green-500 mr-1 mt-0.5 flex-shrink-0" />
-            <div className="flex-grow">
-              <div className="flex items-center">
-                <p className="text-xs font-medium">
-                  {direction === "fromCollege" ? "Drop Point" : "Pickup Point"} {userLocation.split("|").length > 1 ? `#${index + 1}` : ""}
-                </p>
-                {isAcceptedLocation(location) && (
-                  <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                    Accepted
-                  </span>
+      {/* Location details panel - increased padding and margin to prevent overlay */}
+      <div className="p-4 bg-white border-t border-gray-100 mb-8">
+        <div className="space-y-4">
+          {/* Start Location */}
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mt-1">
+              <div className="h-2 w-2 rounded-full bg-green-500"></div>
+            </div>
+            <div className="ml-3 min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">
+                Start
+              </p>
+              <p className="text-sm text-gray-500 break-words">
+                {startLocation}
+                {direction === "toCollege" && (
+                  <span className="text-xs text-gray-400 ml-1">(driver's address)</span>
                 )}
-              </div>
-              <p className="text-sm text-gray-700">{location}</p>
+              </p>
             </div>
           </div>
-        ))}
+          
+          
 
-        <div className="flex items-start mb-2">
-          <MapPin className="h-4 w-4 text-blue-500 mr-1 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs font-medium">To</p>
-            <p className="text-sm text-gray-700">
-              {direction === "fromCollege" ? endLocation : endLocation}
-            </p>
+          {/* User location(s) */}
+          {userLocations.map((location, index) => (
+            <React.Fragment key={index}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                </div>
+                <div className="ml-3 min-w-0 flex-1">
+                  <div className="flex items-center space-x-2">
+                    <p className="text-sm font-medium text-gray-900">
+                      {direction === "toCollege" ? "Pickup Point" : "Dropoff Point"} {userLocations.length > 1 ? `#${index + 1}` : ""}
+                    </p>
+                    {isAcceptedLocation(location) && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
+                        Accepted
+                      </span>
+                    )}
+                    
+                    {/* Profile icon with user details on hover - only show if showHitcherDetails is true */}
+                    {showHitcherDetails && hitcherNames && hitcherNames.length > index && hitcherNames[index] && (
+                      <div className="relative group">
+                        <UserCircle className="h-4 w-4 text-blue-500 cursor-pointer" />
+                        
+                        {/* Hover tooltip - positioned on the left to stay within container */}
+                        <div className="absolute z-10 left-0 mt-2 w-48 p-2 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-200">
+                          <p className="text-sm font-medium text-gray-900">{getFirstName(hitcherNames[index])}</p>
+                          {hitcherPhones && hitcherPhones.length > index && (
+                            <p className="text-sm text-gray-600">{hitcherPhones[index].substring(3)}</p>
+                          )}
+                          {hitcherFares && hitcherFares.length > index && (
+                            <p className="text-sm font-medium text-green-600">₹{hitcherFares[index]}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 break-words">{location}</p>
+                </div>
+              </div>
+              
+              
+            </React.Fragment>
+          ))}
+
+          
+
+          {/* End Location */}
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mt-1">
+              <div className="h-2 w-2 rounded-full bg-red-500"></div>
+            </div>
+            <div className="ml-3 min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900">
+                Destination
+              </p>
+              <p className="text-sm text-gray-500 break-words">
+                {endLocation}
+              </p>
+            </div>
           </div>
         </div>
       </div>

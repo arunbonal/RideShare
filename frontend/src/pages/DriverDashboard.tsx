@@ -340,6 +340,7 @@ const DriverDashboard: React.FC = () => {
         hitcherId: hitcher.user._id,
         rideId: ride._id,
         hitcherName: hitcher.user.name,
+        hitcherPhone: hitcher.user.phone,
         hitcherGender: hitcher.user.gender || "Not specified",
         hitcherSRN: hitcher.user.srn ? `${hitcher.user.srn.slice(0, -3)}XXX` : undefined,
         hitcherRating: hitcher.user.hitcherProfile?.rating || 0,
@@ -569,35 +570,6 @@ const DriverDashboard: React.FC = () => {
                         </p>
                       )}
                       
-                      {/* Accepted Hitchers Section */}
-                      {ride.hitchers && ride.hitchers.filter(h => h.status === "accepted").length > 0 && (
-                        <div className="mt-4 border-t pt-4">
-                          <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
-                          <div className="space-y-3">
-                            {ride.hitchers
-                              .filter(h => h.status === "accepted")
-                              .map((hitcher, index) => (
-                                <div key={index} className="bg-gray-50 p-3 rounded-md">
-                                  <div className="flex justify-between">
-                                    <div>
-                                      <p className="font-medium">{hitcher.user.name}</p>
-                                      <p className="text-sm text-gray-600">{hitcher.user.phone.replace(/^(\+91)(\d+)$/, '$1 $2')}</p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-sm text-gray-600">
-                                        {ride.direction === "toCollege" 
-                                          ? `Pickup: ${hitcher.pickupLocation}` 
-                                          : `Dropoff: ${hitcher.dropoffLocation}`}
-                                      </p>
-                                      <p className="text-sm font-medium text-green-600">₹{hitcher.fare}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                      
                       <p className="mt-4 text-md text-red-700">
                           Your Current Route :
                         </p>
@@ -613,6 +585,15 @@ const DriverDashboard: React.FC = () => {
                             .join("|")}
                           className="rounded-lg shadow-sm"
                           direction={ride.direction}
+                          hitcherNames={ride.hitchers
+                            ?.filter(h => h.status === "accepted")
+                            .map(h => h.user.name)}
+                          hitcherPhones={ride.hitchers
+                            ?.filter(h => h.status === "accepted")
+                            .map(h => h.user.phone)}
+                          hitcherFares={ride.hitchers
+                            ?.filter(h => h.status === "accepted")
+                            .map(h => h.fare || 0)}
                         />
                       </div>
 
@@ -838,6 +819,17 @@ const DriverDashboard: React.FC = () => {
                         ].filter(Boolean).join("|")}
                         direction={currentRequest.rideDirection}
                         isAcceptedLocation={(location) => currentRequest.acceptedHitchersLocations.includes(location)}
+                        hitcherNames={[
+                          // Names for accepted hitchers - we don't have these in the currentRequest
+                          // so we'll just use the current hitcher's name for now
+                          // This will be improved when we fetch the additional data
+                          currentRequest.hitcherName
+                        ]}
+                        hitcherPhones={[
+                          // Phones for accepted hitchers - same issue as with names
+                          currentRequest.hitcherPhone
+                        ]}
+                        showHitcherDetails={false} // Hide hitcher details in the ride request view
                       />
                     </div>
                     

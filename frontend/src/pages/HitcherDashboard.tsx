@@ -689,7 +689,7 @@ const HitcherDashboard: React.FC = () => {
                                 <span className="font-medium">Name:</span> {ride.driver.name}
                               </p>
                               <p className="text-sm">
-                                <span className="font-medium">Phone:</span> {ride.driver.phone.replace(/^(\+91)(\d+)$/, '$1 $2')}
+                                <span className="font-medium">Phone:</span> {ride.driver.phone.substring(3)}
                               </p>
                               {ride.driver.driverProfile?.vehicle && (
                                 <p className="text-sm">
