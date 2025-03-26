@@ -1,13 +1,8 @@
 user:
-print proper errors in controller-auth.js for invalid email, authentication error
 driving license fix
 feedback, rating, report issues
 load more button to fetch more rides (for hitcher)
-fromCollegeTime not displaying in rideSearch
 handle unrefreshed conditions
-in driverdashboard -> mappreview, say "your address" instead of "driver's address" in brackets 
-notification in hitcher dashboard if ride is accepted by driver
-remvoe back button in driver profile setup after hitcher proifle is already setup
 
 
 *.pesu.pes.edu check commented out in backend/auth.js and backend/controller/auth.js for testing purposes

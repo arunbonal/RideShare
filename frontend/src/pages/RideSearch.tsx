@@ -116,25 +116,14 @@ const RideSearch: React.FC = () => {
         // Get hitcher status if user has requested this ride
         const hitcherStatus = ride.hitchers?.find(h => h.user?._id === currentUser.id)?.status;
         
-        // If the ride is accepted, show a notification to the user
-        if (hitcherStatus === "accepted" && !localStorage.getItem(`ride-accepted-${ride._id}`)) {
-          setNotification({
-            show: true,
-            message: "One of your ride requests has been accepted!",
-            type: "success"
-          });
-          // Store in localStorage to prevent showing the notification again
-          localStorage.setItem(`ride-accepted-${ride._id}`, "true");
+        // Don't show rides that the user has already requested (regardless of status)
+        if (hitcherStatus) {
+          return false;
         }
-        
+
         // Exclude cancelled rides
         if (ride.status === "cancelled") {
           return false;
-        }
-        
-        // Show rides the user is already part of (with status)
-        if (hitcherStatus) {
-          return true;
         }
 
         // Exclude rides where the current user is the driver
@@ -522,22 +511,6 @@ const RideSearch: React.FC = () => {
                           </p>
                         </div>
                         <div className="flex flex-col items-end">
-                          {/* Show request status if user has requested this ride */}
-                          {ride.hitchers?.some(h => h.user?._id === currentUser?.id) && (
-                            <span className={`mb-2 px-2 py-1 text-xs font-medium rounded-full ${
-                              ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "accepted"
-                                ? "bg-green-100 text-green-800"
-                                : ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}>
-                              {ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "accepted"
-                                ? "Accepted"
-                                : ride.hitchers.find(h => h.user?._id === currentUser?.id)?.status === "pending"
-                                ? "Pending"
-                                : "Rejected"}
-                            </span>
-                          )}
                           <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full">
                             {ride.availableSeats} seats left
                           </span>
@@ -631,8 +604,6 @@ const RideSearch: React.FC = () => {
                     userLocation={currentUser?.homeAddress || ""}
                     direction={selectedRideDetails.direction}
                     className="shadow-sm rounded-lg overflow-hidden"
-                    hitcherNames={currentUser ? [currentUser.name] : []}
-                    hitcherPhones={currentUser ? [currentUser.phone] : []}
                   />
                 </div>
 
@@ -693,20 +664,6 @@ const RideSearch: React.FC = () => {
                       Driver Information
                     </h3>
                     <div className="bg-gray-50 rounded-md p-4">
-                      <div className="flex items-center mb-4">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                          <Car className="h-5 w-5 text-gray-500" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">
-                            {selectedRideDetails.driver.driverProfile?.vehicle?.model && 
-                             selectedRideDetails.driver.driverProfile?.vehicle?.color ? 
-                              `${selectedRideDetails.driver.driverProfile.vehicle.model} (${selectedRideDetails.driver.driverProfile.vehicle.color})` : 
-                              'Vehicle details not available'}
-                          </p>
-                        </div>
-                      </div>
-                      
                       <div className="space-y-2">
                         <p className="text-sm text-gray-600">
                           Gender: {selectedRideDetails.driver.gender ? selectedRideDetails.driver.gender.charAt(0).toUpperCase() + selectedRideDetails.driver.gender.slice(1) : 'Not specified'}

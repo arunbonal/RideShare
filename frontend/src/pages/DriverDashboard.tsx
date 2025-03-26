@@ -540,11 +540,11 @@ const DriverDashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center text-gray-600">
                           <MapPin className="h-5 w-5 mr-2" />
-                          From: {ride.from}
+                          From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
                         </div>
                         <div className="flex items-center text-gray-600">
                           <MapPin className="h-5 w-5 mr-2" />
-                          To: {ride.to}
+                          To: {ride.direction === "fromCollege" ? `${ride.to}` : ride.to}
                         </div>
                         <div className="flex items-center text-gray-600">
                           <Users className="h-5 w-5 mr-2" />
@@ -571,13 +571,13 @@ const DriverDashboard: React.FC = () => {
                       )}
                       
                       <p className="mt-4 text-md text-red-700">
-                          Your Current Route :
-                        </p>
+                        Your Current Route:
+                      </p>
                       {/* Map Preview for Current Route */}
                       <div className="mt-4">
                         <MapPreview
-                          startLocation={ride.direction === "fromCollege" ? ride.from : ride.from}
-                          endLocation={ride.direction === "fromCollege" ? ride.to : ride.to}
+                          startLocation={`${ride.direction === "toCollege" ? `${ride.from} (Your Address)` : ride.from}`}
+                          endLocation={`${ride.direction === "fromCollege" ? `${ride.to} (Your Address)` : ride.to}`}
                           userLocation={ride.hitchers
                             ?.filter(h => h.status === "accepted")
                             .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
@@ -698,9 +698,9 @@ const DriverDashboard: React.FC = () => {
       {/* Request Modal */}
       {requestModal.show && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 py-8"
         >
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full max-h-90vh overflow-y-auto">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
             {(() => {
               // Get the current request and ride
               const requests = getRequestsForRide(requestModal.rideId);

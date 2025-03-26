@@ -112,9 +112,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
               </p>
               <p className="text-sm text-gray-500 break-words">
                 {startLocation}
-                {direction === "toCollege" && (
-                  <span className="text-xs text-gray-400 ml-1">(driver's address)</span>
-                )}
+                
               </p>
             </div>
           </div>

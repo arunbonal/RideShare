@@ -103,30 +103,29 @@ const HitcherDashboard: React.FC = () => {
       ) as ExtendedRide[];
       setHitcherRides(currentHitcherRides);
 
-      // Check for newly cancelled rides by driver
-      // Get already notified ride IDs from localStorage
-      const notifiedCancelledRides = JSON.parse(localStorage.getItem('notifiedCancelledRides') || '[]');
+      // Check for newly accepted rides
+      const seenAcceptedRides = JSON.parse(localStorage.getItem('seenAcceptedRides') || '[]');
       
-      const newlyCancelledRides = currentHitcherRides.filter(ride => {
+      const newlyAcceptedRides = currentHitcherRides.filter(ride => {
         const hitcherInfo = ride.hitchers?.find(h => h.user?._id === currentUser?.id);
-        return (hitcherInfo?.status as string) === "cancelled-by-driver" && 
-               !notifiedCancelledRides.includes(ride._id);
+        return hitcherInfo?.status === "accepted" && 
+               !seenAcceptedRides.includes(ride._id);
       });
 
-      // Show notification for newly cancelled rides
-      if (newlyCancelledRides.length > 0) {
+      // Show notification for newly accepted rides
+      if (newlyAcceptedRides.length > 0) {
         setNotification({
           show: true,
-          message: "Ride was cancelled by the driver",
-          type: "error"
+          message: "Your ride request has been accepted! Check your upcoming rides for details.",
+          type: "success"
         });
         
-        // Add these ride IDs to the notified list
-        const updatedNotifiedRides = [
-          ...notifiedCancelledRides,
-          ...newlyCancelledRides.map(ride => ride._id)
+        // Add these ride IDs to the seen list
+        const updatedSeenRides = [
+          ...seenAcceptedRides,
+          ...newlyAcceptedRides.map(ride => ride._id)
         ];
-        localStorage.setItem('notifiedCancelledRides', JSON.stringify(updatedNotifiedRides));
+        localStorage.setItem('seenAcceptedRides', JSON.stringify(updatedSeenRides));
       }
 
       // Check for unread notifications
@@ -686,7 +685,7 @@ const HitcherDashboard: React.FC = () => {
                             <h4 className="font-medium text-gray-900 mb-2">Driver Details:</h4>
                             <div className="space-y-2">
                               <p className="text-sm">
-                                <span className="font-medium">Name:</span> {ride.driver.name}
+                                <span className="font-medium">Name:</span> {ride.driver.name.split(' ')[0]}
                               </p>
                               <p className="text-sm">
                                 <span className="font-medium">Phone:</span> {ride.driver.phone.substring(3)}
@@ -712,7 +711,7 @@ const HitcherDashboard: React.FC = () => {
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
-                            Cancel Ride
+                            {hitcherInfo.status === 'pending' ? 'Cancel Request' : 'Cancel Ride'}
                           </button>
                         )}
                       </div>

@@ -862,17 +862,21 @@ const DriverProfileSetup: React.FC = () => {
                 </div>
 
                 <div className="pt-4 flex justify-between">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    Back
-                  </button>
+                  {!currentUser?.hitcherProfileComplete && (
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      Back
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={nextStep}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className={`bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      !currentUser?.hitcherProfileComplete ? "" : "ml-auto"
+                    }`}
                   >
                     Next
                   </button>
