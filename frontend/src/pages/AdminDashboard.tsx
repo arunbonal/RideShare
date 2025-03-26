@@ -26,6 +26,8 @@ interface AdminRide {
   driver: {
     name: string;
     email: string;
+    srn: string;
+    phone: string;
   };
   status: string;
   hitchers?: {
@@ -39,17 +41,23 @@ const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [rides, setRides] = useState<AdminRide[]>([]);
+  const [filteredRides, setFilteredRides] = useState<AdminRide[]>([]);
   const [activeTab, setActiveTab] = useState<string>('users');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [rideSearchTerm, setRideSearchTerm] = useState<string>('');
   const [notification, setNotification] = useState<{ 
     show: boolean; 
     message: string; 
     type: 'success' | 'error' 
   }>({ show: false, message: '', type: 'success' });
 
-  // Format name to show only first 3 words
+  // Format name to show only first 3 words, but exclude PESU if it appears in the third position
   const formatName = (name: string) => {
     const words = name.split(' ');
+    // Check if the third word is PESU and remove it
+    if (words.length >= 3 && words[2].toUpperCase().startsWith('PESU')) {
+      return words.slice(0, 2).join(' ');
+    }
     return words.slice(0, 3).join(' ');
   };
 
@@ -76,6 +84,22 @@ const AdminDashboard: React.FC = () => {
     }
   }, [searchTerm, users]);
 
+  // Filter rides based on search term
+  useEffect(() => {
+    if (rideSearchTerm.trim() === '') {
+      setFilteredRides(rides);
+    } else {
+      const lowercaseSearch = rideSearchTerm.toLowerCase();
+      setFilteredRides(
+        rides.filter(
+          (ride) =>
+            ride.driver.name.toLowerCase().includes(lowercaseSearch) ||
+            (ride.driver.srn && ride.driver.srn.toLowerCase().includes(lowercaseSearch))
+        )
+      );
+    }
+  }, [rideSearchTerm, rides]);
+
   // Redirect if not admin - this should be inside a useEffect or component body
   if (!currentUser?.isAdmin) {
     return <Navigate to="/" replace />;
@@ -94,6 +118,7 @@ const AdminDashboard: React.FC = () => {
           withCredentials: true
         });
         setRides(response.data);
+        setFilteredRides(response.data);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -104,6 +129,19 @@ const AdminDashboard: React.FC = () => {
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+  };
+
+  // Add this helper function to format the date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB'); // This will format as dd/mm/yyyy
+  };
+
+  // Get first name, properly handling special cases
+  const getFirstName = (fullName: string) => {
+    const words = fullName.split(' ');
+    // Usually the first word is the first name
+    return words[0];
   };
 
   return (
@@ -196,7 +234,22 @@ const AdminDashboard: React.FC = () => {
 
         {activeTab === 'rides' && (
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">All Rides ({rides.length})</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">All Rides ({filteredRides.length})</h2>
+              
+              {/* Ride Search Bar */}
+              <div className="relative w-64">
+                <input
+                  type="text"
+                  placeholder="Search by driver name or SRN..."
+                  value={rideSearchTerm}
+                  onChange={(e) => setRideSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
+            </div>
+            
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -204,17 +257,30 @@ const AdminDashboard: React.FC = () => {
                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRN</th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hitchers</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available Seats</th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {rides.map(ride => (
+                  {filteredRides.map(ride => (
                     <tr key={ride._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{new Date(ride.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{ride.direction === 'toCollege' ? 'To College' : 'From College'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{formatName(ride.driver.name)} ({ride.driver.email})</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {formatDate(ride.date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ride.direction === 'toCollege' ? 'To College' : 'From College'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getFirstName(ride.driver.name)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ride.driver.srn || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ride.driver.phone}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded text-xs ${
                           ride.status === 'scheduled' ? 'bg-green-100 text-green-800' : 
@@ -226,10 +292,13 @@ const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {ride.hitchers?.filter(h => h.status === 'accepted').length || 0} accepted 
-                        / {ride.hitchers?.filter(h => h.status === 'pending').length || 0} pending
+                        <Link 
+                          to={`/admin/rides/${ride._id}`}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                        >
+                          View Details
+                        </Link>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{ride.availableSeats}</td>
                     </tr>
                   ))}
                 </tbody>

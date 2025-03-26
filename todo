@@ -3,13 +3,10 @@ driving license fix
 feedback, rating, report issues
 load more button to fetch more rides (for hitcher)
 handle unrefreshed conditions
-
+edit address and phone number
 
 *.pesu.pes.edu check commented out in backend/auth.js and backend/controller/auth.js for testing purposes
 
 
 admin:
-in ride section of admin dashboard, show date (in ddmmyyyy), direction, only first name of driver, srn, 
-in admin user dashboard, if name[3] is pesu smth, remove it
 profile admin approval
-delete rides

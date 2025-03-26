@@ -3,6 +3,7 @@ const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
 const adminAuth = require('../middleware/adminAuth');
 const adminController = require('../controller/admin');
+const { getRideDetails } = require('../controller/admin');
 
 // Apply auth middleware to all routes
 router.use(isAuthenticated);
@@ -21,6 +22,8 @@ router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deleteUser);
   
 // Get all rides (admin only)
-router.get('/rides', adminController.getRides);
+router.get('/rides', adminController.getAllRides);
+
+router.get('/rides/:id', adminController.getRideDetails);
 
 module.exports = router;

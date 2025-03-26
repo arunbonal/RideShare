@@ -80,14 +80,34 @@ exports.deleteUser = async (req, res) => {
     }
 }
 
-exports.getRides = async (req, res) => {
-    try {
-        const rides = await Ride.find()
-          .populate('driver', 'name email phone college driverProfile.reliabilityRate')
-          .populate('hitchers.user', 'name email phone college hitcherProfile.reliabilityRate');
-        res.json(rides);
-    } catch (error) {
-        console.error('Error fetching rides:', error);
-        res.status(500).json({ error: 'Server error' });
+exports.getAllRides = async (req, res) => {
+  try {
+    const rides = await Ride.find()
+      .populate('driver', 'name email phone srn')
+      .sort({ date: -1 });
+    res.json(rides);
+  } catch (error) {
+    console.error('Error fetching rides:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getRideDetails = async (req, res) => {
+  try {
+    const ride = await Ride.findById(req.params.id)
+      .populate('driver', 'name email phone srn gender')
+      .populate({
+        path: 'hitchers.user',
+        select: 'name email phone srn gender'
+      });
+
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found' });
     }
-}
+
+    res.json(ride);
+  } catch (error) {
+    console.error('Error fetching ride details:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

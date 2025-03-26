@@ -43,6 +43,7 @@ import RoleDetails from "./pages/RoleDetails";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserDetails from "./pages/AdminUserDetails";
+import AdminRideDetails from './pages/AdminRideDetails';
 
 function App() {
   return (
@@ -160,6 +161,7 @@ function App() {
                 </AdminRoute>
               } 
             />
+            <Route path="/admin/rides/:id" element={<AdminRideDetails />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
