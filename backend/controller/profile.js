@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Ride = require("../models/Ride");
 const { getCompleteUserData } = require("../utils/userUtils");
 
 // Update driver profile
@@ -138,6 +139,111 @@ exports.getUserProfile = async (req, res) => {
     res.json(userData);
   } catch (error) {
     console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Update basic profile information (phone, address, etc.)
+exports.updateBasicProfileInfo = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { phone, homeAddress, gender, distanceToCollege } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // If trying to update address, check for active rides
+    if (homeAddress !== undefined && homeAddress !== user.homeAddress) {
+      const now = new Date();
+      
+      // Check if user has active rides as a driver
+      const driverActiveRides = await Ride.find({
+        'driver': userId,
+        'status': { $in: ['scheduled', 'in-progress'] },
+        $or: [
+          { date: { $gte: now } },  // Future rides
+          {                         // Today's rides
+            date: {
+              $gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+              $lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+            }
+          }
+        ]
+      });
+      
+      // Check if user has active rides as a hitcher
+      const hitcherActiveRides = await Ride.find({
+        'hitchers.user': userId,
+        'hitchers.status': { $in: ['accepted', 'pending'] },
+        'status': { $in: ['scheduled', 'in-progress'] },
+        $or: [
+          { date: { $gte: now } },  // Future rides
+          {                         // Today's rides
+            date: {
+              $gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+              $lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+            }
+          }
+        ]
+      });
+      
+      // If user has active rides, prevent address change
+      if (driverActiveRides.length > 0 || hitcherActiveRides.length > 0) {
+        return res.status(403).json({
+          message: "Cannot update address while you have active rides scheduled. Please complete or cancel your existing rides before changing your address.",
+          hasActiveRides: true,
+          driverRides: driverActiveRides.length,
+          hitcherRides: hitcherActiveRides.length
+        });
+      }
+    }
+
+    // Update only the provided fields
+    if (phone !== undefined) user.phone = phone;
+    
+    // When address is updated, also update distanceToCollege
+    if (homeAddress !== undefined) {
+      user.homeAddress = homeAddress;
+      
+      // If distanceToCollege is provided, update it
+      if (distanceToCollege !== undefined) {
+        // Update the user's distanceToCollege field
+        user.distanceToCollege = distanceToCollege;
+        
+        console.log(`Updating address to "${homeAddress}" with distance: ${distanceToCollege} km`);
+        
+        // If updating the address and the user has profiles, ensure they're updated
+        if (user.hitcherProfileComplete) {
+          console.log("User has a hitcher profile - distance will be used for fare calculations");
+        }
+        
+        if (user.driverProfileComplete) {
+          console.log("User has a driver profile - distance will be used for fare calculations");
+        }
+      }
+    } else if (distanceToCollege !== undefined) {
+      // Handle case where only distanceToCollege is updated without changing address
+      user.distanceToCollege = distanceToCollege;
+      console.log(`Updating only distance to college: ${distanceToCollege} km`);
+    }
+    
+    if (gender !== undefined) user.gender = gender;
+
+    // Save the updated user
+    await user.save();
+
+    // Return the updated user data
+    const updatedUserData = await getCompleteUserData(userId);
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUserData
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

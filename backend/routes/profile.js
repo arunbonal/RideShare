@@ -18,4 +18,7 @@ router.post("/driver/update", profileController.updateDriverVehicleAndPricing);
 // Update hitcher profile
 router.post("/hitcher", profileController.updateHitcherProfile);
 
+// Generic profile update route for basic info like phone and address
+router.post("/update", profileController.updateBasicProfileInfo);
+
 module.exports = router;
