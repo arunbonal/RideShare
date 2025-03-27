@@ -27,4 +27,10 @@ router.post("/update-status", rideController.updateRideStatus);
 
 router.post("/calculate-reliability-impact", rideController.calculateReliabilityImpact);
 
+// Get the status of a specific ride
+router.get("/:rideId/status", rideController.getRideStatus);
+
+// Get the status of a specific hitcher in a ride
+router.get("/:rideId/hitcher/:hitcherId/status", rideController.getHitcherStatus);
+
 module.exports = router;

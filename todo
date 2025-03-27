@@ -2,8 +2,6 @@ user:
 driving license fix
 feedback, rating, report issues
 load more button to fetch more rides (for hitcher)
-handle unrefreshed conditions
-edit address and phone number
 
 *.pesu.pes.edu check commented out in backend/auth.js and backend/controller/auth.js for testing purposes
 

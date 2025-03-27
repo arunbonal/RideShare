@@ -213,21 +213,10 @@ exports.updateBasicProfileInfo = async (req, res) => {
         // Update the user's distanceToCollege field
         user.distanceToCollege = distanceToCollege;
         
-        console.log(`Updating address to "${homeAddress}" with distance: ${distanceToCollege} km`);
-        
-        // If updating the address and the user has profiles, ensure they're updated
-        if (user.hitcherProfileComplete) {
-          console.log("User has a hitcher profile - distance will be used for fare calculations");
-        }
-        
-        if (user.driverProfileComplete) {
-          console.log("User has a driver profile - distance will be used for fare calculations");
-        }
       }
     } else if (distanceToCollege !== undefined) {
       // Handle case where only distanceToCollege is updated without changing address
       user.distanceToCollege = distanceToCollege;
-      console.log(`Updating only distance to college: ${distanceToCollege} km`);
     }
     
     if (gender !== undefined) user.gender = gender;

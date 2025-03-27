@@ -47,11 +47,38 @@ exports.cancelRide = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ride not found' });
     }
 
+    // Check if the entire ride is already cancelled
+    if (ride.status === 'cancelled' && !hitcherId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This ride is already cancelled',
+        alreadyCancelled: true
+      });
+    }
+
     // If hitcherId is provided, it's a hitcher canceling their request
     if (hitcherId) {
       const hitcher = ride.hitchers.find(h => h.user && h.user._id.toString() === hitcherId);
       if (!hitcher) {
         return res.status(404).json({ success: false, message: 'Hitcher not found in this ride' });
+      }
+      
+      // Check if the ride is already cancelled by the driver
+      if (ride.status === 'cancelled') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This ride has already been cancelled by the driver',
+          alreadyCancelledByDriver: true
+        });
+      }
+      
+      // Check if the hitcher has already cancelled their request
+      if (hitcher.status === 'cancelled') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'You have already cancelled this ride request',
+          alreadyCancelled: true
+        });
       }
       
       // Store the previous status to check if we need to update seats and fare
@@ -88,6 +115,16 @@ exports.cancelRide = async (req, res) => {
       }
     } else {
       // Driver is canceling the entire ride
+      
+      // Check if the ride is already cancelled
+      if (ride.status === 'cancelled') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This ride is already cancelled',
+          alreadyCancelled: true
+        });
+      }
+      
       ride.status = 'cancelled';
 
       // Check if there are any accepted hitchers
@@ -110,6 +147,22 @@ exports.cancelRide = async (req, res) => {
             };
           }
           return hitcher;
+        });
+        
+        // Add notifications for all affected hitchers
+        if (!ride.notifications) {
+          ride.notifications = [];
+        }
+        
+        ride.hitchers.forEach(hitcher => {
+          if (hitcher.status === 'cancelled-by-driver') {
+            ride.notifications.push({
+              userId: hitcher.user._id,
+              message: `Your ride has been cancelled by the driver`,
+              read: false,
+              createdAt: new Date()
+            });
+          }
         });
       }
     }
@@ -235,6 +288,18 @@ exports.acceptRide = async (req, res) => {
     // Update available seats
     ride.availableSeats = Math.max(0, ride.availableSeats - 1);
 
+    // Add notification for the hitcher
+    if (!ride.notifications) {
+      ride.notifications = [];
+    }
+    
+    ride.notifications.push({
+      userId: hitcherId,
+      message: `Your ride request has been accepted by the driver`,
+      read: false,
+      createdAt: new Date()
+    });
+
     await ride.save();
     res.status(200).json({ message: "Ride request accepted successfully" });
   } catch (err) {
@@ -258,6 +323,14 @@ exports.rejectRide = async (req, res) => {
     const hitcher = ride.hitchers.find((h) => h.user && h.user._id.toString() === hitcherId);
     if (!hitcher) {
       return res.status(404).json({ message: "Hitcher not found" });
+    }
+
+    // Check if the hitcher has already cancelled their request
+    if (hitcher.status === "cancelled") {
+      return res.status(400).json({ 
+        message: "Cannot reject this request as the hitcher has already cancelled it",
+        alreadyCancelled: true
+      });
     }
 
     // Store the hitcher's name for notification
@@ -421,5 +494,65 @@ exports.calculateReliabilityImpact = async (req, res) => {
   } catch (error) {
     console.error("Error calculating reliability impact:", error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get the current status of a specific ride
+exports.getRideStatus = async (req, res) => {
+  try {
+    const { rideId } = req.params;
+    
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ride not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      rideStatus: ride.status
+    });
+  } catch (error) {
+    console.error('Error getting ride status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error retrieving ride status' 
+    });
+  }
+};
+
+// Get the status of a specific hitcher in a ride
+exports.getHitcherStatus = async (req, res) => {
+  try {
+    const { rideId, hitcherId } = req.params;
+    
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ride not found' 
+      });
+    }
+    
+    const hitcher = ride.hitchers.find(h => h.user && h.user.toString() === hitcherId);
+    if (!hitcher) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Hitcher not found in this ride' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      hitcherStatus: hitcher.status
+    });
+  } catch (error) {
+    console.error('Error getting hitcher status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error retrieving hitcher status' 
+    });
   }
 };

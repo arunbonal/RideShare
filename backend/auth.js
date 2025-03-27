@@ -39,13 +39,13 @@ passport.use(
         const isAdmin = !!admin;
         
         // For non-admin users, apply the PESU email validation
-        // if (!isAdmin) {
-        //   if (!email.endsWith("@pesu.pes.edu")) {
-        //     return done(null, false, {
-        //       message: "Only PES University email addresses are allowed",
-        //     });
-        //   }
-        // }
+        if (!isAdmin) {
+          if (!email.endsWith("@pesu.pes.edu")) {
+            return done(null, false, {
+              message: "Only PES University email addresses are allowed",
+            });
+          }
+        }
 
         // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });

@@ -197,6 +197,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Define fetchAllRides before it's used in useEffect hooks
+  const fetchAllRides = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rides`,
+        {
+          withCredentials: true,
+        }
+      );
+      setAllRides(response.data.rides);
+    } catch (error) {
+      console.error("Error fetching rides:", error);
+      throw error;
+    }
+  }, []);
+
   // useEffect to update ride state when currentUser changes
   useEffect(() => {
     if (currentUser) {
@@ -233,6 +249,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isMounted = false;
     };
   }, [fetchUserData]);
+
+  // Add a background polling mechanism to keep ride data fresh
+  useEffect(() => {
+    let intervalId: number | null = null;
+    
+    // Only set up polling if the user is logged in and has completed a profile
+    if (currentUser && (currentUser.driverProfileComplete || currentUser.hitcherProfileComplete)) {
+      // Set up polling every 30 seconds
+      intervalId = window.setInterval(() => {
+        // Check if user has been inactive for at least 1 minute
+        const lastInteractionTime = localStorage.getItem('lastInteractionTime');
+        if (lastInteractionTime) {
+          const lastInteraction = parseInt(lastInteractionTime, 10);
+          const currentTime = Date.now();
+          
+          // Only fetch if user has been inactive for less than a minute
+          // This prevents unnecessary API calls when the user is actively using the app
+          if (currentTime - lastInteraction < 60000) {
+            fetchAllRides();
+          }
+        } else {
+          // No interaction time recorded, assume user is active
+          fetchAllRides();
+        }
+      }, 30000); // 30 seconds
+    }
+    
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [currentUser, fetchAllRides]);
+  
+  // Track user interaction to optimize background polling
+  useEffect(() => {
+    // Update last interaction time when component mounts
+    localStorage.setItem('lastInteractionTime', Date.now().toString());
+    
+    // Function to update last interaction time
+    const updateInteractionTime = () => {
+      localStorage.setItem('lastInteractionTime', Date.now().toString());
+    };
+    
+    // Add event listeners for user interactions
+    window.addEventListener('click', updateInteractionTime);
+    window.addEventListener('keydown', updateInteractionTime);
+    window.addEventListener('mousemove', updateInteractionTime);
+    window.addEventListener('touchstart', updateInteractionTime);
+    
+    return () => {
+      // Remove event listeners on cleanup
+      window.removeEventListener('click', updateInteractionTime);
+      window.removeEventListener('keydown', updateInteractionTime);
+      window.removeEventListener('mousemove', updateInteractionTime);
+      window.removeEventListener('touchstart', updateInteractionTime);
+    };
+  }, []);
 
   // Google login function
   const loginWithGoogle = useCallback(async () => {
@@ -396,21 +470,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       totalFare: 0,
     });
   }, [currentUser]);
-
-  const fetchAllRides = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides`,
-        {
-          withCredentials: true,
-        }
-      );
-      setAllRides(response.data.rides);
-    } catch (error) {
-      console.error("Error fetching rides:", error);
-      throw error;
-    }
-  }, []);
 
   // Memoize the context value to prevent unnecessary re-renders
   const value = useMemo(

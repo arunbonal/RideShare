@@ -98,11 +98,16 @@ const DriverDashboard: React.FC = () => {
         .flatMap(ride => 
           (ride.notifications || [])
             .filter(n => !n.read && n.userId === currentUser.id && !seenNotifications.includes(n._id))
-            .map(n => ({ 
-              _id: n._id,
-              message: n.message,
-              rideId: ride._id
-            }))
+            .map(n => {
+              // Determine notification type
+              const notificationType = n.message.includes('accepted') ? 'success' : 'error';
+              return { 
+                _id: n._id,
+                message: n.message,
+                rideId: ride._id,
+                type: notificationType as "success" | "error"
+              };
+            })
         );
       
       // Show the first unread notification if any
@@ -110,7 +115,7 @@ const DriverDashboard: React.FC = () => {
         setNotification({
           show: true,
           message: unreadNotifications[0].message,
-          type: "error"
+          type: unreadNotifications[0].type
         });
         
         // Mark this notification as seen locally
@@ -252,78 +257,6 @@ const DriverDashboard: React.FC = () => {
     }
   };
 
-  const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/accept`,
-        {
-          rideId,
-          hitcherId
-        },
-        { withCredentials: true }
-      );
-      
-      // Fetch fresh data to update the UI
-      await fetchAllRides();
-      
-      // Show success notification
-      setNotification({
-        show: true,
-        message: "Request accepted successfully",
-        type: "success"
-      });
-      
-      // Check if this was the last request for this ride
-      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
-      if (remainingRequests.length === 0) {
-        closeRequestModal();
-      }
-    } catch (error: any) {
-      console.error("Error accepting request:", error);
-      // Check if the error is due to a cancelled request
-      if (error.response?.data?.alreadyCancelled) {
-        setNotification({
-          show: true,
-          message: "This ride request has already been cancelled by the hitcher.",
-          type: "error"
-        });
-        // Refresh rides to get the updated status
-        await fetchAllRides();
-      }
-    }
-  };
-
-  const handleRejectRequest = async (rideId: string, hitcherId: string) => {
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/reject`,
-        {
-          rideId,
-          hitcherId
-        },
-        { withCredentials: true }
-      );
-      
-      // Fetch fresh data to update the UI
-      await fetchAllRides();
-      
-      // Show success notification
-      setNotification({
-        show: true,
-        message: "Request declined successfully",
-        type: "success"
-      });
-      
-      // Check if this was the last request for this ride
-      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
-      if (remainingRequests.length === 0) {
-        closeRequestModal();
-      }
-    } catch (error) {
-      console.error("Error rejecting request:", error);
-    }
-  };
-
   const formatTime = (time24: string) => {
     const [hours, minutes] = time24.split(":");
     const hour = parseInt(hours);
@@ -404,6 +337,208 @@ const DriverDashboard: React.FC = () => {
       }
     }
   }, [pendingRequests, requestModal, currentRequestIndex]);
+
+  const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
+    try {
+      // First check if the ride is still active
+      const rideCheckResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/status`,
+        { withCredentials: true }
+      );
+      
+      // If ride is already cancelled or completed
+      if (rideCheckResponse.data.rideStatus !== "scheduled") {
+        setNotification({
+          show: true,
+          message: `Cannot accept request. This ride is ${rideCheckResponse.data.rideStatus}.`,
+          type: "error"
+        });
+        await fetchAllRides(); // Refresh to get updated status
+        return;
+      }
+
+      // Then check if the hitcher request is still pending
+      const hitcherCheckResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/hitcher/${hitcherId}/status`,
+        { withCredentials: true }
+      );
+      
+      // If request is already cancelled by hitcher
+      if (hitcherCheckResponse.data.hitcherStatus === "cancelled") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been cancelled by the hitcher.",
+          type: "error"
+        });
+        await fetchAllRides(); // Refresh to get updated status
+        return;
+      }
+      
+      // If request is already accepted or rejected
+      if (hitcherCheckResponse.data.hitcherStatus === "accepted") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been accepted.",
+          type: "error"
+        });
+        await fetchAllRides();
+        return;
+      }
+      
+      if (hitcherCheckResponse.data.hitcherStatus === "rejected") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been rejected.",
+          type: "error"
+        });
+        await fetchAllRides();
+        return;
+      }
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/accept`,
+        {
+          rideId,
+          hitcherId
+        },
+        { withCredentials: true }
+      );
+      
+      // Fetch fresh data to update the UI
+      await fetchAllRides();
+      
+      // Show success notification
+      setNotification({
+        show: true,
+        message: "Request accepted successfully",
+        type: "success"
+      });
+      
+      // Check if this was the last request for this ride
+      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
+      if (remainingRequests.length === 0) {
+        closeRequestModal();
+      }
+    } catch (error: any) {
+      console.error("Error accepting request:", error);
+      
+      // Handle specific error cases
+      if (error.response?.data?.alreadyCancelled) {
+        setNotification({
+          show: true,
+          message: "This ride request has already been cancelled by the hitcher.",
+          type: "error"
+        });
+      } else if (error.response?.data?.noSeatsAvailable) {
+        setNotification({
+          show: true,
+          message: "No seats available for this ride.",
+          type: "error"
+        });
+      } else {
+        setNotification({
+          show: true,
+          message: error.response?.data?.message || "Failed to accept request. Please try again.",
+          type: "error"
+        });
+      }
+      
+      // Refresh rides to get the updated status
+      await fetchAllRides();
+    }
+  };
+
+  const handleRejectRequest = async (rideId: string, hitcherId: string) => {
+    try {
+      // First check if the ride is still active
+      const rideCheckResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/status`,
+        { withCredentials: true }
+      );
+      
+      // If ride is already cancelled or completed
+      if (rideCheckResponse.data.rideStatus !== "scheduled") {
+        setNotification({
+          show: true,
+          message: `Cannot reject request. This ride is ${rideCheckResponse.data.rideStatus}.`,
+          type: "error"
+        });
+        await fetchAllRides(); // Refresh to get updated status
+        return;
+      }
+
+      // Then check if the hitcher request is still pending
+      const hitcherCheckResponse = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/hitcher/${hitcherId}/status`,
+        { withCredentials: true }
+      );
+      
+      // If request is already cancelled by hitcher
+      if (hitcherCheckResponse.data.hitcherStatus === "cancelled") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been cancelled by the hitcher.",
+          type: "error"
+        });
+        await fetchAllRides(); // Refresh to get updated status
+        return;
+      }
+      
+      // If request is already accepted or rejected
+      if (hitcherCheckResponse.data.hitcherStatus === "accepted") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been accepted.",
+          type: "error"
+        });
+        await fetchAllRides();
+        return;
+      }
+      
+      if (hitcherCheckResponse.data.hitcherStatus === "rejected") {
+        setNotification({
+          show: true,
+          message: "This ride request has already been rejected.",
+          type: "error"
+        });
+        await fetchAllRides();
+        return;
+      }
+
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/rides/reject`,
+        {
+          rideId,
+          hitcherId
+        },
+        { withCredentials: true }
+      );
+      
+      // Fetch fresh data to update the UI
+      await fetchAllRides();
+      
+      // Show success notification
+      setNotification({
+        show: true,
+        message: "Request declined successfully",
+        type: "success"
+      });
+      
+      // Check if this was the last request for this ride
+      const remainingRequests = getRequestsForRide(rideId).filter(req => req.hitcherId !== hitcherId);
+      if (remainingRequests.length === 0) {
+        closeRequestModal();
+      }
+    } catch (error: any) {
+      console.error("Error rejecting request:", error);
+      setNotification({
+        show: true,
+        message: error.response?.data?.message || "Failed to reject request. Please try again.",
+        type: "error"
+      });
+      await fetchAllRides();
+    }
+  };
 
   return (
     <>
@@ -505,7 +640,7 @@ const DriverDashboard: React.FC = () => {
                             
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2 items-end">
                           {/* Ride status */}
                           <span
                             className={`px-2 py-1 text-sm font-medium rounded-full ${
@@ -523,7 +658,7 @@ const DriverDashboard: React.FC = () => {
                               : ride.status.charAt(0).toUpperCase() +
                                 ride.status.slice(1)}
                           </span>
-                          <br />
+                          
                           {ride.totalFare > 0 && (
                             <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
