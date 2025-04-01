@@ -574,13 +574,23 @@ const HitcherDashboard: React.FC = () => {
         )}
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Hitcher Dashboard
-            </h1>
-            <p className="text-gray-600">
-              View your ride requests and bookings
-            </p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Hitcher Dashboard
+                </h1>
+                <p className="text-gray-600">
+                  View your ride requests and bookings
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/report")}
+                className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                Report an Issue
+              </button>
+            </div>
           </div>
         </div>
 

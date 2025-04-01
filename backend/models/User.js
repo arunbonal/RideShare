@@ -42,16 +42,6 @@ const DriverProfileSchema = new mongoose.Schema({
     min: 0,
     max: 100,
   },
-  rating: {
-    type: Number,
-    min: 0,
-    max: 5,
-    default: 0,
-  },
-  ratingCount: {
-    type: Number,
-    default: 0,
-  },
   // New fields for tracking reliability metrics
   completedRides: {
     type: Number,
@@ -83,16 +73,6 @@ const HitcherProfileSchema = new mongoose.Schema({
     min: 0,
     max: 100,
   },
-  rating: {
-    type: Number,
-    min: 0,
-    max: 5,
-    default: 0,
-  },
-  ratingCount: {
-    type: Number,
-    default: 0,
-  },
   // New fields for tracking reliability metrics
   completedRides: {
     type: Number,
@@ -109,6 +89,30 @@ const HitcherProfileSchema = new mongoose.Schema({
   cancelledPendingRides: {
     type: Number,
     default: 0,
+  },
+});
+
+// Define the Notification Schema
+const NotificationSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    required: true,
+  },
+  title: {
+    type: String,
+    required: true,
+  },
+  message: {
+    type: String,
+    required: true,
+  },
+  read: {
+    type: Boolean,
+    default: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
   },
 });
 
@@ -184,7 +188,8 @@ const UserSchema = new mongoose.Schema({
   isAdmin: {
     type: Boolean,
     default: false
-  }
+  },
+  notifications: [NotificationSchema],
 });
 
 // Method to update driver reliability rate

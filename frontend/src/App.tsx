@@ -44,6 +44,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserDetails from "./pages/AdminUserDetails";
 import AdminRideDetails from './pages/AdminRideDetails';
+import Report from "./pages/Report";
 
 function App() {
   return (
@@ -162,6 +163,14 @@ function App() {
               } 
             />
             <Route path="/admin/rides/:id" element={<AdminRideDetails />} />
+            <Route
+              path="/report"
+              element={
+                <ProtectedRoute>
+                  <Report />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

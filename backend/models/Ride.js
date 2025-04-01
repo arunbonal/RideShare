@@ -17,11 +17,6 @@ const RideSchema = new mongoose.Schema({
         enum: ["pending", "accepted", "rejected", "cancelled", "completed", "cancelled-by-driver"],
         default: "pending",
       },
-      rating: {
-        type: Number,
-        min: 1,
-        max: 5,
-      },
       pickupLocation: {
         type: String,
       },

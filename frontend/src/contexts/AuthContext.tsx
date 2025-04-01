@@ -29,7 +29,6 @@ interface User {
   driverProfile: {
     isActive: boolean;
     completedTripsAsDriver: number;
-    rating: number;
     licenseImage: string;
     vehicle: {
       model: string;
@@ -38,7 +37,6 @@ interface User {
       seats: number;
     };
     pricePerKm: number;
-    ratingCount: number;
     reliabilityRate: number;
     completedRides: number;
     totalRidesCreated: number;
@@ -48,8 +46,6 @@ interface User {
   hitcherProfile: {
     isActive: boolean;
     completedTripsAsHitcher: number;
-    rating: number;
-    ratingCount: number;
     reliabilityRate: number;
     completedRides: number;
     totalRidesRequested: number;
@@ -57,6 +53,13 @@ interface User {
     cancelledPendingRides: number;
   } | null;
   isAdmin: boolean;
+  notifications?: {
+    type: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+  }[];
 }
 
 // Updated Ride interface to match the backend schema

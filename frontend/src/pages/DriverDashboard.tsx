@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Car, Plus, Calendar, Clock, Users, MapPin, List, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
@@ -16,7 +16,7 @@ interface Driver {
   gender: string;
   srn: string;
   hitcherProfile?: {
-    rating: number;
+    reliabilityRate: number;
   };
 }
 
@@ -29,7 +29,6 @@ interface User {
   gender: string;
   srn?: string;
   hitcherProfile?: {
-    rating: number;
     reliabilityRate: number;
   };
 }
@@ -68,6 +67,7 @@ const DriverDashboard: React.FC = () => {
     }
   );
   const [currentRequestIndex, setCurrentRequestIndex] = useState(0);
+  const navigate = useNavigate();
   
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -276,7 +276,6 @@ const DriverDashboard: React.FC = () => {
         hitcherPhone: hitcher.user.phone,
         hitcherGender: hitcher.user.gender || "Not specified",
         hitcherSRN: hitcher.user.srn ? `${hitcher.user.srn.slice(0, -3)}XXX` : undefined,
-        hitcherRating: hitcher.user.hitcherProfile?.rating || 0,
         hitcherReliability: hitcher.user.hitcherProfile?.reliabilityRate || 100,
         rideDirection: ride.direction,
         pickupLocation: hitcher.pickupLocation || "Not specified",
@@ -564,15 +563,25 @@ const DriverDashboard: React.FC = () => {
         )}
         
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Driver Dashboard
-            </h1>
-            <p className="text-gray-600">
-              Manage your rides and hitcher requests
-            </p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Driver Dashboard
+                </h1>
+                <p className="text-gray-600">
+                  Manage your rides and hitcher requests
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/report")}
+                className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                Report an Issue
+              </button>
+            </div>
           </div>
-          <div className="mt-4 md:mt-0 space-x-4">
+          <div className="mt-4 md:mt-0 space-x-4 flex items-center">
             <Link
               to="/rides/manage"
               className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -912,9 +921,6 @@ const DriverDashboard: React.FC = () => {
                             SRN: {currentRequest.hitcherSRN}
                           </p>
                         )}
-                        <p className="text-sm text-gray-600">
-                          Rating: {currentRequest.hitcherRating.toFixed(1)}
-                        </p>
                         <p className="text-sm text-gray-600">
                           Reliability: <span className={`font-medium ${
                             currentRequest.hitcherReliability > 80 ? 'text-green-600' : 

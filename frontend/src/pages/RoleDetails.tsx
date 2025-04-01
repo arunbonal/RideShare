@@ -386,8 +386,7 @@ const RoleDetails: React.FC = () => {
                 Completed Trips: {driverProfile.completedTripsAsDriver}
               </p>
               <p>
-                Rating: {driverProfile.rating.toFixed(1)} (
-                {driverProfile.ratingCount} reviews)
+                Reliability Rate: {driverProfile.reliabilityRate}%
               </p>
             </div>
 
@@ -442,8 +441,7 @@ const RoleDetails: React.FC = () => {
               Completed Trips: {hitcherProfile.completedTripsAsHitcher}
             </p>
             <p>
-              Rating: {hitcherProfile.rating.toFixed(1)} (
-              {hitcherProfile.ratingCount} reviews)
+              Reliability Rate: {hitcherProfile.reliabilityRate}%
             </p>
           </div>
         </div>

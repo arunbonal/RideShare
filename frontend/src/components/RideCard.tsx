@@ -8,7 +8,7 @@ interface RideCardProps {
     id: string;
     driverId: string;
     driverName: string;
-    driverRating: number;
+    driverReliability: number;
     direction: "toCollege" | "fromCollege";
     departureTime: string;
     departureLocation: string;
@@ -47,7 +47,7 @@ const RideCard: React.FC<RideCardProps> = ({
           </div>
           <div className="flex items-center bg-blue-50 px-2 py-1 rounded text-blue-700">
             <Star className="h-4 w-4 mr-1 text-yellow-500" />
-            <span>{ride.driverRating.toFixed(1)}</span>
+            <span>{ride.driverReliability}%</span>
           </div>
         </div>
 

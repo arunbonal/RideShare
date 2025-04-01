@@ -12,7 +12,6 @@ interface RideSchedule {
     pickupLocation?: string;
     dropoffLocation?: string;
     fare?: number;
-    rating?: number;
     review?: string;
   }>;
   note?: string;

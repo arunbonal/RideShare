@@ -31,8 +31,6 @@ exports.updateDriverProfile = async (req, res) => {
       },
       pricePerKm: driverProfile.pricePerKm,
       completedTripsAsDriver: user.driverProfile?.completedTripsAsDriver || 0,
-      rating: user.driverProfile?.rating || 0,
-      ratingCount: user.driverProfile?.ratingCount || 0,
     };
 
     // Save the updated user
@@ -116,8 +114,6 @@ exports.updateHitcherProfile = async (req, res) => {
       isActive: true,
       completedTripsAsHitcher:
         user.hitcherProfile?.completedTripsAsHitcher || 0,
-      rating: user.hitcherProfile?.rating || 0,
-      ratingCount: user.hitcherProfile?.ratingCount || 0,
     };
 
     // Save the updated user

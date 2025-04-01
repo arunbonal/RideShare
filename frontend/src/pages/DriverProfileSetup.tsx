@@ -390,8 +390,6 @@ const DriverProfileSetup: React.FC = () => {
           },
           pricePerKm: formData.pricePerKm,
           completedTripsAsDriver: 0,
-          rating: 0,
-          ratingCount: 0,
         },
         driverProfileComplete: true,
         activeRoles: {
