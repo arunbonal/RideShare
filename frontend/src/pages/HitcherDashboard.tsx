@@ -351,9 +351,8 @@ const HitcherDashboard: React.FC = () => {
 
     try {
       // First, check the current status of the ride
-      const rideCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/status`,
-        { withCredentials: true }
+      const rideCheckResponse = await api.get(
+        `/api/rides/${rideId}/status`
       );
       
       // If ride is already cancelled by driver or completed
@@ -382,9 +381,8 @@ const HitcherDashboard: React.FC = () => {
       }
 
       // Then check the hitcher's status in this ride
-      const hitcherCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/hitcher/${hitcherId}/status`,
-        { withCredentials: true }
+      const hitcherCheckResponse = await api.get(
+        `/api/rides/${rideId}/hitcher/${hitcherId}/status`
       );
       
       // If hitcher request is already cancelled
