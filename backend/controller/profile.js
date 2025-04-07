@@ -19,10 +19,10 @@ exports.updateDriverProfile = async (req, res) => {
     if (homeAddress) user.homeAddress = homeAddress;
     if (gender) user.gender = gender;
     if (distanceToCollege) user.distanceToCollege = distanceToCollege;
+    
     // Update or create driver profile
     user.driverProfile = {
       isActive: true,
-      licenseImage: driverProfile.licenseImage,
       vehicle: {
         model: driverProfile.vehicle.model,
         color: driverProfile.vehicle.color,
