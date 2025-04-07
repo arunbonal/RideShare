@@ -5,6 +5,7 @@ import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { Plus } from "lucide-react";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 const RideManagement: React.FC = () => {
   const { currentUser, allRides, setAllRides, fetchAllRides, refreshUserData } = useAuth();
@@ -24,6 +25,7 @@ const RideManagement: React.FC = () => {
     currentRate: number | null;
     newRate: number | null;
   }>({ currentRate: null, newRate: null });
+  const [loading, setLoading] = useState(false);
 
   // Fetch all rides when component mounts
   useEffect(() => {
@@ -107,14 +109,13 @@ const RideManagement: React.FC = () => {
       
       if (hasAcceptedHitchers) {
         // Calculate reliability impact for rides with accepted hitchers
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/rides/calculate-reliability-impact`,
+        const response = await api.post(
+          "/api/rides/calculate-reliability-impact",
           { 
             userId: currentUser?.id,
             userType: 'driver',
             actionType: 'CANCEL_ACCEPTED_RIDE'
-          },
-          { withCredentials: true }
+          }
         );
         
         setReliabilityImpact({
@@ -144,12 +145,10 @@ const RideManagement: React.FC = () => {
     if (!rideToCancel) return;
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/cancel`,
-        {
-          rideId: rideToCancel.id
-        },
-        { withCredentials: true }
+      setLoading(true);
+      const response = await api.post(
+        "/api/rides/cancel",
+        { rideId: rideToCancel.id, userId: currentUser?.id, userType: 'driver' }
       );
 
       // Update local user data with the new reliability rate
@@ -180,6 +179,73 @@ const RideManagement: React.FC = () => {
       setTimeout(() => {
         setNotification((prev) => ({ ...prev, show: false }));
       }, 3000);
+      setLoading(false);
+    }
+  };
+
+  const cancelRide = async (rideId: string) => {
+    try {
+      setLoading(true);
+      const response = await api.post(
+        "/api/rides/cancel",
+        { rideId, userId: currentUser?.id, userType: 'driver' }
+      );
+      
+      // Update rides list after cancellation
+      await fetchAllRides();
+      
+      // Show success message
+      setNotification({
+        show: true,
+        type: "success",
+        message: "Ride cancelled successfully"
+      });
+    } catch (error: any) {
+      console.error("Error cancelling ride:", error);
+      setNotification({
+        show: true,
+        type: "error",
+        message: error.response?.data?.message || "Failed to cancel ride"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptHitcher = async (rideId: string, hitcherId: string) => {
+    try {
+      setLoading(true);
+      const response = await api.post(
+        "/api/rides/accept",
+        { rideId, hitcherId }
+      );
+      
+      // Update rides list after accepting hitcher
+      await fetchAllRides();
+      
+      // Show success message
+      setNotification({
+        show: true,
+        type: "success",
+        message: "Hitcher request accepted successfully"
+      });
+    } catch (error: any) {
+      console.error("Error accepting hitcher:", error);
+      const errorMessage = error.response?.data?.message || "Failed to accept hitcher";
+      
+      // Check if this is due to the hitcher already cancelling
+      if (error.response?.data?.alreadyCancelled) {
+        // Refresh the rides list to get the updated status
+        await fetchAllRides();
+      }
+      
+      setNotification({
+        show: true,
+        type: "error",
+        message: errorMessage
+      });
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 declare global {
   interface Window {
@@ -333,13 +334,12 @@ const UserProfile: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/profile/update`,
+      const response = await api.post(
+        "/api/profile/update",
         {
           homeAddress: newAddress,
           distanceToCollege: distanceToCollege
-        },
-        { withCredentials: true }
+        }
       );
       await refreshUserData();
       setSuccessMessage("Address updated successfully!");

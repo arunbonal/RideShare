@@ -4,6 +4,7 @@ import { User, MapPin, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 declare global {
   interface Window {
@@ -20,8 +21,8 @@ const HitcherProfileSetup: React.FC = () => {
     const completeHitcherProfile = async () => {
       if (currentUser?.phone && currentUser?.gender && currentUser?.homeAddress) {
         try {
-          await axios.post(
-            `${import.meta.env.VITE_API_URL}/api/profile/hitcher`,
+          await api.post(
+            "/api/profile/hitcher",
             {
               phone: currentUser.phone,
               gender: currentUser.gender,
@@ -32,8 +33,7 @@ const HitcherProfileSetup: React.FC = () => {
                 driver: currentUser.activeRoles?.driver || false,
                 hitcher: true,
               },
-            },
-            { withCredentials: true }
+            }
           );
           await updateHitcherProfileComplete(true);
           navigate("/hitcher/dashboard");
@@ -226,10 +226,9 @@ const HitcherProfileSetup: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/send`,
-        { phoneNumber: formattedPhoneNumber },
-        { withCredentials: true }
+      const response = await api.post(
+        "/api/verify/send",
+        { phoneNumber: formattedPhoneNumber }
       );
       
       if (response.data.success) {
@@ -261,13 +260,12 @@ const HitcherProfileSetup: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`;
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/verify`,
+      const response = await api.post(
+        "/api/verify/verify",
         { 
           phoneNumber: formattedPhoneNumber,
           code: verificationCode 
-        },
-        { withCredentials: true }
+        }
       );
       
       if (response.data.success) {
@@ -307,8 +305,8 @@ const HitcherProfileSetup: React.FC = () => {
     setError(null);
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/profile/hitcher`,
+      await api.post(
+        "/api/profile/hitcher",
         {
           ...formData,
           phone: `+91${phoneNumber}`,
@@ -317,8 +315,7 @@ const HitcherProfileSetup: React.FC = () => {
             driver: currentUser?.activeRoles?.driver || false,
             hitcher: true,
           },
-        },
-        { withCredentials: true }
+        }
       );
 
       await updateHitcherProfileComplete(true);
