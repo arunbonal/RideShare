@@ -6,9 +6,15 @@
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RideShare</title>
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnTE-k5_PY8y8KZW6Ss5tgq-ZbjerfW4k&libraries=places,geometry"
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBnTE-k5_PY8y8KZW6Ss5tgq-ZbjerfW4k&libraries=places,geometry&callback=initMap"
     ></script>
+  <script>
+    // Create a global callback function that Maps API will call when loaded
+    window.initMap = function() {
+      // Maps API is loaded and ready to use
+    };
+  </script>
 </head>
 
 <body>

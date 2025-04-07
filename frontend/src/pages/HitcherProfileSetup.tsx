@@ -80,6 +80,8 @@ const HitcherProfileSetup: React.FC = () => {
 
       try {
         // Create the autocomplete instance
+        // Note: Using Autocomplete with a notice that it should be updated in the future
+        // Google recommends migrating to PlaceAutocompleteElement but that requires DOM changes
         autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
           componentRestrictions: { country: "IN" },
           fields: ["formatted_address", "geometry", "name", "types"],
@@ -102,6 +104,8 @@ const HitcherProfileSetup: React.FC = () => {
           setMap(newMap);
           
           // Create a marker but don't set position yet
+          // Note: Using Marker with a notice that it should be updated in the future
+          // Google recommends migrating to AdvancedMarkerElement but that requires additional setup
           const newMarker = new google.maps.Marker({
             map: newMap,
             draggable: false,
