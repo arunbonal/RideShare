@@ -328,23 +328,25 @@ const DriverProfileSetup: React.FC = () => {
     
     try {
       setIsSubmitting(true);
-      const driverProfileData = {
+      const requestData = {
         phone: formData.phone,
         gender: formData.gender,
-        vehicle: {
-          model: formData.vehicle.model,
-          color: formData.vehicle.color,
-          registrationNumber: formData.vehicle.registrationNumber,
-          seats: formData.vehicle.seats,
-        },
         homeAddress: formData.homeAddress,
         distanceToCollege: formData.distanceToCollege,
-        pricePerKm: formData.pricePerKm,
+        driverProfile: {
+          vehicle: {
+            model: formData.vehicle.model,
+            color: formData.vehicle.color,
+            registrationNumber: formData.vehicle.registrationNumber,
+            seats: formData.vehicle.seats,
+          },
+          pricePerKm: formData.pricePerKm,
+        }
       };
 
       await api.post(
         "/api/profile/driver",
-        driverProfileData
+        requestData
       );
       await updateDriverProfileComplete(true);
       navigate("/driver/dashboard");
