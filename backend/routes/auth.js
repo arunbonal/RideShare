@@ -2,6 +2,7 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 const authController = require("../controller/auth");
+const authMiddleware = require("../middleware/auth");
 require("dotenv").config();
 
 // Google OAuth login route
@@ -24,17 +25,23 @@ router.get(
 router.get("/logout", authController.logout);
 
 // Update active roles
-router.put("/active-roles", authController.updateActiveRoles);
+router.put(
+  "/active-roles",
+  authMiddleware.isAuthenticated,
+  authController.updateActiveRoles
+);
 
 // Update driver profile completion status
 router.put(
   "/driver-profile-complete",
+  authMiddleware.isAuthenticated,
   authController.updateDriverProfileComplete
 );
 
 // Update hitcher profile completion status
 router.put(
   "/hitcher-profile-complete",
+  authMiddleware.isAuthenticated,
   authController.updateHitcherProfileComplete
 );
 

@@ -80,10 +80,7 @@ exports.logout = (req, res) => {
 
 // understand from here
 exports.updateActiveRoles = (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
+  // User is already authenticated by the middleware
   const { driver, hitcher } = req.body;
 
   // Validate input
@@ -116,10 +113,7 @@ exports.updateActiveRoles = (req, res) => {
 };
 
 exports.updateDriverProfileComplete = (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
+  // User is already authenticated by the middleware
   const { complete } = req.body;
 
   if (typeof complete !== "boolean") {
@@ -143,10 +137,7 @@ exports.updateDriverProfileComplete = (req, res) => {
 };
 
 exports.updateHitcherProfileComplete = (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
+  // User is already authenticated by the middleware
   const { complete } = req.body;
 
   if (typeof complete !== "boolean") {
