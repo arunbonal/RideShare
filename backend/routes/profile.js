@@ -18,7 +18,11 @@ router.post(
 );
 
 // Update driver vehicle and pricing only
-router.post("/driver/update", profileController.updateDriverVehicleAndPricing);
+router.post(
+  "/driver/update",
+  authMiddleware.isAuthenticated,
+  profileController.updateDriverVehicleAndPricing || profileController.updateDriverProfile
+);
 
 // Update hitcher profile
 router.post(
@@ -31,7 +35,7 @@ router.post(
 router.post(
   "/update",
   authMiddleware.isAuthenticated,
-  profileController.updateUserProfile
+  profileController.updateBasicProfileInfo
 );
 
 module.exports = router;
