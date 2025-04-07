@@ -5,6 +5,7 @@ import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 import { ArrowLeft } from "lucide-react";
 
 interface ExtendedRide extends Ride {
@@ -157,13 +158,12 @@ const Report: React.FC = () => {
 
   const handleReportNoShow = async (rideId: string, userId: string) => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/issues/no-show`,
+      await api.post(
+        "/api/issues/no-show",
         {
           rideId,
           userId
-        },
-        { withCredentials: true }
+        }
       );
       
       setNotification({
@@ -187,9 +187,8 @@ const Report: React.FC = () => {
   const handleReportIssue = async (rideId: string, userId: string) => {
     try {
       // Check if an issue already exists for this ride
-      const existingIssue = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/issues/ride/${rideId}`,
-        { withCredentials: true }
+      const existingIssue = await api.get(
+        `/api/issues/ride/${rideId}`
       );
 
       if (existingIssue.data.length > 0) {
@@ -202,14 +201,13 @@ const Report: React.FC = () => {
         return;
       }
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/issues`,
+      await api.post(
+        "/api/issues",
         {
           rideId,
           reportedUserId: userId,
           ...issueForm
-        },
-        { withCredentials: true }
+        }
       );
       
       setNotification({
@@ -248,9 +246,8 @@ const Report: React.FC = () => {
   // Update the checkExistingIssues function
   const checkExistingIssues = async (rideId: string, reportedUserId: string) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/issues/ride/${rideId}`,
-        { withCredentials: true }
+      const response = await api.get(
+        `/api/issues/ride/${rideId}`
       );
       
       // Check if there's an issue from current user to reported user

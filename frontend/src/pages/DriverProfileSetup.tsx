@@ -4,6 +4,7 @@ import { Car, MapPin, CreditCard, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 // Add these type declarations at the top of the file
 declare global {
@@ -341,10 +342,9 @@ const DriverProfileSetup: React.FC = () => {
         pricePerKm: formData.pricePerKm,
       };
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/profile/driver`,
-        driverProfileData,
-        { withCredentials: true }
+      await api.post(
+        "/api/profile/driver",
+        driverProfileData
       );
       await updateDriverProfileComplete(true);
       navigate("/driver/dashboard");

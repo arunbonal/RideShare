@@ -4,6 +4,8 @@ import { Calendar, Clock, MapPin, MessageSquare, Users } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
+
 interface RideSchedule {
   driver: string;
   passengers?: Array<{
@@ -148,11 +150,7 @@ const RideCreation: React.FC = () => {
         })()
       };
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/create`,
-        rideData,
-        { withCredentials: true }
-      );
+      await api.post("/api/rides/create", rideData);
 
       resetRide();
       navigate("/driver/dashboard");
