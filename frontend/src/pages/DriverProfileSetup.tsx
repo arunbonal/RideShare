@@ -374,10 +374,9 @@ const DriverProfileSetup: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/send`,
-        { phoneNumber: formattedPhoneNumber },
-        { withCredentials: true }
+      const response = await api.post(
+        "/api/verify/send",
+        { phoneNumber: formattedPhoneNumber }
       );
       
       if (response.data.success) {
@@ -409,13 +408,12 @@ const DriverProfileSetup: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`;
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/verify`,
+      const response = await api.post(
+        "/api/verify/verify",
         { 
           phoneNumber: formattedPhoneNumber,
           code: verificationCode 
-        },
-        { withCredentials: true }
+        }
       );
       
       if (response.data.success) {

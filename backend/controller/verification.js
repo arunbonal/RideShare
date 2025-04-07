@@ -52,12 +52,14 @@ const verifyCode = async (req, res) => {
       .create({ to: phoneNumber, code });
 
     if (verificationCheck.status === 'approved') {
-      // Update user's record to mark phone as verified
-      const User = require('../models/User');
-      await User.findByIdAndUpdate(
-        req.user.id, 
-        { isPhoneVerified: true }
-      );
+      // Update user's record to mark phone as verified if we have a user
+      if (req.user && req.user._id) {
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(
+          req.user._id, 
+          { isPhoneVerified: true }
+        );
+      }
       
       res.json({ 
         success: true, 

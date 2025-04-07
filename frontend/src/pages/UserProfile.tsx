@@ -254,10 +254,9 @@ const UserProfile: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/send`,
-        { phoneNumber: formattedPhoneNumber },
-        { withCredentials: true }
+      const response = await api.post(
+        "/api/verify/send",
+        { phoneNumber: formattedPhoneNumber }
       );
       
       if (response.data.success) {
@@ -289,13 +288,12 @@ const UserProfile: React.FC = () => {
       }
 
       const formattedPhoneNumber = `+91${phoneNumber}`;
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/verify/verify`,
+      const response = await api.post(
+        "/api/verify/verify",
         { 
           phoneNumber: formattedPhoneNumber,
           code: verificationCode 
-        },
-        { withCredentials: true }
+        }
       );
       
       if (response.data.success) {
@@ -380,12 +378,11 @@ const UserProfile: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/profile/update`,
+      await api.post(
+        "/api/profile/update",
         {
           phone: `+91${phoneNumber}`
-        },
-        { withCredentials: true }
+        }
       );
       await refreshUserData();
       setSuccessMessage("Phone number updated successfully!");
