@@ -594,8 +594,12 @@ const RideSearch: React.FC = () => {
                   <XCircle className="h-6 w-6" />
                 </button>
               </div>
-
-              <div className="p-6">
+              {selectedRideDetails.direction === "toCollege" ? (
+                <div className="mx-6 mt-2 text-red-500 text-sm">Your ride is likely to be accepted if your pickup point is on the way for the driver</div>
+              ) : (
+                <div className="mx-6 mt-2 text-red-500 text-sm">Your ride is likely to be accepted if your dropoff point is on the way for the driver</div>
+              )}
+              <div className="p-4">
                 {/* Map Preview - Properly contained with enough space */}
                 <div className="relative mb-8">
                   <MapPreview
@@ -604,6 +608,7 @@ const RideSearch: React.FC = () => {
                     userLocation={currentUser?.homeAddress || ""}
                     direction={selectedRideDetails.direction}
                     className="shadow-sm rounded-lg overflow-hidden"
+                    showAddressLabels={true}
                   />
                 </div>
 

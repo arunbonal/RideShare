@@ -404,9 +404,8 @@ const RideCreation: React.FC = () => {
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Default price from your profile: ₹
-                {currentUser?.driverProfile?.pricePerKm || 0}/km
-                <br />
+                
+               
                 {ride.pricePerKm !== undefined && ride.availableSeats > 0 && (
                   <>
                     At full capacity ({ride.availableSeats} seats), you'll earn
@@ -422,8 +421,8 @@ const RideCreation: React.FC = () => {
                 <MessageSquare className="inline-block w-4 h-4 mr-2" />
                 Additional Notes (optional)
               </label>
-              <p className=" text-sm text-gray-500">
-              Avoid sharing personal details like your name or phone number to prevent spam. Relevant details will be shared once you accept a request.
+              <p className="mb-2 text-sm text-gray-500">
+              Avoid sharing personal details like your phone number to prevent spam.
               </p>
               <textarea
                 value={ride.note}
@@ -439,7 +438,9 @@ const RideCreation: React.FC = () => {
 
               />
             </div>
-
+            <p className=" text-sm text-gray-500">
+              Relevant details will be shared once you accept a request.
+              </p>
             <button
               onClick={handleCreateSchedule}
               className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

@@ -13,6 +13,7 @@ interface MapPreviewProps {
   hitcherPhones?: string[]; // Array of hitcher phone numbers matching the locations
   hitcherFares?: number[]; // Array of fares for each hitcher
   showHitcherDetails?: boolean; // Whether to show hitcher details (name/phone) on hover
+  showAddressLabels?: boolean; // Whether to show clarifying labels for addresses (for RideSearch)
 }
 
 const MapPreview: React.FC<MapPreviewProps> = ({
@@ -27,6 +28,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   hitcherPhones = [],
   hitcherFares = [],
   showHitcherDetails = true, // Default to true to maintain backwards compatibility
+  showAddressLabels = false, // Default to false to maintain backwards compatibility
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -109,10 +111,12 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             <div className="ml-3 min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900">
                 Start
+                {showAddressLabels && direction === "toCollege" && (
+                  <span className="ml-1 text-xs text-gray-500">(Driver's address)</span>
+                )}
               </p>
               <p className="text-sm text-gray-500 break-words">
                 {startLocation}
-                
               </p>
             </div>
           </div>
@@ -130,6 +134,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                   <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium text-gray-900">
                       {direction === "toCollege" ? "Pickup Point" : "Dropoff Point"} {userLocations.length > 1 ? `#${index + 1}` : ""}
+                      {showAddressLabels && (
+                        (direction === "toCollege" || direction === "fromCollege") ? (
+                          <span className="ml-1 text-xs text-gray-500">(Your address)</span>
+                        ) : null
+                      )}
                     </p>
                     {isAcceptedLocation(location) && (
                       <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
@@ -155,7 +164,9 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 break-words">{location}</p>
+                  <p className="text-sm text-gray-500 break-words">
+                    {location}
+                  </p>
                 </div>
               </div>
               
@@ -173,6 +184,9 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             <div className="ml-3 min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900">
                 Destination
+                {showAddressLabels && direction === "fromCollege" && (
+                  <span className="ml-1 text-xs text-gray-500">(Driver's address)</span>
+                )}
               </p>
               <p className="text-sm text-gray-500 break-words">
                 {endLocation}

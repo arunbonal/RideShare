@@ -394,11 +394,12 @@ const RoleDetails: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-500">
                 Personal Details
               </h3>
-              <img
-                src={driverProfile.licenseImage}
-                alt="Driver's License"
-                className="mt-1 h-32 w-auto object-cover rounded-md"
-              />
+              <p className="mt-1">
+                Gender: {currentUser.gender.charAt(0).toUpperCase() + currentUser.gender.slice(1)}
+              </p>
+              <p>
+                Phone: {currentUser.phone}
+              </p>
             </div>
           </div>
         </div>

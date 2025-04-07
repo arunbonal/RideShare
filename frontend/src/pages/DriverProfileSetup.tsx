@@ -15,7 +15,6 @@ declare global {
 // First, define the type for the form data
 interface FormData {
   phone: string;
-  licenseImage: string;
   gender: string;
   vehicle: {
     model: string;
@@ -42,7 +41,6 @@ const DriverProfileSetup: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     phone: currentUser?.phone || "",
-    licenseImage: "",
     gender: currentUser?.gender || "",
     vehicle: {
       model: "",
@@ -264,61 +262,37 @@ const DriverProfileSetup: React.FC = () => {
   };
 
   const nextStep = () => {
-    // Validate current step before proceeding
     if (currentStep === 1) {
+      // Validate phone and gender
+      if (!formData.phone || !formData.gender) {
+        setError("Please fill all required fields.");
+        return;
+      }
       if (!isPhoneVerified) {
-        setError("Please verify your phone number");
+        setError("Please verify your phone number.");
         return;
       }
-      if (!formData.gender || formData.gender === "") {
-        setError("Please select your gender");
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      // Validate vehicle information
+      if (
+        !formData.vehicle.model ||
+        !formData.vehicle.color ||
+        !formData.vehicle.registrationNumber ||
+        !formData.vehicle.seats
+      ) {
+        setError("Please fill all required fields.");
         return;
       }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      // Validate home address
+      if (!formData.homeAddress || formData.distanceToCollege === 0) {
+        setError("Please enter your home address and ensure distance is calculated.");
+        return;
+      }
+      setCurrentStep(4);
     }
-
-    // Vehicle Information validation
-    if (currentStep === 2) {
-      if (!formData.licenseImage) {
-        setError("Please enter your license image URL");
-        return;
-      }
-      if (!formData.vehicle.model) {
-        setError("Please enter your vehicle model");
-        return;
-      }
-      if (!formData.vehicle.color) {
-        setError("Please enter your vehicle color");
-        return;
-      }
-      if (!formData.vehicle.registrationNumber) {
-        setError("Please enter your vehicle registration number");
-        return;
-      }
-      if (!formData.vehicle.seats) {
-        setError("Please select number of seats");
-        return;
-      }
-    }
-
-    // Location validation
-    if (currentStep === 3) {
-      if (!formData.homeAddress) {
-        setError("Please enter your home address");
-        return;
-      }
-    }
-
-    // Pricing validation
-    if (currentStep === 4) {
-      if (formData.pricePerKm === undefined || formData.pricePerKm <= 0) {
-        setError("Please enter a valid price per kilometer");
-        return;
-      }
-    }
-    
-    // Clear any existing error
-    setError(null);
-    setCurrentStep((prev) => prev + 1);
   };
 
   const prevStep = () => {
@@ -327,80 +301,49 @@ const DriverProfileSetup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Skip personal info validation if already exists
-    if (!currentUser?.phone) {
-      if (!isPhoneVerified) {
-        setError("Please verify your phone number");
-        return;
-      }
-      if (!formData.gender || formData.gender === "") {
-        setError("Please select your gender");
-        return;
-      }
-    }
-
-    // Always validate vehicle and pricing info
-    if (!formData.licenseImage) {
-      setError("Please enter your license image URL");
+    
+    // Validation for the current step
+    if (currentStep === 1 && (!formData.phone || !formData.gender)) {
+      setError("Please fill all required fields.");
+      return;
+    } else if (
+      currentStep === 2 && 
+      (
+        !formData.vehicle.model ||
+        !formData.vehicle.color ||
+        !formData.vehicle.registrationNumber ||
+        !formData.vehicle.seats
+      )
+    ) {
+      setError("Please fill all required fields.");
+      return;
+    } else if (currentStep === 3 && (!formData.homeAddress || formData.distanceToCollege === 0)) {
+      setError("Please enter your home address and ensure distance is calculated.");
+      return;
+    } else if (currentStep === 4 && !formData.pricePerKm) {
+      setError("Please set your price per kilometer.");
       return;
     }
-    if (!formData.vehicle.model) {
-      setError("Please enter your vehicle model");
-      return;
-    }
-    if (!formData.vehicle.color) {
-      setError("Please enter your vehicle color");
-      return;
-    }
-    if (!formData.vehicle.registrationNumber) {
-      setError("Please enter your vehicle registration number");
-      return;
-    }
-    if (!formData.vehicle.seats) {
-      setError("Please select number of seats");
-      return;
-    }
-    if (!formData.homeAddress) {
-      setError("Please enter your home address");
-      return;
-    }
-    if (formData.pricePerKm === undefined || formData.pricePerKm <= 0) {
-      setError("Please enter a valid price per kilometer");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
+    
     try {
-      const profileData = {
-        phone: currentUser?.phone || `+91${phoneNumber}`,
-        homeAddress: currentUser?.homeAddress || formData.homeAddress,
-        distanceToCollege: currentUser?.distanceToCollege || formData.distanceToCollege,
-        gender: currentUser?.gender || formData.gender,
-        driverProfile: {
-          isActive: true,
-          licenseImage: formData.licenseImage,
-          vehicle: {
-            model: formData.vehicle.model,
-            color: formData.vehicle.color,
-            registrationNumber: formData.vehicle.registrationNumber,
-            seats: formData.vehicle.seats,
-          },
-          pricePerKm: formData.pricePerKm,
-          completedTripsAsDriver: 0,
+      setIsSubmitting(true);
+      const driverProfileData = {
+        phone: formData.phone,
+        gender: formData.gender,
+        vehicle: {
+          model: formData.vehicle.model,
+          color: formData.vehicle.color,
+          registrationNumber: formData.vehicle.registrationNumber,
+          seats: formData.vehicle.seats,
         },
-        driverProfileComplete: true,
-        activeRoles: {
-          driver: true,
-          hitcher: currentUser?.activeRoles?.hitcher || false,
-        },
+        homeAddress: formData.homeAddress,
+        distanceToCollege: formData.distanceToCollege,
+        pricePerKm: formData.pricePerKm,
       };
 
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/profile/driver`,
-        profileData,
+        driverProfileData,
         { withCredentials: true }
       );
       await updateDriverProfileComplete(true);
@@ -757,25 +700,6 @@ const DriverProfileSetup: React.FC = () => {
                   <h2 className="text-xl font-semibold ml-2">
                     Vehicle Information
                   </h2>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="licenseImage"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Driving License Image
-                  </label>
-                  <input
-                    type="text"
-                    id="licenseImage"
-                    name="licenseImage"
-                    value={formData.licenseImage}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your license image URL"
-                  />
                 </div>
 
                 <div>

@@ -584,12 +584,14 @@ const HitcherDashboard: React.FC = () => {
                   View your ride requests and bookings
                 </p>
               </div>
-              <button
-                onClick={() => navigate("/report")}
-                className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-              >
-                Report an Issue
-              </button>
+              {(activeTab === "upcoming" ? upcomingRides.length > 0 : pastRides.length > 0) && (
+                <button
+                  onClick={() => navigate("/report")}
+                  className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                  Report an Issue
+                </button>
+              )}
             </div>
           </div>
         </div>

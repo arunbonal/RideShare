@@ -25,12 +25,19 @@ const Navbar: React.FC = () => {
   const showHitcherDashboard =
     currentUser.activeRoles?.hitcher && currentUser.hitcherProfileComplete;
 
+  // Determine home route based on user's active role
+  const getHomeRoute = () => {
+    if (showDriverDashboard) return "/driver/dashboard";
+    if (showHitcherDashboard) return "/hitcher/dashboard";
+    return "/role-selection";
+  };
+
   return (
     <nav className="bg-blue-600 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
+            <Link to={getHomeRoute()} className="flex items-center">
               <Car className="h-8 w-8 mr-2" />
               <span className="font-bold text-xl">RideShare</span>
             </Link>

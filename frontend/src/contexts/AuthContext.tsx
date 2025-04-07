@@ -29,7 +29,6 @@ interface User {
   driverProfile: {
     isActive: boolean;
     completedTripsAsDriver: number;
-    licenseImage: string;
     vehicle: {
       model: string;
       color: string;
