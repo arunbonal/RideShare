@@ -712,6 +712,24 @@ const DriverDashboard: React.FC = () => {
                       <p className="mt-4 text-md text-red-700">
                         Your Current Route:
                       </p>
+                      {/* External Google Maps link */}
+                      <div className="mt-2 mb-2">
+                        <a 
+                          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
+                            ride.hitchers
+                              ?.filter(h => h.status === "accepted")
+                              .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
+                              .filter(Boolean)
+                              .join("|")
+                          }&travelmode=driving`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
+                        >
+                          <MapPin className="h-4 w-4 mr-1" />
+                          Open in Google Maps
+                        </a>
+                      </div>
                       {/* Map Preview for Current Route */}
                       <div className="mt-4">
                         <MapPreview
@@ -943,6 +961,27 @@ const DriverDashboard: React.FC = () => {
                     <p className="text-md text-red-700 mb-3">
                       Your Route after accepting this ride:
                     </p>
+                    
+                    {/* Google Maps external link for request view */}
+                    <div className="mb-2">
+                      <a 
+                        href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(currentRequest.rideDirection === "fromCollege" ? currentRequest.from : currentRequest.from)}&destination=${encodeURIComponent(currentRequest.rideDirection === "fromCollege" ? currentRequest.to : currentRequest.to)}&waypoints=${
+                          [
+                            ...currentRequest.acceptedHitchersLocations,
+                            currentRequest.rideDirection === "toCollege" ? currentRequest.pickupLocation : currentRequest.dropoffLocation
+                          ]
+                            .filter(Boolean)
+                            .map(location => encodeURIComponent(location || ""))
+                            .join("|")
+                        }&travelmode=driving`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
+                      >
+                        <MapPin className="h-4 w-4 mr-1" />
+                        Open in Google Maps
+                      </a>
+                    </div>
                     
                     {/* Map Preview for Ride Request */}
                     <div className="mb-4">
