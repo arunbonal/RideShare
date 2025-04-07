@@ -6,6 +6,7 @@ import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import api from "../utils/api"; // Import our API utility
 
 // Define interface for Driver that includes college
 interface Driver {
@@ -77,10 +78,7 @@ const RideSearch: React.FC = () => {
   // Modified fetch function to only get rides for a specific date
   const fetchRidesForDate = async (date: string) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides?date=${date}`,
-        { withCredentials: true }
-      );
+      const response = await api.get(`/api/rides?date=${date}`);
       setAllRides(response.data.rides);
       setRidesLoaded(true);
     } catch (error) {

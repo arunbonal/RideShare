@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import axios from "axios";
+import api from "../utils/api"; // Import our API utility
 
 // Updated User interface to match the new schema
 interface User {
@@ -199,44 +200,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     totalFare: 0,
   });
 
+  // Define fetchAllRides before it's used in useEffect hooks
+  const fetchAllRides = useCallback(async () => {
+    try {
+      const response = await api.get("/api/rides");
+      setAllRides(response.data.rides);
+    } catch (error) {
+      console.error("Error fetching rides:", error);
+      throw error;
+    }
+  }, []);
+
   // Fetch current user data from the backend
   const fetchUserData = useCallback(async () => {
     try {
       // Check for token in URL or localStorage
-      const token = getTokenFromUrl();
+      getTokenFromUrl();
       
-      // Setup headers for API request
-      const config = {
-        withCredentials: true,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      };
-      
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/profile`,
-        config
-      );
+      const response = await api.get("/api/profile");
       setCurrentUser(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching user data:", error);
       setCurrentUser(null);
       return null;
-    }
-  }, []);
-
-  // Define fetchAllRides before it's used in useEffect hooks
-  const fetchAllRides = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides`,
-        {
-          withCredentials: true,
-        }
-      );
-      setAllRides(response.data.rides);
-    } catch (error) {
-      console.error("Error fetching rides:", error);
-      throw error;
     }
   }, []);
 
@@ -339,9 +326,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear token from localStorage
       localStorage.removeItem('authToken');
       
-      await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
-        withCredentials: true,
-      });
+      await api.get("/api/auth/logout");
       setCurrentUser(null);
     } catch (error) {
       console.error("Logout error:", error);
@@ -376,11 +361,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           hitcher: role === "hitcher",
         };
 
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/auth/active-roles`,
-          roles,
-          { withCredentials: true }
-        );
+        await api.put("/api/auth/active-roles", roles);
 
         // Fetch fresh user data
         await fetchUserData();
@@ -404,11 +385,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ...(roles.hitcher ? { hitcher: true, driver: false } : {}),
         };
 
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/auth/active-roles`,
-          updatedRoles,
-          { withCredentials: true }
-        );
+        await api.put("/api/auth/active-roles", updatedRoles);
 
         // Fetch fresh user data
         await fetchUserData();
@@ -424,11 +401,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateDriverProfileComplete = useCallback(
     async (complete: boolean) => {
       try {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/auth/driver-profile-complete`,
-          { complete },
-          { withCredentials: true }
-        );
+        await api.put("/api/auth/driver-profile-complete", { complete });
 
         // Fetch fresh user data
         await fetchUserData();
@@ -444,11 +417,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateHitcherProfileComplete = useCallback(
     async (complete: boolean) => {
       try {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/auth/hitcher-profile-complete`,
-          { complete },
-          { withCredentials: true }
-        );
+        await api.put("/api/auth/hitcher-profile-complete", { complete });
 
         // Fetch fresh user data
         await fetchUserData();

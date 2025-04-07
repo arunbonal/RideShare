@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const rideController = require("../controller/ride");
-const { isAuthenticated } = require("../middleware/auth");
+const authMiddleware = require("../middleware/auth");
 
-// Apply authentication middleware to all profile routes
-router.use(isAuthenticated);
+// Apply authentication middleware to all routes
+router.use(authMiddleware.isAuthenticated);
 
 router.post("/create", rideController.createRide);
 
