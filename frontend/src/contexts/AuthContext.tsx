@@ -152,6 +152,24 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Function to extract token from URL query params
+const getTokenFromUrl = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  
+  if (token) {
+    // Store token in localStorage
+    localStorage.setItem('authToken', token);
+    
+    // Clean up URL by removing token parameter
+    const newUrl = window.location.pathname + 
+      (urlParams.toString() ? '?' + urlParams.toString().replace(/token=[^&]*(&|$)/, '') : '');
+    window.history.replaceState({}, document.title, newUrl);
+  }
+  
+  return token || localStorage.getItem('authToken');
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,11 +202,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Fetch current user data from the backend
   const fetchUserData = useCallback(async () => {
     try {
+      // Check for token in URL or localStorage
+      const token = getTokenFromUrl();
+      
+      // Setup headers for API request
+      const config = {
+        withCredentials: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      };
+      
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/profile`,
-        {
-          withCredentials: true,
-        }
+        config
       );
       setCurrentUser(response.data);
       return response.data;
@@ -225,31 +250,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [currentUser]);
 
-  // Check authentication status on component mount
+  // Initialize authentication state
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAuthStatus = async () => {
-      setLoading(true);
-      try {
-        if (isMounted) {
-          await fetchUserData();
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    checkAuthStatus();
-
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      isMounted = false;
-    };
+    // Check for token from URL (OAuth callback)
+    getTokenFromUrl();
+    
+    // Fetch user data
+    fetchUserData()
+      .then(() => setLoading(false))
+      .catch(() => setLoading(false));
   }, [fetchUserData]);
 
   // Add a background polling mechanism to keep ride data fresh
@@ -327,6 +336,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
+      // Clear token from localStorage
+      localStorage.removeItem('authToken');
+      
       await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
         withCredentials: true,
       });

@@ -1,4 +1,14 @@
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
+
+// Helper function to generate JWT token
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+};
 
 exports.googleCallback = (req, res) => {
   // authentication failed
@@ -7,9 +17,12 @@ exports.googleCallback = (req, res) => {
     return res.redirect(`${process.env.CLIENT_URL}/?error=invalid-email`);
   }
 
+  // Generate JWT token
+  const token = generateToken(req.user);
+
   // Check if user is an admin - bypass email validation for admins
   if (req.user.isAdmin) {
-    return res.redirect(`${process.env.CLIENT_URL}/admin`);
+    return res.redirect(`${process.env.CLIENT_URL}/admin?token=${token}`);
   }
 
   // Check if email is from PES domain
@@ -30,7 +43,7 @@ exports.googleCallback = (req, res) => {
 
   // If no active roles, redirect to role-selection
   if (!hasActiveRoles) {
-    return res.redirect(`${process.env.CLIENT_URL}/role-selection`);
+    return res.redirect(`${process.env.CLIENT_URL}/role-selection?token=${token}`);
   }
 
   // Determine redirect based on active roles and profile completion status
@@ -39,18 +52,18 @@ exports.googleCallback = (req, res) => {
   // If user is an active driver
   if (req.user.activeRoles.driver) {
     redirectPath = req.user.driverProfileComplete
-      ? "/driver/dashboard"
-      : "/driver/setup";
+      ? `/driver/dashboard?token=${token}`
+      : `/driver/setup?token=${token}`;
   }
   // If user is an active hitcher
   else if (req.user.activeRoles.hitcher) {
     redirectPath = req.user.hitcherProfileComplete
-      ? "/hitcher/dashboard"
-      : "/hitcher/setup";
+      ? `/hitcher/dashboard?token=${token}`
+      : `/hitcher/setup?token=${token}`;
   }
   // Fallback for any unexpected state
   else {
-    redirectPath = "/role-selection";
+    redirectPath = `/role-selection?token=${token}`;
   }
 
   return res.redirect(`${process.env.CLIENT_URL}${redirectPath}`);

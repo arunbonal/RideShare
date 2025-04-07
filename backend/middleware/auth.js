@@ -1,38 +1,53 @@
 const jwt = require("jsonwebtoken");
+const User = require('../models/User');
+require('dotenv').config();
 
-// Authentication middleware
-exports.isAuthenticated = (req, res, next) => {
-  // Check if user is authenticated via session
-  if (req.isAuthenticated && req.isAuthenticated()) {
+// Middleware to check if user is authenticated (via session OR token)
+exports.isAuthenticated = async (req, res, next) => {
+  // First check if user is authenticated via session
+  if (req.isAuthenticated()) {
     return next();
   }
 
-  // If not authenticated, return 401 Unauthorized
-  res.status(401).json({ message: "Unauthorized. Please log in." });
-};
-
-// JWT Token authentication middleware
-exports.authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "Access token required" });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid or expired token" });
+  // If not authenticated via session, check for token
+  try {
+    // Get token from header or query parameter
+    const token = 
+      req.headers.authorization?.split(' ')[1] || // Bearer TOKEN format
+      req.query.token; // Token as query parameter
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized. Please log in.' });
     }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Find user by id
+    const user = await User.findById(decoded.id);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    // Attach user to request
     req.user = user;
     next();
-  });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(401).json({ message: 'Unauthorized. Please log in.' });
+  }
 };
 
-// Admin authorization middleware
+// Middleware to check if user is an admin
 exports.isAdmin = (req, res, next) => {
-  if (!req.user || !req.user.isAdmin) {
-    return res.status(403).json({ message: "Admin access required" });
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized. Please log in.' });
   }
+  
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ message: 'Forbidden. Admin access required.' });
+  }
+  
   next();
 };

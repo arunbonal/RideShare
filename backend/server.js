@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: function(origin, callback) {
-      const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173", "https://ride-frontend.vercel.app"];
+      const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173", "https://rideshare-frontend.vercel.app"];
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
@@ -28,6 +28,8 @@ app.use(
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 app.use(express.json());
@@ -46,6 +48,7 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24, // 1 day
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
     },
   })
 );
