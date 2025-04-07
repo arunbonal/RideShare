@@ -6,10 +6,6 @@ const DriverProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  licenseImage: {
-    type: String,
-    required: true,
-  },
   vehicle: {
     model: {
       type: String,
