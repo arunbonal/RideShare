@@ -215,7 +215,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchUserData = useCallback(async () => {
     try {
       // Check for token in URL or localStorage
-      getTokenFromUrl();
+      const token = getTokenFromUrl();
+      
+      // If no token is available, return null immediately
+      if (!token) {
+        setCurrentUser(null);
+        return null;
+      }
       
       const response = await api.get("/api/profile");
       setCurrentUser(response.data);
