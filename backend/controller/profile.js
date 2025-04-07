@@ -20,16 +20,25 @@ exports.updateDriverProfile = async (req, res) => {
     if (gender) user.gender = gender;
     if (distanceToCollege) user.distanceToCollege = distanceToCollege;
     
+    // Validate driverProfile data
+    if (!driverProfile) {
+      return res.status(400).json({ message: "Driver profile data is required" });
+    }
+    
+    if (!driverProfile.vehicle) {
+      return res.status(400).json({ message: "Vehicle information is required" });
+    }
+    
     // Update or create driver profile
     user.driverProfile = {
       isActive: true,
       vehicle: {
-        model: driverProfile.vehicle.model,
-        color: driverProfile.vehicle.color,
-        registrationNumber: driverProfile.vehicle.registrationNumber,
-        seats: driverProfile.vehicle.seats,
+        model: driverProfile.vehicle.model || "",
+        color: driverProfile.vehicle.color || "",
+        registrationNumber: driverProfile.vehicle.registrationNumber || "",
+        seats: driverProfile.vehicle.seats || 4,
       },
-      pricePerKm: driverProfile.pricePerKm,
+      pricePerKm: driverProfile.pricePerKm || 0,
       completedTripsAsDriver: user.driverProfile?.completedTripsAsDriver || 0,
     };
 
