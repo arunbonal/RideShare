@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import { Ride } from "../contexts/AuthContext";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 // Extend the driver interface to include driverProfile
 interface ExtendedRide extends Ride {
@@ -430,14 +431,10 @@ const HitcherDashboard: React.FC = () => {
       }
       
       // If all checks pass, proceed with cancellation
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/cancel`,
-        { 
-          rideId,
-          hitcherId 
-        },
-        { withCredentials: true }
-      );
+      const response = await api.post("/api/rides/cancel", { 
+        rideId,
+        hitcherId 
+      });
 
       if (response.data.success) {
         // Update local user with new reliability rate from response

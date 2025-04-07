@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import api from '../utils/api'; // Import API utility
 import { ArrowLeft, Save, Trash2, AlertTriangle } from 'lucide-react';
 import AdminNavbar from '../components/AdminNavbar';
 
@@ -62,9 +63,7 @@ const AdminUserDetails: React.FC = () => {
     const fetchUserDetails = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users/${id}`, {
-          withCredentials: true,
-        });
+        const response = await api.get(`/api/admin/users/${id}`);
         setUser(response.data);
         setFormData({
           name: response.data.name || '',
@@ -112,10 +111,9 @@ const AdminUserDetails: React.FC = () => {
         homeAddress: formData.homeAddress
       };
       
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/admin/users/${id}`,
-        editableData,
-        { withCredentials: true }
+      await api.put(
+        `/api/admin/users/${id}`,
+        editableData
       );
       showNotification('User updated successfully', 'success');
     } catch (err: any) {
@@ -126,9 +124,8 @@ const AdminUserDetails: React.FC = () => {
 
   const handleDeleteUser = async () => {
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/admin/users/${id}`,
-        { withCredentials: true }
+      await api.delete(
+        `/api/admin/users/${id}`
       );
       showNotification('User deleted successfully', 'success');
       // Navigate back to admin dashboard after a short delay

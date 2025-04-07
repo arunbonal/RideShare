@@ -4,6 +4,7 @@ import { ArrowLeft, Car, MapPin, Edit, Save } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 const RoleDetails: React.FC = () => {
   const { currentUser, refreshUserData } = useAuth();
@@ -151,8 +152,8 @@ const RoleDetails: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/profile/driver/update`,
+      await api.post(
+        "/api/profile/driver/update",
         {
           vehicle: {
             model: editedData.vehicleModel,
@@ -161,8 +162,7 @@ const RoleDetails: React.FC = () => {
             seats: parseInt(editedData.seats)
           },
           pricePerKm: parseFloat(editedData.pricePerKm)
-        },
-        { withCredentials: true }
+        }
       );
 
       // Refresh user data to get updated profile

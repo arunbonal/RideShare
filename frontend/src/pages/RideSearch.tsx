@@ -280,8 +280,8 @@ const RideSearch: React.FC = () => {
 
       // Calculate estimated fare based on price per km and actual distance
       const fare = selectedRide.pricePerKm && currentUser?.distanceToCollege
-    ? Math.round(selectedRide.pricePerKm * currentUser.distanceToCollege)
-    : 0;
+        ? Math.round(selectedRide.pricePerKm * currentUser.distanceToCollege)
+        : 0;
 
 
       const hitcherData = {
@@ -300,11 +300,7 @@ const RideSearch: React.FC = () => {
         gender: currentUser?.gender
       };
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/request`,
-        hitcherData,
-        { withCredentials: true }
-      );
+      await api.post("/api/rides/request", hitcherData);
 
       setNotification({
         show: true,

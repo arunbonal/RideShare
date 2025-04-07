@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
 import axios from 'axios';
+import api from '../utils/api'; // Import API utility
 import { Navigate, Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
@@ -185,21 +186,15 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       if (activeTab === 'users') {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
-          withCredentials: true
-        });
+        const response = await api.get('/api/admin/users');
         setUsers(response.data);
         setFilteredUsers(response.data);
       } else if (activeTab === 'rides') {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/rides`, {
-          withCredentials: true
-        });
+        const response = await api.get('/api/admin/rides');
         setRides(response.data);
         setFilteredRides(response.data);
       } else if (activeTab === 'issues') {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/issues`, {
-          withCredentials: true
-        });
+        const response = await api.get('/api/issues');
         setIssues(response.data);
         setFilteredIssues(response.data);
       }
@@ -229,10 +224,9 @@ const AdminDashboard: React.FC = () => {
 
   const handleUpdateIssueStatus = async (issueId: string, status: string) => {
     try {
-      await axios.patch(
-        `${import.meta.env.VITE_API_URL}/api/issues/${issueId}/status`,
-        { status, resolution },
-        { withCredentials: true }
+      await api.patch(
+        `/api/issues/${issueId}/status`,
+        { status, resolution }
       );
       
       showNotification('Issue status updated successfully', 'success');

@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
 import axios from "axios";
+import api from "../utils/api"; // Import API utility
 
 interface Driver {
   _id: string;
@@ -132,13 +133,12 @@ const DriverDashboard: React.FC = () => {
 
   const markNotificationAsRead = async (rideId: string, notificationId: string) => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/notifications/read`,
+      await api.post(
+        "/api/rides/notifications/read",
         {
           rideId,
           notificationId
-        },
-        { withCredentials: true }
+        }
       );
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -242,13 +242,12 @@ const DriverDashboard: React.FC = () => {
   // Function to update ride status on the backend
   const updateRideStatus = async (rideId: string, status: "scheduled" | "in-progress" | "completed" | "cancelled") => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/update-status`,
+      await api.post(
+        "/api/rides/update-status",
         {
           rideId,
           status
-        },
-        { withCredentials: true }
+        }
       );
       // No need to fetch all rides here as it would cause UI flicker
       // Status is already updated in local state
@@ -340,9 +339,8 @@ const DriverDashboard: React.FC = () => {
   const handleAcceptRequest = async (rideId: string, hitcherId: string) => {
     try {
       // First check if the ride is still active
-      const rideCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/status`,
-        { withCredentials: true }
+      const rideCheckResponse = await api.get(
+        `/api/rides/${rideId}/status`
       );
       
       // If ride is already cancelled or completed
@@ -357,9 +355,8 @@ const DriverDashboard: React.FC = () => {
       }
 
       // Then check if the hitcher request is still pending
-      const hitcherCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/hitcher/${hitcherId}/status`,
-        { withCredentials: true }
+      const hitcherCheckResponse = await api.get(
+        `/api/rides/${rideId}/hitcher/${hitcherId}/status`
       );
       
       // If request is already cancelled by hitcher
@@ -394,13 +391,12 @@ const DriverDashboard: React.FC = () => {
         return;
       }
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/accept`,
+      const response = await api.post(
+        "/api/rides/accept",
         {
           rideId,
           hitcherId
-        },
-        { withCredentials: true }
+        }
       );
       
       // Fetch fresh data to update the UI
@@ -450,9 +446,8 @@ const DriverDashboard: React.FC = () => {
   const handleRejectRequest = async (rideId: string, hitcherId: string) => {
     try {
       // First check if the ride is still active
-      const rideCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/status`,
-        { withCredentials: true }
+      const rideCheckResponse = await api.get(
+        `/api/rides/${rideId}/status`
       );
       
       // If ride is already cancelled or completed
@@ -467,9 +462,8 @@ const DriverDashboard: React.FC = () => {
       }
 
       // Then check if the hitcher request is still pending
-      const hitcherCheckResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rides/${rideId}/hitcher/${hitcherId}/status`,
-        { withCredentials: true }
+      const hitcherCheckResponse = await api.get(
+        `/api/rides/${rideId}/hitcher/${hitcherId}/status`
       );
       
       // If request is already cancelled by hitcher
@@ -504,13 +498,12 @@ const DriverDashboard: React.FC = () => {
         return;
       }
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rides/reject`,
+      await api.post(
+        "/api/rides/reject",
         {
           rideId,
           hitcherId
-        },
-        { withCredentials: true }
+        }
       );
       
       // Fetch fresh data to update the UI
