@@ -1,11 +1,16 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import { Car, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 const RoleSelection: React.FC = () => {
   const { updateActiveRoles, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect admin users to the admin dashboard
+  if (currentUser?.isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   // Track selected role
   const [selectedRole, setSelectedRole] = useState<"driver" | "hitcher" | null>(

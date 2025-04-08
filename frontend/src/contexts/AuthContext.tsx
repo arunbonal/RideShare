@@ -353,6 +353,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const switchRole = useCallback(
     async (role: "driver" | "hitcher") => {
       try {
+        // Prevent admin users from switching roles
+        if (currentUser?.isAdmin) {
+          throw new Error("Admin users cannot switch roles");
+        }
+
         // Check if profile is complete for the selected role
         if (
           (role === "driver" && !currentUser?.driverProfileComplete) ||
@@ -383,6 +388,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateActiveRoles = useCallback(
     async (roles: { driver?: boolean; hitcher?: boolean }) => {
       try {
+        // Prevent admin users from updating roles
+        if (currentUser?.isAdmin) {
+          throw new Error("Admin users cannot update active roles");
+        }
+
         // Ensure only one role is active at a time
         const updatedRoles = {
           driver: false,
@@ -400,7 +410,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
     },
-    [fetchUserData]
+    [fetchUserData, currentUser]
   );
 
   // Update driver profile completion status

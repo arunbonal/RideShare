@@ -42,6 +42,11 @@ const RootRouteHandler = () => {
     return <Login />;
   }
   
+  // Admin users should be redirected to admin dashboard
+  if (currentUser.isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
   if (currentUser.activeRoles?.driver && currentUser.driverProfileComplete) {
     return <Navigate to="/driver/dashboard" replace />;
   }
