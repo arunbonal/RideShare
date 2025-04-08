@@ -121,6 +121,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             </div>
           </div>
           
+          
+
           {/* User location(s) */}
           {userLocations.map((location, index) => (
             <React.Fragment key={index}>
@@ -147,10 +149,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                     {/* Profile icon with user details on hover - only show if showHitcherDetails is true */}
                     {showHitcherDetails && hitcherNames && hitcherNames.length > index && hitcherNames[index] && (
                       <div className="relative group">
-                        <UserCircle className="h-6 w-6 text-blue-500 cursor-pointer" />
+                        <UserCircle className="h-4 w-4 text-blue-500 cursor-pointer" />
                         
                         {/* Hover tooltip - positioned on the left to stay within container */}
-                        <div className="absolute z-10 left-0 mt-2 w-48 p-3 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-200">
+                        <div className="absolute z-10 left-0 mt-2 w-48 p-2 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-200">
                           <p className="text-sm font-medium text-gray-900">{getFirstName(hitcherNames[index])}</p>
                           {hitcherPhones && hitcherPhones.length > index && (
                             <p className="text-sm text-gray-600">{hitcherPhones[index].substring(3)}</p>
@@ -167,8 +169,12 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                   </p>
                 </div>
               </div>
+              
+              
             </React.Fragment>
           ))}
+
+          
 
           {/* End Location */}
           <div className="flex items-start">
