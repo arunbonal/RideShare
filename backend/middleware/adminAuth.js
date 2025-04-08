@@ -1,5 +1,6 @@
 const adminAuth = (req, res, next) => {
-  if (req.isAuthenticated() && req.user && req.user.isAdmin) {
+  // Check for admin rights whether authenticated via session or token
+  if (req.user && req.user.isAdmin) {
     return next();
   }
   
