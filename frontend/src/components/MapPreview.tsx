@@ -35,6 +35,18 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   const [directionsRenderer, setDirectionsRenderer] =
     useState<google.maps.DirectionsRenderer | null>(null);
 
+  // Add state to track which tooltip is visible
+  const [visibleTooltip, setVisibleTooltip] = useState<number | null>(null);
+
+  // Toggle tooltip visibility
+  const toggleTooltip = (index: number) => {
+    if (visibleTooltip === index) {
+      setVisibleTooltip(null);
+    } else {
+      setVisibleTooltip(index);
+    }
+  };
+
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -146,13 +158,23 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                       </span>
                     )}
                     
-                    {/* Profile icon with user details on hover - only show if showHitcherDetails is true */}
+                    {/* Profile icon with user details on hover and tap - only show if showHitcherDetails is true */}
                     {showHitcherDetails && hitcherNames && hitcherNames.length > index && hitcherNames[index] && (
-                      <div className="relative group">
-                        <UserCircle className="h-4 w-4 text-blue-500 cursor-pointer" />
+                      <div className="relative">
+                        <button 
+                          onClick={() => toggleTooltip(index)}
+                          className="p-1 rounded-full hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+                          aria-label="Show user details"
+                        >
+                          <UserCircle className="h-6 w-6 text-blue-500" />
+                        </button>
                         
-                        {/* Hover tooltip - positioned on the left to stay within container */}
-                        <div className="absolute z-10 left-0 mt-2 w-48 p-2 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-200">
+                        {/* Tooltip that shows on hover or tap */}
+                        <div 
+                          className={`absolute z-10 left-0 mt-2 w-60 p-4 bg-white rounded-md shadow-lg border border-gray-200 transition-opacity duration-200 ${
+                            visibleTooltip === index ? 'opacity-100 visible' : 'opacity-0 invisible md:group-hover:opacity-100 md:group-hover:visible'
+                          }`}
+                        >
                           <p className="text-sm font-medium text-gray-900">{getFirstName(hitcherNames[index])}</p>
                           {hitcherPhones && hitcherPhones.length > index && (
                             <p className="text-sm text-gray-600">{hitcherPhones[index].substring(3)}</p>
