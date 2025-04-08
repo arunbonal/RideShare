@@ -142,7 +142,7 @@ const UserSchema = new mongoose.Schema({
   },
   srn: {
     type: String,
-    unique: true,
+    // unique: true,
   },
   homeAddress: {
     type: String,

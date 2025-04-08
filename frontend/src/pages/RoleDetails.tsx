@@ -383,7 +383,7 @@ const RoleDetails: React.FC = () => {
             <div>
               <h3 className="text-sm font-medium text-gray-500">Statistics</h3>
               <p className="mt-1">
-                Completed Trips: {driverProfile.completedTripsAsDriver}
+                Completed Trips: {driverProfile.completedRides}
               </p>
               <p>
                 Reliability Rate: {driverProfile.reliabilityRate}%
@@ -439,7 +439,7 @@ const RoleDetails: React.FC = () => {
           <div>
             <h3 className="text-sm font-medium text-gray-500">Statistics</h3>
             <p className="mt-1">
-              Completed Trips: {hitcherProfile.completedTripsAsHitcher}
+              Completed Trips: {hitcherProfile.completedRides}
             </p>
             <p>
               Reliability Rate: {hitcherProfile.reliabilityRate}%
