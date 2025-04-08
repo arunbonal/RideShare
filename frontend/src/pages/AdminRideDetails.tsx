@@ -3,6 +3,7 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
 import axios from 'axios';
+import api from '../utils/api';
 import { ArrowLeft } from 'lucide-react';
 
 interface DetailedRide {
@@ -51,10 +52,7 @@ const AdminRideDetails: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/admin/rides/${id}`,
-          { withCredentials: true }
-        );
+        const response = await api.get(`/api/admin/rides/${id}`);
         setRide(response.data);
       } catch (error: any) {
         console.error('Error fetching ride details:', error);
