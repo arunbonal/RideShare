@@ -60,8 +60,7 @@ passport.use(
         }
 
         // Create new user
-        // const srn = email.endsWith("@pesu.pes.edu") ? email.split("@")[0].toUpperCase() : null;
-        const srn = email.split("@")[0].toUpperCase();
+        const srn = email.endsWith("@pesu.pes.edu") ? email.split("@")[0].toUpperCase() : null;
         const college = getCollege(email);
         user = new User({
           googleId: profile.id,

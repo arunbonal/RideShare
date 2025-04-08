@@ -1,10 +1,2 @@
-user:
-driving license fix
-feedback, rating, report issues
-load more button to fetch more rides (for hitcher)
-
-*.pesu.pes.edu check commented out in backend/auth.js and backend/controller/auth.js for testing purposes
-
-
-admin:
-profile admin approval
+no srn for admin
+srn unique = true
