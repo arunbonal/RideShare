@@ -307,14 +307,13 @@ const HitcherDashboard: React.FC = () => {
       
       if (hitcherInfo?.status === 'accepted') {
         // Calculate reliability impact for accepted rides
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/rides/calculate-reliability-impact`,
+        const response = await api.post(
+          "/api/rides/calculate-reliability-impact",
           { 
             userId: currentUser?.id,
             userType: 'hitcher',
             actionType: 'CANCEL_ACCEPTED_RIDE'
-          },
-          { withCredentials: true }
+          }
         );
         
         setReliabilityImpact({
