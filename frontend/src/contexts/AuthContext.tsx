@@ -115,6 +115,34 @@ export interface Ride {
   totalFare?: number;
 }
 
+// Add BugReport interface
+export interface BugReport {
+  _id: string;
+  reporter: string | {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  type: "bug" | "feature";
+  title: string;
+  description: string;
+  status: "open" | "in-progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "critical";
+  resolution?: string;
+  resolvedBy?: string | {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  resolvedAt?: string;
+  browser?: string;
+  device?: string;
+  screenshot?: string;
+  reportedAt: string;
+  lastUpdated: string;
+}
+
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;

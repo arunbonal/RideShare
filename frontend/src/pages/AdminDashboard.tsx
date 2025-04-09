@@ -73,6 +73,23 @@ interface AdminIssue {
   resolution?: string;
 }
 
+// Add interface for AdminBugReport
+interface AdminBugReport {
+  _id: string;
+  type: string;
+  title: string;
+  description: string;
+  reporter: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  browser?: string;
+  device?: string;
+  screenshot?: string;
+  createdAt: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -94,6 +111,12 @@ const AdminDashboard: React.FC = () => {
     message: string; 
     type: 'success' | 'error' 
   }>({ show: false, message: '', type: 'success' });
+  const [bugReports, setBugReports] = useState<AdminBugReport[]>([]);
+  const [filteredBugReports, setFilteredBugReports] = useState<AdminBugReport[]>([]);
+  const [bugReportSearchTerm, setBugReportSearchTerm] = useState<string>('');
+  const [bugReportTypeFilter, setBugReportTypeFilter] = useState<string>('all');
+  const [selectedBugReport, setSelectedBugReport] = useState<AdminBugReport | null>(null);
+  const [showBugReportModal, setShowBugReportModal] = useState<boolean>(false);
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
   const formatName = (name: string) => {
@@ -177,6 +200,29 @@ const AdminDashboard: React.FC = () => {
     setFilteredIssues(filtered);
   }, [issueSearchTerm, issueStatusFilter, issueTypeFilter, issues]);
 
+  // Filter bug reports based on search term and type filter
+  useEffect(() => {
+    let filtered = bugReports;
+    
+    // Apply search filter
+    if (bugReportSearchTerm.trim() !== '') {
+      const lowercaseSearch = bugReportSearchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (report) =>
+          report.title.toLowerCase().includes(lowercaseSearch) ||
+          report.reporter.name.toLowerCase().includes(lowercaseSearch) ||
+          report.description.toLowerCase().includes(lowercaseSearch)
+      );
+    }
+    
+    // Apply type filter
+    if (bugReportTypeFilter !== 'all') {
+      filtered = filtered.filter(report => report.type === bugReportTypeFilter);
+    }
+    
+    setFilteredBugReports(filtered);
+  }, [bugReportSearchTerm, bugReportTypeFilter, bugReports]);
+
   // Redirect if not admin - this should be inside a useEffect or component body
   if (!currentUser?.isAdmin) {
     return <Navigate to="/" replace />;
@@ -196,6 +242,10 @@ const AdminDashboard: React.FC = () => {
         const response = await api.get('/api/issues');
         setIssues(response.data);
         setFilteredIssues(response.data);
+      } else if (activeTab === 'bug-reports') {
+        const response = await api.get('/api/bug-reports');
+        setBugReports(response.data.data);
+        setFilteredBugReports(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -221,59 +271,86 @@ const AdminDashboard: React.FC = () => {
            ' ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleUpdateIssueStatus = async (issueId: string, status: string) => {
-    try {
-      await api.patch(
-        `/api/issues/${issueId}/status`,
-        { status, resolution }
-      );
-      
-      showNotification('Issue status updated successfully', 'success');
-      fetchData(); // Refresh issues data
-      setSelectedIssue(null);
-      setResolution('');
-    } catch (error) {
-      console.error('Error updating issue status:', error);
-      showNotification('Failed to update issue status', 'error');
-    }
-  };
-
   return (
     <>
       <AdminNavbar />
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-        
-        {/* Tabs */}
-        <div className="flex mb-6 border-b">
-          <button 
-            className={`py-2 px-4 ${activeTab === 'users' ? 'border-b-2 border-blue-500 font-medium' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
-            Users
-          </button>
-          <button 
-            className={`py-2 px-4 ${activeTab === 'rides' ? 'border-b-2 border-blue-500 font-medium' : ''}`}
-            onClick={() => setActiveTab('rides')}
-          >
-            Rides
-          </button>
-          <button 
-            className={`py-2 px-4 ${activeTab === 'issues' ? 'border-b-2 border-blue-500 font-medium' : ''}`}
-            onClick={() => setActiveTab('issues')}
-          >
-            Issues
-          </button>
-        </div>
-
-        {/* Notification */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {notification.show && (
-          <div className={`p-4 mb-4 rounded ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div
+            className={`fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg ${
+              notification.type === 'success'
+                ? 'bg-green-50 text-green-800 border border-green-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            } transition-all duration-300 z-50`}
+          >
             {notification.message}
           </div>
         )}
 
-        {/* Tab Content */}
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => {
+                setActiveTab('users');
+                setSearchTerm('');
+              }}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'users'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Users
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('rides');
+                setRideSearchTerm('');
+              }}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'rides'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Rides
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('issues');
+                setIssueSearchTerm('');
+                setIssueStatusFilter('all');
+                setIssueTypeFilter('all');
+              }}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'issues'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Issues
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('bug-reports');
+                setBugReportSearchTerm('');
+                setBugReportTypeFilter('all');
+              }}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'bug-reports'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Bug Reports
+            </button>
+          </nav>
+        </div>
+
+        {/* Conditional content based on active tab */}
         {activeTab === 'users' && (
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex justify-between items-center mb-6">
@@ -541,156 +618,237 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Issue Details Modal */}
-        {selectedIssue && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium">Issue Details</h3>
-                <button
-                  onClick={() => {
-                    setSelectedIssue(null);
-                    setResolution('');
-                  }}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+        {activeTab === 'bug-reports' && (
+          <div>
+            <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <div className="flex-1 w-full sm:w-auto">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by title, reporter or description..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md pr-10"
+                    value={bugReportSearchTerm}
+                    onChange={(e) => setBugReportSearchTerm(e.target.value)}
+                  />
+                  <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column - Issue Information */}
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Issue Type</h4>
-                    <div className="mt-1">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        selectedIssue.type === 'no-show' ? 'bg-red-100 text-red-800' :
-                        selectedIssue.type === 'safety' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedIssue.type === 'payment' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {selectedIssue.type.charAt(0).toUpperCase() + selectedIssue.type.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Status</h4>
-                    <div className="mt-1">
-                      <select
-                        value={selectedIssue.status}
-                        onChange={(e) => setSelectedIssue({ ...selectedIssue, status: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              <div className="flex flex-1 gap-4 w-full sm:w-auto">
+                <select
+                  className="px-4 py-2 border border-gray-300 rounded-md bg-white flex-1 sm:flex-none"
+                  value={bugReportTypeFilter}
+                  onChange={(e) => setBugReportTypeFilter(e.target.value)}
+                >
+                  <option value="all">All Types</option>
+                  <option value="bug">Bug Reports</option>
+                  <option value="feature">Feature Requests</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-white shadow-md rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        <option value="open">Open</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Date Reported</h4>
-                    <p className="mt-1 text-sm text-gray-900">{formatDateTime(selectedIssue.createdAt)}</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Description</h4>
-                    <div className="mt-1 text-sm text-gray-900 border p-3 rounded bg-gray-50 max-h-32 overflow-y-auto">
-                      {selectedIssue.description || 'No description provided'}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Resolution Notes</h4>
-                    <textarea
-                      value={resolution}
-                      onChange={(e) => setResolution(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      rows={3}
-                      placeholder="Add resolution notes..."
-                    />
-                  </div>
-                </div>
-                
-                {/* Right Column - User and Ride Details */}
-                <div className="space-y-4">
-                  <div className="p-3 border rounded-md bg-blue-50">
-                    <h4 className="text-sm font-medium text-gray-500 mb-2">Reporter</h4>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{selectedIssue.reporter.name}</p>
-                      <p className="text-sm text-gray-600">{selectedIssue.reporter.phone || 'No phone number'}</p>
-                      <p className="text-sm text-gray-600">{selectedIssue.reporter.email}</p>
-                      <div>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          selectedIssue.reporter.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
-                          selectedIssue.reporter.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {selectedIssue.reporter.activeRoles?.driver ? 'Driver' :
-                          selectedIssue.reporter.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 border rounded-md bg-red-50">
-                    <h4 className="text-sm font-medium text-gray-500 mb-2">Reported User</h4>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{selectedIssue.reportedUser.name}</p>
-                      <p className="text-sm text-gray-600">{selectedIssue.reportedUser.phone || 'No phone number'}</p>
-                      <p className="text-sm text-gray-600">{selectedIssue.reportedUser.email}</p>
-                      <div>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          selectedIssue.reportedUser.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
-                          selectedIssue.reportedUser.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {selectedIssue.reportedUser.activeRoles?.driver ? 'Driver' :
-                          selectedIssue.reportedUser.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 border rounded-md bg-green-50">
-                    <h4 className="text-sm font-medium text-gray-500 mb-2">Ride Details</h4>
-                    <div className="space-y-1">
-                      <p className="text-sm"><span className="font-medium">Date:</span> {formatDate(selectedIssue.ride.date)}</p>
-                      <p className="text-sm"><span className="font-medium">Direction:</span> {selectedIssue.ride.direction === 'toCollege' ? 'To College' : 'From College'}</p>
-                      <p className="text-sm"><span className="font-medium">From:</span> {selectedIssue.ride.from}</p>
-                      <p className="text-sm"><span className="font-medium">To:</span> {selectedIssue.ride.to}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setSelectedIssue(null);
-                    setResolution('');
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => handleUpdateIssueStatus(selectedIssue._id, selectedIssue.status)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
-                  Update Status
-                </button>
+                        Type
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Title
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Reporter
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Reported
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredBugReports.length > 0 ? (
+                      filteredBugReports.map((report) => (
+                        <tr key={report._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                report.type === 'bug'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {report.type === 'bug' ? 'Bug' : 'Feature'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {report.title}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {report.reporter.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {report.reporter.email}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDateTime(report.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => {
+                                setSelectedBugReport(report);
+                                setShowBugReportModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-6 py-4 text-center text-sm text-gray-500"
+                        >
+                          No bug reports found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Bug Report Details Modal */}
+      {showBugReportModal && selectedBugReport && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-10 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium text-gray-900">
+                {selectedBugReport.type === 'bug' ? 'Bug Report' : 'Feature Request'} Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBugReportModal(false);
+                  setSelectedBugReport(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <span className="sr-only">Close</span>
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 divide-y divide-gray-200">
+              {/* Title and Description */}
+              <div className="py-3">
+                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  {selectedBugReport.title}
+                </h4>
+                <div className="flex space-x-3 mb-3">
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      selectedBugReport.type === 'bug'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {selectedBugReport.type === 'bug' ? 'Bug' : 'Feature'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {selectedBugReport.description}
+                </p>
+              </div>
+
+              {/* Reporter Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Reporter</h4>
+                <div className="text-sm">
+                  <p className="text-gray-700">{selectedBugReport.reporter.name}</p>
+                  <p className="text-gray-500">{selectedBugReport.reporter.email}</p>
+                  <p className="text-gray-500">{selectedBugReport.reporter.phone}</p>
+                </div>
+              </div>
+
+              {/* Technical Details (for bug reports) */}
+              {selectedBugReport.type === 'bug' && (
+                <div className="py-3">
+                  <h4 className="font-medium text-gray-900 mb-2">Technical Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Browser</p>
+                      <p className="text-gray-700">{selectedBugReport.browser || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Device</p>
+                      <p className="text-gray-700">{selectedBugReport.device || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Screenshot if available */}
+              {selectedBugReport.screenshot && (
+                <div className="py-3">
+                  <h4 className="font-medium text-gray-900 mb-2">Screenshot</h4>
+                  <img
+                    src={selectedBugReport.screenshot}
+                    alt="Screenshot"
+                    className="max-w-full h-auto rounded-md border border-gray-200"
+                  />
+                </div>
+              )}
+
+              {/* Date Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Date Submitted</h4>
+                <p className="text-sm text-gray-700">
+                  {formatDateTime(selectedBugReport.createdAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

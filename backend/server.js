@@ -10,6 +10,7 @@ const rideRoutes = require("./routes/ride");
 const verificationRoutes = require("./routes/verification");
 const adminRoutes = require("./routes/admin");
 const issuesRoutes = require("./routes/issues");
+const bugReportRoutes = require("./routes/bugReports");
 require("dotenv").config();
 
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api/rides", rideRoutes);
 app.use("/api/verify", verificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/issues", issuesRoutes); 
+app.use("/api/bug-reports", bugReportRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {

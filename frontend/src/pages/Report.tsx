@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X, AlertTriangle, Bug } from "lucide-react";
 
 interface ExtendedRide extends Ride {
   totalFare: number;
@@ -35,9 +35,21 @@ interface IssueForm {
   description: string;
 }
 
+interface BugReportForm {
+  type: "bug" | "feature";
+  title: string;
+  description: string;
+  browser: string;
+  device: string;
+  screenshot?: string;
+}
+
 const Report: React.FC = () => {
   const { currentUser, allRides, fetchAllRides } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const reportType = location.state?.type || "ride"; // Default to ride issues
+  
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [userRides, setUserRides] = useState<ExtendedRide[]>([]);
   const [upcomingRides, setUpcomingRides] = useState<ExtendedRide[]>([]);
@@ -48,12 +60,52 @@ const Report: React.FC = () => {
     type: "no-show",
     description: ""
   });
+  
+  // New state for bug reports/feature requests
+  const [bugReportForm, setBugReportForm] = useState<BugReportForm>({
+    type: reportType === "bug" ? "bug" : "feature",
+    title: "",
+    description: "",
+    browser: getBrowser(),
+    device: getDevice(),
+    screenshot: ""
+  });
+  
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
   const [rideIssues, setRideIssues] = useState<{ [key: string]: { [key: string]: boolean } }>({});
+
+  // Helper functions to detect browser and device
+  function getBrowser() {
+    const userAgent = navigator.userAgent;
+    let browserName = "Unknown";
+    
+    if (userAgent.match(/chrome|chromium|crios/i)) {
+      browserName = "Chrome";
+    } else if (userAgent.match(/firefox|fxios/i)) {
+      browserName = "Firefox";
+    } else if (userAgent.match(/safari/i)) {
+      browserName = "Safari";
+    } else if (userAgent.match(/opr\//i)) {
+      browserName = "Opera";
+    } else if (userAgent.match(/edg/i)) {
+      browserName = "Edge";
+    }
+    
+    return browserName;
+  }
+
+  function getDevice() {
+    const userAgent = navigator.userAgent;
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+      return "Mobile";
+    } else {
+      return "Desktop";
+    }
+  }
 
   // Fetch all rides when component mounts
   useEffect(() => {
@@ -282,6 +334,95 @@ const Report: React.FC = () => {
     return true;
   };
 
+  // Handle bug report form submission
+  const handleBugReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (!bugReportForm.title.trim() || !bugReportForm.description.trim()) {
+        setNotification({
+          show: true,
+          message: "Title and description are required",
+          type: "error"
+        });
+        return;
+      }
+      
+      const response = await api.post("/api/bug-reports", bugReportForm);
+      
+      if (response.data.success) {
+        setNotification({
+          show: true,
+          message: bugReportForm.type === "bug" 
+            ? "Bug report submitted successfully" 
+            : "Feature request submitted successfully",
+          type: "success"
+        });
+        
+        // Clear form after successful submission
+        setBugReportForm({
+          type: bugReportForm.type,
+          title: "",
+          description: "",
+          browser: getBrowser(),
+          device: getDevice(),
+          screenshot: ""
+        });
+        
+        // Redirect back to dashboard after 2 seconds
+        setTimeout(() => {
+          navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
+        }, 2000);
+      }
+    } catch (error: any) {
+      console.error("Error submitting bug report:", error);
+      setNotification({
+        show: true,
+        message: error.response?.data?.message || "Failed to submit report. Please try again.",
+        type: "error"
+      });
+    }
+  };
+
+  // Handle file upload for screenshots
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Check if file is an image
+      if (!file.type.match('image.*')) {
+        setNotification({
+          show: true,
+          message: "Please select an image file",
+          type: "error"
+        });
+        return;
+      }
+      
+      // Check if file size is less than 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        setNotification({
+          show: true,
+          message: "Image size should be less than 5MB",
+          type: "error"
+        });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setBugReportForm({
+            ...bugReportForm,
+            screenshot: e.target.result as string
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   if (!currentUser) {
     return (
       <>
@@ -306,245 +447,167 @@ const Report: React.FC = () => {
               notification.type === "success"
                 ? "bg-green-50 text-green-800 border border-green-200"
                 : "bg-red-50 text-red-800 border border-red-200"
-            } transition-all duration-300 z-50`}
+            } transition-all duration-300 z-50 flex items-center`}
           >
-            {notification.message}
+            <span>{notification.message}</span>
+            <button
+              onClick={() => setNotification({ ...notification, show: false })}
+              className="ml-3 text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
 
         <div className="mb-8">
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard")}
             className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Dashboard
           </button>
           <h1 className="text-2xl font-bold text-gray-900">
-            Report an Issue
+            {reportType === "ride" ? "Report a Ride Issue" : reportType === "bug" ? "Report a Bug" : "Request a Feature"}
           </h1>
           <p className="text-gray-600">
-            Select a ride to report an issue
+            {reportType === "ride" 
+              ? "Select a ride to report an issue" 
+              : reportType === "bug" 
+                ? "Help us improve by reporting any bugs you encounter" 
+                : "Suggest a new feature that would improve your experience"}
           </p>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex -mb-px">
-            <button
-              onClick={() => setActiveTab("upcoming")}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                activeTab === "upcoming"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Upcoming Rides ({upcomingRides.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("past")}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                activeTab === "past"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Past Rides ({pastRides.length})
-            </button>
-          </nav>
-        </div>
-
-        {/* Ride listings */}
-        <div className="space-y-6">
-          {activeTab === "upcoming" ? (
-            upcomingRides.length > 0 ? (
-              upcomingRides.map((ride) => (
-                <div
-                  key={ride._id}
-                  className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => setSelectedRide(ride)}
+        {/* Show different content based on report type */}
+        {reportType === "ride" ? (
+          // Ride issue reporting UI - existing code
+          <>
+            {/* Tabs */}
+            <div className="border-b border-gray-200 mb-6">
+              <nav className="flex -mb-px">
+                <button
+                  onClick={() => setActiveTab("upcoming")}
+                  className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                    activeTab === "upcoming"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {ride.direction === "toCollege"
-                          ? "To College"
-                          : "From College"}
-                      </h3>
-                      <p className="text-gray-500">
-                        {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 text-sm font-medium rounded-full ${
-                        ride.status === "scheduled"
-                          ? "bg-green-100 text-green-800"
-                          : ride.status === "in-progress"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                  Upcoming Rides ({upcomingRides.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("past")}
+                  className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                    activeTab === "past"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  Past Rides ({pastRides.length})
+                </button>
+              </nav>
+            </div>
+
+            {/* Ride listings */}
+            <div className="space-y-6">
+              {activeTab === "upcoming" ? (
+                upcomingRides.length > 0 ? (
+                  upcomingRides.map((ride) => (
+                    <div
+                      key={ride._id}
+                      className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => setSelectedRide(ride)}
                     >
-                      {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600">
-                      <span className="font-medium">Time:</span>
-                      <span className="ml-2">
-                        {ride.direction === "toCollege"
-                          ? formatTime(ride.toCollegeTime || "")
-                          : formatTime(ride.fromCollegeTime || "")}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <span className="font-medium">From:</span>
-                      <span className="ml-2">{ride.from}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <span className="font-medium">To:</span>
-                      <span className="ml-2">{ride.to}</span>
-                    </div>
-                  </div>
-
-                  {/* Driver-specific content */}
-                  {currentUser.activeRoles.driver && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
-                      <div className="space-y-2">
-                        {ride.hitchers
-                          ?.filter((h) => h.status === "accepted")
-                          .map((hitcher) => (
-                            <div
-                              key={hitcher.user._id}
-                              className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
-                            >
-                              <div>
-                                <p className="font-medium">{hitcher.user.name}</p>
-                                <p className="text-sm text-gray-600">
-                                  Fare: ₹{hitcher.fare}
-                                </p>
-                              </div>
-                              {!rideIssues[ride._id]?.[hitcher.user._id] && canReportIssue(ride) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedRide(ride);
-                                    setShowIssueModal(true);
-                                  }}
-                                  className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                >
-                                  Report Issue
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Hitcher-specific content */}
-                  {currentUser.activeRoles.hitcher && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                      <div className="flex justify-between items-start mb-4">
                         <div>
-                          <p className="font-medium">Driver: {ride.driver.name}</p>
-                          <p className="text-sm text-gray-600">
-                            Fare: ₹{ride.hitchers?.find(h => h.user._id === currentUser.id)?.fare}
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {ride.direction === "toCollege"
+                              ? "To College"
+                              : "From College"}
+                          </h3>
+                          <p className="text-gray-500">
+                            {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
                           </p>
                         </div>
-                        {!rideIssues[ride._id]?.[ride.driver._id] && canReportIssue(ride, ride.hitchers?.find(h => h.user._id === currentUser.id)) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRide(ride);
-                              setShowIssueModal(true);
-                            }}
-                            className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                          >
-                            Report Issue
-                          </button>
-                        )}
+                        <span
+                          className={`px-2 py-1 text-sm font-medium rounded-full ${
+                            ride.status === "scheduled"
+                              ? "bg-green-100 text-green-800"
+                              : ride.status === "in-progress"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
+                        </span>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
-                  No upcoming rides
-                </h3>
-                <p className="text-gray-500">
-                  You don't have any upcoming rides to report issues for.
-                </p>
-              </div>
-            )
-          ) : pastRides.length > 0 ? (
-            pastRides.map((ride) => (
-              <div
-                key={ride._id}
-                className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setSelectedRide(ride)}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {ride.direction === "toCollege"
-                        ? "To College"
-                        : "From College"}
-                    </h3>
-                    <p className="text-gray-500">
-                      {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 text-sm font-medium rounded-full ${
-                      ride.status === "completed"
-                        ? "bg-gray-100 text-gray-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center text-gray-600">
-                    <span className="font-medium">Time:</span>
-                    <span className="ml-2">
-                      {ride.direction === "toCollege"
-                        ? formatTime(ride.toCollegeTime || "")
-                        : formatTime(ride.fromCollegeTime || "")}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <span className="font-medium">From:</span>
-                    <span className="ml-2">{ride.from}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <span className="font-medium">To:</span>
-                    <span className="ml-2">{ride.to}</span>
-                  </div>
-                </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-600">
+                          <span className="font-medium">Time:</span>
+                          <span className="ml-2">
+                            {ride.direction === "toCollege"
+                              ? formatTime(ride.toCollegeTime || "")
+                              : formatTime(ride.fromCollegeTime || "")}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <span className="font-medium">From:</span>
+                          <span className="ml-2">{ride.from}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <span className="font-medium">To:</span>
+                          <span className="ml-2">{ride.to}</span>
+                        </div>
+                      </div>
 
-                {/* Driver-specific content */}
-                {currentUser.activeRoles.driver && (
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
-                    <div className="space-y-2">
-                      {ride.hitchers
-                        ?.filter((h) => h.status === "accepted")
-                        .map((hitcher) => (
-                          <div
-                            key={hitcher.user._id}
-                            className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
-                          >
+                      {/* Driver-specific content */}
+                      {currentUser.activeRoles.driver && (
+                        <div className="mt-4">
+                          <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
+                          <div className="space-y-2">
+                            {ride.hitchers
+                              ?.filter((h) => h.status === "accepted")
+                              .map((hitcher) => (
+                                <div
+                                  key={hitcher.user._id}
+                                  className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
+                                >
+                                  <div>
+                                    <p className="font-medium">{hitcher.user.name}</p>
+                                    <p className="text-sm text-gray-600">
+                                      Fare: ₹{hitcher.fare}
+                                    </p>
+                                  </div>
+                                  {!rideIssues[ride._id]?.[hitcher.user._id] && canReportIssue(ride) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedRide(ride);
+                                        setShowIssueModal(true);
+                                      }}
+                                      className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    >
+                                      Report Issue
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hitcher-specific content */}
+                      {currentUser.activeRoles.hitcher && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
                             <div>
-                              <p className="font-medium">{hitcher.user.name}</p>
+                              <p className="font-medium">Driver: {ride.driver.name}</p>
                               <p className="text-sm text-gray-600">
-                                Fare: ₹{hitcher.fare}
+                                Fare: ₹{ride.hitchers?.find(h => h.user._id === currentUser.id)?.fare}
                               </p>
                             </div>
-                            {!rideIssues[ride._id]?.[hitcher.user._id] && canReportIssue(ride) && (
+                            {!rideIssues[ride._id]?.[ride.driver._id] && canReportIssue(ride, ride.hitchers?.find(h => h.user._id === currentUser.id)) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -557,112 +620,350 @@ const Report: React.FC = () => {
                               </button>
                             )}
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Hitcher-specific content */}
-                {currentUser.activeRoles.hitcher && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                      <div>
-                        <p className="font-medium">Driver: {ride.driver.name}</p>
-                        <p className="text-sm text-gray-600">
-                          Fare: ₹{ride.hitchers?.find(h => h.user._id === currentUser.id)?.fare}
-                        </p>
-                      </div>
-                      {!rideIssues[ride._id]?.[ride.driver._id] && canReportIssue(ride, ride.hitchers?.find(h => h.user._id === currentUser.id)) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRide(ride);
-                            setShowIssueModal(true);
-                          }}
-                          className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                        >
-                          Report Issue
-                        </button>
+                        </div>
                       )}
                     </div>
+                  ))
+                ) : (
+                  <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      No upcoming rides
+                    </h3>
+                    <p className="text-gray-500">
+                      You don't have any upcoming rides to report issues for.
+                    </p>
                   </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No past rides
-              </h3>
-              <p className="text-gray-500">
-                You don't have any past rides to report issues for.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Issue Report Modal */}
-        {showIssueModal && selectedRide && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-lg font-medium mb-4">Report an Issue</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Issue Type</label>
-                  <select
-                    value={issueForm.type}
-                    onChange={(e) => setIssueForm({ ...issueForm, type: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                )
+              ) : pastRides.length > 0 ? (
+                pastRides.map((ride) => (
+                  <div
+                    key={ride._id}
+                    className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => setSelectedRide(ride)}
                   >
-                    <option value="no-show">No Show</option>
-                    <option value="safety">Safety</option>
-                    <option value="payment">Payment</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {ride.direction === "toCollege"
+                            ? "To College"
+                            : "From College"}
+                        </h3>
+                        <p className="text-gray-500">
+                          {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-sm font-medium rounded-full ${
+                          ride.status === "completed"
+                            ? "bg-gray-100 text-gray-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium">Time:</span>
+                        <span className="ml-2">
+                          {ride.direction === "toCollege"
+                            ? formatTime(ride.toCollegeTime || "")
+                            : formatTime(ride.fromCollegeTime || "")}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium">From:</span>
+                        <span className="ml-2">{ride.from}</span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium">To:</span>
+                        <span className="ml-2">{ride.to}</span>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    value={issueForm.description}
-                    onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    rows={3}
-                    placeholder="Please describe the issue in detail..."
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowIssueModal(false);
-                      setIssueForm({
-                        type: "no-show",
-                        description: ""
-                      });
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleReportIssue(
-                      selectedRide._id,
-                      currentUser.activeRoles.driver
-                        ? selectedRide.hitchers?.find(h => h.status === "accepted")?.user._id || ""
-                        : selectedRide.driver._id
+                    {/* Driver-specific content */}
+                    {currentUser.activeRoles.driver && (
+                      <div className="mt-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
+                        <div className="space-y-2">
+                          {ride.hitchers
+                            ?.filter((h) => h.status === "accepted")
+                            .map((hitcher) => (
+                              <div
+                                key={hitcher.user._id}
+                                className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
+                              >
+                                <div>
+                                  <p className="font-medium">{hitcher.user.name}</p>
+                                  <p className="text-sm text-gray-600">
+                                    Fare: ₹{hitcher.fare}
+                                  </p>
+                                </div>
+                                {!rideIssues[ride._id]?.[hitcher.user._id] && canReportIssue(ride) && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedRide(ride);
+                                      setShowIssueModal(true);
+                                    }}
+                                    className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                  >
+                                    Report Issue
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     )}
-                    disabled={!issueForm.description.trim()}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Submit Report
-                  </button>
+
+                    {/* Hitcher-specific content */}
+                    {currentUser.activeRoles.hitcher && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                          <div>
+                            <p className="font-medium">Driver: {ride.driver.name}</p>
+                            <p className="text-sm text-gray-600">
+                              Fare: ₹{ride.hitchers?.find(h => h.user._id === currentUser.id)?.fare}
+                            </p>
+                          </div>
+                          {!rideIssues[ride._id]?.[ride.driver._id] && canReportIssue(ride, ride.hitchers?.find(h => h.user._id === currentUser.id)) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRide(ride);
+                                setShowIssueModal(true);
+                              }}
+                              className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                              Report Issue
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    No past rides
+                  </h3>
+                  <p className="text-gray-500">
+                    You don't have any past rides to report issues for.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          // Bug report/Feature request UI
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <form onSubmit={handleBugReportSubmit}>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type
+                </label>
+                <div className="flex space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio h-4 w-4 text-blue-600"
+                      value="bug"
+                      checked={bugReportForm.type === "bug"}
+                      onChange={() => setBugReportForm({ ...bugReportForm, type: "bug" })}
+                    />
+                    <span className="ml-2 flex items-center">
+                      <Bug className="h-4 w-4 mr-1 text-red-500" />
+                      Bug Report
+                    </span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio h-4 w-4 text-blue-600"
+                      value="feature"
+                      checked={bugReportForm.type === "feature"}
+                      onChange={() => setBugReportForm({ ...bugReportForm, type: "feature" })}
+                    />
+                    <span className="ml-2">Feature Request</span>
+                  </label>
                 </div>
               </div>
-            </div>
+
+              <div className="mb-6">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder={bugReportForm.type === "bug" ? "Brief description of the bug" : "Feature name or short description"}
+                  value={bugReportForm.title}
+                  onChange={(e) => setBugReportForm({ ...bugReportForm, title: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  rows={5}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder={bugReportForm.type === "bug" 
+                    ? "Please describe the bug in detail. What were you trying to do? What happened? What did you expect to happen?" 
+                    : "Please describe the feature you'd like to see. How would it work? Why would it be useful?"}
+                  value={bugReportForm.description}
+                  onChange={(e) => setBugReportForm({ ...bugReportForm, description: e.target.value })}
+                  required
+                ></textarea>
+              </div>
+
+              {bugReportForm.type === "bug" && (
+                <>
+                  <div className="mb-6">
+                    <label htmlFor="screenshot" className="block text-sm font-medium text-gray-700 mb-2">
+                      Screenshot (optional)
+                    </label>
+                    <input
+                      type="file"
+                      id="screenshot"
+                      accept="image/*"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      onChange={handleScreenshotUpload}
+                    />
+                    {bugReportForm.screenshot && (
+                      <div className="mt-2 relative">
+                        <img 
+                          src={bugReportForm.screenshot} 
+                          alt="Screenshot preview" 
+                          className="max-h-40 rounded-md border border-gray-300"
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md"
+                          onClick={() => setBugReportForm({ ...bugReportForm, screenshot: "" })}
+                        >
+                          <X className="h-4 w-4 text-gray-500" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label htmlFor="browser" className="block text-sm font-medium text-gray-700 mb-2">
+                        Browser
+                      </label>
+                      <input
+                        type="text"
+                        id="browser"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={bugReportForm.browser}
+                        onChange={(e) => setBugReportForm({ ...bugReportForm, browser: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="device" className="block text-sm font-medium text-gray-700 mb-2">
+                        Device
+                      </label>
+                      <input
+                        type="text"
+                        id="device"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={bugReportForm.device}
+                        onChange={(e) => setBugReportForm({ ...bugReportForm, device: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard")}
+                  className="mr-4 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>
+
+      {/* Issue Report Modal */}
+      {showIssueModal && selectedRide && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Report an Issue</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Issue Type</label>
+                <select
+                  value={issueForm.type}
+                  onChange={(e) => setIssueForm({ ...issueForm, type: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="no-show">No Show</option>
+                  <option value="safety">Safety</option>
+                  <option value="payment">Payment</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  value={issueForm.description}
+                  onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Please describe the issue in detail..."
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowIssueModal(false);
+                    setIssueForm({
+                      type: "no-show",
+                      description: ""
+                    });
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleReportIssue(
+                    selectedRide._id,
+                    currentUser.activeRoles.driver
+                      ? selectedRide.hitchers?.find(h => h.status === "accepted")?.user._id || ""
+                      : selectedRide.driver._id
+                  )}
+                  disabled={!issueForm.description.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
