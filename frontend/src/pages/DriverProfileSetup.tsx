@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Car, MapPin, CreditCard, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 // Add these type declarations at the top of the file

@@ -7,7 +7,6 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import axios from "axios";
 import api from "../utils/api"; // Import our API utility
 
 // Updated User interface to match the new schema

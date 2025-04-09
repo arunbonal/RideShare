@@ -4,7 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api"; // Import our API utility
 

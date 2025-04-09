@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, MessageSquare, Users } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 // Add detection for iOS devices

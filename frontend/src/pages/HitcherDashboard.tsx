@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Plus, Calendar, Clock, MapPin, X } from "lucide-react";
+import { Plus, Calendar, Clock, MapPin, X, ChevronDown, AlertTriangle, Bug } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import { Ride } from "../contexts/AuthContext";
@@ -45,6 +45,9 @@ const HitcherDashboard: React.FC = () => {
     type: "success",
   });
   
+  // Add dropdown state
+  const [showReportDropdown, setShowReportDropdown] = useState(false);
+  
   // Add modal state
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
@@ -60,6 +63,21 @@ const HitcherDashboard: React.FC = () => {
     currentRate: number | null;
     newRate: number | null;
   }>({ currentRate: null, newRate: null });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showReportDropdown && !target.closest(".report-dropdown-container")) {
+        setShowReportDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showReportDropdown]);
 
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -579,12 +597,40 @@ const HitcherDashboard: React.FC = () => {
                 </p>
               </div>
               {(activeTab === "upcoming" ? upcomingRides.length > 0 : pastRides.length > 0) && (
-                <button
-                  onClick={() => navigate("/report")}
-                  className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                >
-                  Report an Issue
-                </button>
+                <div className="relative report-dropdown-container">
+                  <button
+                    onClick={() => setShowReportDropdown(!showReportDropdown)}
+                    className="ml-4 mr-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  >
+                    Report an Issue
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </button>
+                  
+                  {showReportDropdown && (
+                    <div className="absolute right-4 mt-2 w-60 bg-white rounded-md shadow-lg z-10 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          navigate("/report", { state: { type: "ride" } });
+                          setShowReportDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 flex items-center"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                        Report Ride Issue
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate("/report", { state: { type: "bug" } });
+                          setShowReportDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 flex items-center"
+                      >
+                        <Bug className="h-4 w-4 mr-2 text-red-600" />
+                        Report Bugs/Request Features
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

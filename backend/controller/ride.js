@@ -196,7 +196,7 @@ exports.requestRide = async (req, res) => {
   try {
     const { rideId, user, pickupLocation, dropoffLocation, fare, status, gender } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('driver', 'college');
+    const ride = await Ride.findById(rideId).populate('driver', 'college').populate('hitchers.user', 'name');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
@@ -233,6 +233,18 @@ exports.requestRide = async (req, res) => {
       fare,
       requestTime: new Date(),
       gender: gender || hitcherUser.gender // Use provided gender or get from user
+    });
+
+    // Add notification for the driver
+    if (!ride.notifications) {
+      ride.notifications = [];
+    }
+    
+    ride.notifications.push({
+      userId: ride.driver._id,
+      message: `You have a new ride request`,
+      read: false,
+      createdAt: new Date()
     });
 
     // Update hitcher reliability

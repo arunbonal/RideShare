@@ -4,7 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { Plus } from "lucide-react";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 const RideManagement: React.FC = () => {

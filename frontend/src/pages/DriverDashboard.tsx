@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Car, Plus, Calendar, Clock, Users, MapPin, List, X } from "lucide-react";
+import { Car, Plus, Calendar, Clock, Users, MapPin, List, X, ChevronDown, AlertTriangle, Bug, XCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 interface Driver {
@@ -56,7 +55,7 @@ const DriverDashboard: React.FC = () => {
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
-    type: "success" | "error";
+    type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
   const [requestModal, setRequestModal] = useState<{
     show: boolean;
@@ -68,7 +67,23 @@ const DriverDashboard: React.FC = () => {
     }
   );
   const [currentRequestIndex, setCurrentRequestIndex] = useState(0);
+  const [showReportDropdown, setShowReportDropdown] = useState(false);
   const navigate = useNavigate();
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showReportDropdown && !target.closest(".report-dropdown-container")) {
+        setShowReportDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showReportDropdown]);
   
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -101,12 +116,20 @@ const DriverDashboard: React.FC = () => {
             .filter(n => !n.read && n.userId === currentUser.id && !seenNotifications.includes(n._id))
             .map(n => {
               // Determine notification type
-              const notificationType = n.message.includes('accepted') ? 'success' : 'error';
+              let notificationType: "success" | "error" | "info" = "info";
+              if (n.message.includes('accepted')) {
+                notificationType = "success";
+              } else if (n.message.includes('cancelled') || n.message.includes('rejected')) {
+                notificationType = "error";
+              } else if (n.message.includes('requested')) {
+                notificationType = "info";
+              }
+              
               return { 
                 _id: n._id,
                 message: n.message,
                 rideId: ride._id,
-                type: notificationType as "success" | "error"
+                type: notificationType
               };
             })
         );
@@ -542,7 +565,9 @@ const DriverDashboard: React.FC = () => {
             className={`fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg ${
               notification.type === "success"
                 ? "bg-green-50 text-green-800 border border-green-200"
-                : "bg-red-50 text-red-800 border border-red-200"
+                : notification.type === "error"
+                ? "bg-red-50 text-red-800 border border-red-200"
+                : "bg-yellow-100 text-yellow-800 border border-yellow-200"
             } transition-all duration-300 z-50 flex items-center`}
           >
             <span>{notification.message}</span>
@@ -567,12 +592,40 @@ const DriverDashboard: React.FC = () => {
                 </p>
               </div>
               {(activeTab === "upcoming" ? upcomingRides.length > 0 : pastRides.length > 0) && (
-                <button
-                  onClick={() => navigate("/report")}
-                  className="ml-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                >
-                  Report an Issue
-                </button>
+                <div className="relative report-dropdown-container">
+                  <button
+                    onClick={() => setShowReportDropdown(!showReportDropdown)}
+                    className="ml-4 mr-4 inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-white rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  >
+                    Report an Issue
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </button>
+                  
+                  {showReportDropdown && (
+                    <div className="absolute right-4 mt-2 w-60 bg-white rounded-md shadow-lg z-10 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          navigate("/report", { state: { type: "ride" } });
+                          setShowReportDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 flex items-center"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                        Report Ride Issue
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate("/report", { state: { type: "bug" } });
+                          setShowReportDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-red-50 flex items-center"
+                      >
+                        <Bug className="h-4 w-4 mr-2 text-red-600" />
+                        Report Bugs/Request Features
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -857,7 +910,20 @@ const DriverDashboard: React.FC = () => {
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 py-8"
         >
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto relative">
+            {/* Close button at top right */}
+            <div className="bg-white z-10 flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Ride Requests
+              </h2>
+              <button 
+                onClick={closeRequestModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
             {(() => {
               // Get the current request and ride
               const requests = getRequestsForRide(requestModal.rideId);
@@ -902,9 +968,13 @@ const DriverDashboard: React.FC = () => {
               return (
                 <>
                   <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Ride Requests ({currentRequestIndex + 1}/{requests.length})
-                    </h2>
+                    <div>
+                      {requests.length > 1 && (
+                        <p className="text-sm text-gray-500 mb-1">
+                          Request {currentRequestIndex + 1} of {requests.length}
+                        </p>
+                      )}
+                    </div>
                     <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                       {ride.direction === "toCollege" ? "To College" : "From College"} · 
                       {format(new Date(ride.date), " EEE, MMM d")} · 
@@ -916,7 +986,7 @@ const DriverDashboard: React.FC = () => {
                   
                   <div
                     key={currentRequest.hitcherId}
-                    className="border border-gray-200 rounded-md p-4"
+                    className="border border-gray-200 rounded-md p-4 mb-6"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -1024,30 +1094,23 @@ const DriverDashboard: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="mt-6 flex justify-between items-center">
-                    <button
-                      onClick={() => handleRequestNavigation("prev")}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
-                      disabled={requests.length <= 1}
-                    >
-                      Previous Request
-                    </button>
-                    
-                    <button
-                      onClick={closeRequestModal}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
-                    >
-                      Close
-                    </button>
-                    
-                    <button
-                      onClick={() => handleRequestNavigation("next")}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
-                      disabled={requests.length <= 1}
-                    >
-                      Next Request
-                    </button>
-                  </div>
+                  {requests.length > 1 && (
+                    <div className="mt-4 flex justify-between items-center">
+                      <button
+                        onClick={() => handleRequestNavigation("prev")}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
+                      >
+                        Previous Request
+                      </button>
+                      
+                      <button
+                        onClick={() => handleRequestNavigation("next")}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 focus:outline-none"
+                      >
+                        Next Request
+                      </button>
+                    </div>
+                  )}
                 </>
               );
             })()}

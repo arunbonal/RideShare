@@ -17,7 +17,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 declare global {

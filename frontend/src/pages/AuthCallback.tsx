@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
-import api from "../utils/api";
 import React from "react";
 
 // Use React.memo to prevent unnecessary rerenders of this component

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
-import axios from 'axios';
 import api from '../utils/api'; // Import API utility
 import { Navigate, Link } from 'react-router-dom';
 import { Search } from 'lucide-react';

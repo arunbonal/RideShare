@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
-import axios from 'axios';
 import api from '../utils/api';
 import { ArrowLeft } from 'lucide-react';
 

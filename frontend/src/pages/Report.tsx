@@ -4,7 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { format } from "date-fns";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 import { ArrowLeft } from "lucide-react";
 

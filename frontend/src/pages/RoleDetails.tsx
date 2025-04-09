@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Car, MapPin, Edit, Save } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 const RoleDetails: React.FC = () => {

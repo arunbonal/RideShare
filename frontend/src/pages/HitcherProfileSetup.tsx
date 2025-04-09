@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { User, MapPin, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
 declare global {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import api from '../utils/api'; // Import API utility
 import { ArrowLeft, Save, Trash2, AlertTriangle } from 'lucide-react';
 import AdminNavbar from '../components/AdminNavbar';
