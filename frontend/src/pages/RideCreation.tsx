@@ -6,6 +6,9 @@ import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import api from "../utils/api"; // Import API utility
 
+// Add detection for iOS devices
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
 interface RideSchedule {
   driver: string;
   passengers?: Array<{
@@ -267,81 +270,97 @@ const RideCreation: React.FC = () => {
                   ? "Departure time to college"
                   : "Departure time from college"}
               </label>
-              <div className="flex space-x-2">
+              {isIOS ? (
+                // iOS version - single input with native time picker
                 <input
                   type="time"
-                  value={
-                    formatTimeForDisplay(
-                      ride.direction === "toCollege"
-                        ? ride.toCollegeTime || "08:00"
-                        : ride.fromCollegeTime || "17:00"
-                    ).time
-                  }
+                  value={ride.direction === "toCollege" ? ride.toCollegeTime || "08:00" : ride.fromCollegeTime || "17:00"}
                   onChange={(e) => {
-                    const [hours, minutes] = e.target.value.split(":");
-                    const hour = parseInt(hours);
-                    const currentPeriod = formatTimeForDisplay(
-                      ride.direction === "toCollege"
-                        ? ride.toCollegeTime || "08:00"
-                        : ride.fromCollegeTime || "17:00"
-                    ).period;
-
-                    let hour24 = hour;
-                    if (currentPeriod === "PM" && hour !== 12) hour24 += 12;
-                    if (currentPeriod === "AM" && hour === 12) hour24 = 0;
-
-                    const newTime = `${hour24
-                      .toString()
-                      .padStart(2, "0")}:${minutes}`;
-
                     setRide({
                       ...ride,
-                      [ride.direction === "toCollege"
-                        ? "toCollegeTime"
-                        : "fromCollegeTime"]: newTime,
+                      [ride.direction === "toCollege" ? "toCollegeTime" : "fromCollegeTime"]: e.target.value,
                     });
                   }}
-                  className="flex px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
-                <select
-                  value={
-                    formatTimeForDisplay(
-                      ride.direction === "toCollege"
-                        ? ride.toCollegeTime || "08:00"
-                        : ride.fromCollegeTime || "17:00"
-                    ).period
-                  }
-                  onChange={(e) => {
-                    const { time } = formatTimeForDisplay(
-                      ride.direction === "toCollege"
-                        ? ride.toCollegeTime || "08:00"
-                        : ride.fromCollegeTime || "17:00"
-                    );
-                    const [hours, minutes] = time.split(":");
-                    const hour = parseInt(hours);
-                    const newPeriod = e.target.value as "AM" | "PM";
-
-                    let hour24 = hour;
-                    if (newPeriod === "PM" && hour !== 12) hour24 += 12;
-                    if (newPeriod === "AM" && hour === 12) hour24 = 0;
-
-                    const newTime = `${hour24
-                      .toString()
-                      .padStart(2, "0")}:${minutes}`;
-
-                    setRide({
-                      ...ride,
-                      [ride.direction === "toCollege"
-                        ? "toCollegeTime"
-                        : "fromCollegeTime"]: newTime,
-                    });
-                  }}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
-              </div>
+              ) : (
+                // Non-iOS version - separate time input and AM/PM dropdown
+                <div className="flex space-x-2">
+                  <input
+                    type="time"
+                    value={
+                      formatTimeForDisplay(
+                        ride.direction === "toCollege"
+                          ? ride.toCollegeTime || "08:00"
+                          : ride.fromCollegeTime || "17:00"
+                      ).time
+                    }
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":");
+                      const hour = parseInt(hours);
+                      const currentPeriod = formatTimeForDisplay(
+                        ride.direction === "toCollege"
+                          ? ride.toCollegeTime || "08:00"
+                          : ride.fromCollegeTime || "17:00"
+                      ).period;
+  
+                      let hour24 = hour;
+                      if (currentPeriod === "PM" && hour !== 12) hour24 += 12;
+                      if (currentPeriod === "AM" && hour === 12) hour24 = 0;
+  
+                      const newTime = `${hour24
+                        .toString()
+                        .padStart(2, "0")}:${minutes}`;
+  
+                      setRide({
+                        ...ride,
+                        [ride.direction === "toCollege"
+                          ? "toCollegeTime"
+                          : "fromCollegeTime"]: newTime,
+                      });
+                    }}
+                    className="flex px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <select
+                    value={
+                      formatTimeForDisplay(
+                        ride.direction === "toCollege"
+                          ? ride.toCollegeTime || "08:00"
+                          : ride.fromCollegeTime || "17:00"
+                      ).period
+                    }
+                    onChange={(e) => {
+                      const { time } = formatTimeForDisplay(
+                        ride.direction === "toCollege"
+                          ? ride.toCollegeTime || "08:00"
+                          : ride.fromCollegeTime || "17:00"
+                      );
+                      const [hours, minutes] = time.split(":");
+                      const hour = parseInt(hours);
+                      const newPeriod = e.target.value as "AM" | "PM";
+  
+                      let hour24 = hour;
+                      if (newPeriod === "PM" && hour !== 12) hour24 += 12;
+                      if (newPeriod === "AM" && hour === 12) hour24 = 0;
+  
+                      const newTime = `${hour24
+                        .toString()
+                        .padStart(2, "0")}:${minutes}`;
+  
+                      setRide({
+                        ...ride,
+                        [ride.direction === "toCollege"
+                          ? "toCollegeTime"
+                          : "fromCollegeTime"]: newTime,
+                      });
+                    }}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* From Location */}
