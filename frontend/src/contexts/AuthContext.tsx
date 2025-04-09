@@ -176,8 +176,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [allRides, setAllRides] = useState<Ride[]>([]);
 
-  // Rename the state variables
-  const [ride, setRide] = useState<Ride>({
+  // Memoize the initial ride state based on current user
+  // This is more efficient than recreating the object on every render
+  const initialRideState = useMemo<Ride>(() => ({
     _id: "",
     driver: {
       _id: currentUser?.id || "",
@@ -198,7 +199,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hitchers: [],
     pricePerKm: undefined,
     totalFare: 0,
-  });
+  }), [currentUser]);
+  
+  // Use the memoized initial state
+  const [ride, setRide] = useState<Ride>(initialRideState);
+  
+  // Reset ride state when needed - using the memoized value
+  const resetRide = useCallback(() => {
+    setRide(initialRideState);
+  }, [initialRideState]);
 
   // Define fetchAllRides before it's used in useEffect hooks
   const fetchAllRides = useCallback(async () => {
@@ -444,31 +453,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     },
     [fetchUserData]
   );
-
-  const resetRide = useCallback(() => {
-    setRide({
-      _id: "",
-      driver: {
-        _id: currentUser?.id || "",
-        name: currentUser?.name || "",
-        email: currentUser?.email || "",
-        phone: currentUser?.phone || "",
-        gender: currentUser?.gender || "",
-      },
-      from: currentUser?.homeAddress || "",
-      to: currentUser?.college || "",
-      date: "",
-      direction: "toCollege",
-      toCollegeTime: "08:00",
-      fromCollegeTime: "17:00",
-      availableSeats: currentUser?.driverProfile?.vehicle.seats || 4,
-      status: "scheduled",
-      note: "",
-      hitchers: [],
-      pricePerKm: undefined,
-      totalFare: 0,
-    });
-  }, [currentUser]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const value = useMemo(

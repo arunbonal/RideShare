@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, MessageSquare, Users } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -32,7 +32,8 @@ interface RideSchedule {
   pricePerKm: number;
 }
 
-const RideCreation: React.FC = () => {
+// Wrap the component with React.memo to prevent unnecessary re-renders
+const RideCreation: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { currentUser, ride, setRide, resetRide } = useAuth();
 
@@ -55,12 +56,16 @@ const RideCreation: React.FC = () => {
   }, [currentUser, setRide]);
 
   // Get min and max dates (today to 1 week from now)
-  const today = new Date().toISOString().split("T")[0];
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 7);
-  const maxDateString = maxDate.toISOString().split("T")[0];
+  const { today, maxDateString } = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 7);
+    const maxDateString = maxDate.toISOString().split("T")[0];
+    return { today, maxDateString };
+  }, []);
 
-  const isTimeValid = (date: string, time24: string): boolean => {
+  // Memoize the time validation function
+  const isTimeValid = useCallback((date: string, time24: string): boolean => {
     const now = new Date();
     const [hours, minutes] = time24.split(":").map(Number);
     const scheduleDateTime = new Date(date);
@@ -73,22 +78,25 @@ const RideCreation: React.FC = () => {
 
     // For today, check if the time has not passed
     return scheduleDateTime > now;
-  };
+  }, []);
 
-  const formatTimeForDisplay = (
-    time24: string
-  ): { time: string; period: "AM" | "PM" } => {
-    const [hours, minutes] = time24.split(":");
-    const hour = parseInt(hours);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return {
-      time: `${hour12.toString().padStart(2, "0")}:${minutes}`,
-      period,
-    };
-  };
+  // Memoize the time formatting function
+  const formatTimeForDisplay = useCallback(
+    (time24: string): { time: string; period: "AM" | "PM" } => {
+      const [hours, minutes] = time24.split(":");
+      const hour = parseInt(hours);
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return {
+        time: `${hour12.toString().padStart(2, "0")}:${minutes}`,
+        period,
+      };
+    },
+    []
+  );
 
-  const handleCreateSchedule = async () => {
+  // Memoize the create schedule handler
+  const handleCreateSchedule = useCallback(async () => {
     if (!ride.date) {
       alert("Please select a date");
       return;
@@ -167,7 +175,7 @@ const RideCreation: React.FC = () => {
         "Failed to create ride. Please try again.";
       alert(errorMessage);
     }
-  };
+  }, [ride, currentUser, isTimeValid, resetRide, navigate]);
 
   return (
     <>
@@ -476,6 +484,6 @@ const RideCreation: React.FC = () => {
       </div>
     </>
   );
-};
+});
 
 export default RideCreation;

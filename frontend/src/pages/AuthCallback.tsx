@@ -1,49 +1,52 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
 import api from "../utils/api";
+import React from "react";
 
-const AuthCallback = () => {
+// Use React.memo to prevent unnecessary rerenders of this component
+const AuthCallback = React.memo(() => {
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // Check if we already have a token directly in the URL (from Google redirect)
-        const searchParams = new URLSearchParams(location.search);
-        const token = searchParams.get("token");
+  // Memoize the callback handler to avoid recreation on each render
+  const handleCallback = useCallback(async () => {
+    try {
+      // Check if we already have a token directly in the URL (from Google redirect)
+      const searchParams = new URLSearchParams(location.search);
+      const token = searchParams.get("token");
+      
+      if (token) {
+        // Store token in localStorage
+        localStorage.setItem("authToken", token);
         
-        if (token) {
-          // Store token in localStorage
-          localStorage.setItem("authToken", token);
-          
-          // Redirect to home page, the Auth context will handle further redirection
-          navigate("/", { replace: true });
-          return;
-        }
-        
-        // If we get here, there's no token in the URL
-        setError("Authentication failed. Please try again.");
-        
-        // Redirect to login page after a short delay
-        setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 3000);
-      } catch (err) {
-        console.error("Error during auth callback:", err);
-        setError("Authentication failed. Please try again.");
-        
-        // Redirect to login page after a short delay
-        setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 3000);
+        // Redirect to home page, the Auth context will handle further redirection
+        navigate("/", { replace: true });
+        return;
       }
-    };
+      
+      // If we get here, there's no token in the URL
+      setError("Authentication failed. Please try again.");
+      
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 3000);
+    } catch (err) {
+      console.error("Error during auth callback:", err);
+      setError("Authentication failed. Please try again.");
+      
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 3000);
+    }
+  }, [location.search, navigate]);
 
+  useEffect(() => {
     handleCallback();
-  }, [location, navigate]);
+  }, [handleCallback]);
 
   if (error) {
     return (
@@ -67,6 +70,6 @@ const AuthCallback = () => {
       <p className="text-gray-600 mt-4">Completing authentication...</p>
     </div>
   );
-};
+});
 
 export default AuthCallback; 
