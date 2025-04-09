@@ -17,16 +17,8 @@ exports.googleCallback = (req, res) => {
     return res.redirect(`${process.env.CLIENT_URL}/?error=invalid-email`);
   }
 
-  // Generate JWT token
-  const token = generateToken(req.user);
-
-  // Check if user is an admin - bypass email validation for admins
-  if (req.user.isAdmin) {
-    return res.redirect(`${process.env.CLIENT_URL}/admin?token=${token}`);
-  }
-
-  // Check if email is from PES domain
-  if (!req.user.email?.endsWith("@pesu.pes.edu")) {
+  // Check if email is from PES domain for non-admin users
+  if (!req.user.isAdmin && !req.user.email?.endsWith("@pesu.pes.edu")) {
     req.logout((err) => {
       if (err) {
         console.error("Error logging out:", err);
@@ -36,37 +28,11 @@ exports.googleCallback = (req, res) => {
     return;
   }
 
-  // Check if user has any active roles
-  const hasActiveRoles =
-    req.user.activeRoles &&
-    (req.user.activeRoles.driver || req.user.activeRoles.hitcher);
+  // Generate JWT token
+  const token = generateToken(req.user);
 
-  // If no active roles, redirect to role-selection
-  if (!hasActiveRoles) {
-    return res.redirect(`${process.env.CLIENT_URL}/role-selection?token=${token}`);
-  }
-
-  // Determine redirect based on active roles and profile completion status
-  let redirectPath;
-
-  // If user is an active driver
-  if (req.user.activeRoles.driver) {
-    redirectPath = req.user.driverProfileComplete
-      ? `/driver/dashboard?token=${token}`
-      : `/driver/setup?token=${token}`;
-  }
-  // If user is an active hitcher
-  else if (req.user.activeRoles.hitcher) {
-    redirectPath = req.user.hitcherProfileComplete
-      ? `/hitcher/dashboard?token=${token}`
-      : `/hitcher/setup?token=${token}`;
-  }
-  // Fallback for any unexpected state
-  else {
-    redirectPath = `/role-selection?token=${token}`;
-  }
-
-  return res.redirect(`${process.env.CLIENT_URL}${redirectPath}`);
+  // Redirect back to frontend with the token
+  return res.redirect(`${process.env.CLIENT_URL}/auth/google/callback?token=${token}`);
 };
 
 exports.logout = (req, res) => {

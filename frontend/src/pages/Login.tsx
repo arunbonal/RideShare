@@ -71,7 +71,7 @@ const Login: React.FC = () => {
   const handleGoogleLogin = () => {
     try {
       setErrorMessage("");
-      // Redirect to the backend Google auth route
+      // Redirect to Google auth with frontend callback URL
       window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google`;
     } catch (err) {
       setErrorMessage("Failed to sign in with Google. Please try again.");

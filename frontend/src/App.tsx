@@ -89,6 +89,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserDetails from "./pages/AdminUserDetails";
 import AdminRideDetails from './pages/AdminRideDetails';
 import Report from "./pages/Report";
+import AuthCallback from "./pages/AuthCallback";
 
 // Route change handler component
 const RouteChangeHandler = ({ children }: { children: ReactNode }) => {
@@ -114,6 +115,9 @@ function App() {
               <Route path="/" element={<RootRouteHandler />} />
               <Route path="/login" element={<Navigate to="/" replace />} />
 
+              {/* Auth Callback Route */}
+              <Route path="/auth/google/callback" element={<AuthCallback />} />
+              
               {/* Protected routes */}
               <Route
                 path="/role-selection"
