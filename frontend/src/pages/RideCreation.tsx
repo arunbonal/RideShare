@@ -224,7 +224,14 @@ const RideCreation: React.FC = () => {
                   })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Select date"
+                required
               />
+              {!ride.date && (
+                <p className="mt-1 text-sm text-gray-500">
+                  Please select a date
+                </p>
+              )}
             </div>
 
             {/* Direction Selection */}
