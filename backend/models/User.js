@@ -11,10 +11,6 @@ const DriverProfileSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-    color: {
-      type: String,
-      required: true,
-    },
     registrationNumber: {
       type: String,
       required: true,

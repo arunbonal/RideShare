@@ -34,7 +34,6 @@ exports.updateDriverProfile = async (req, res) => {
       isActive: true,
       vehicle: {
         model: driverProfile.vehicle.model || "",
-        color: driverProfile.vehicle.color || "",
         registrationNumber: driverProfile.vehicle.registrationNumber || "",
         seats: driverProfile.vehicle.seats || 4,
       },

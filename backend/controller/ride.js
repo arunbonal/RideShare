@@ -24,7 +24,7 @@ exports.createRide = async (req, res) => {
 exports.getRides = async (req, res) => {
   try {
     const rides = await Ride.find()
-      .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.color driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
+      .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
       .populate("hitchers.user", "name email phone gender srn college hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order
     res.status(200).json({ message: "Rides fetched successfully", rides });

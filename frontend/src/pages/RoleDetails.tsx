@@ -11,7 +11,6 @@ const RoleDetails: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({
     vehicleModel: "",
-    vehicleColor: "",
     registrationNumber: "",
     seats: "",
     pricePerKm: ""
@@ -49,7 +48,6 @@ const RoleDetails: React.FC = () => {
     if (currentUser?.driverProfile) {
       setEditedData({
         vehicleModel: currentUser.driverProfile.vehicle.model,
-        vehicleColor: currentUser.driverProfile.vehicle.color,
         registrationNumber: currentUser.driverProfile.vehicle.registrationNumber,
         seats: currentUser.driverProfile.vehicle.seats.toString(),
         pricePerKm: currentUser.driverProfile.pricePerKm.toString()
@@ -105,10 +103,6 @@ const RoleDetails: React.FC = () => {
       errors.vehicleModel = 'Vehicle model is required';
     }
     
-    if (!editedData.vehicleColor.trim()) {
-      errors.vehicleColor = 'Vehicle color is required';
-    }
-    
     if (!editedData.registrationNumber.trim()) {
       errors.registrationNumber = 'Registration number is required';
     }
@@ -156,7 +150,6 @@ const RoleDetails: React.FC = () => {
         {
           vehicle: {
             model: editedData.vehicleModel,
-            color: editedData.vehicleColor,
             registrationNumber: editedData.registrationNumber,
             seats: parseInt(editedData.seats)
           },
@@ -272,7 +265,6 @@ const RoleDetails: React.FC = () => {
               {!isEditing ? (
                 <>
                   <p className="mt-1">Model: {driverProfile.vehicle.model}</p>
-                  <p>Color: {driverProfile.vehicle.color}</p>
                   <p>Registration: {driverProfile.vehicle.registrationNumber}</p>
                   <p>Available Seats: {driverProfile.vehicle.seats}</p>
                 </>
@@ -296,25 +288,8 @@ const RoleDetails: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <label htmlFor="vehicleColor" className="block text-xs text-gray-600">
-                      Vehicle Color
-                    </label>
-                    <input
-                      type="text"
-                      id="vehicleColor"
-                      name="vehicleColor"
-                      value={editedData.vehicleColor}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full px-3 py-2 border ${validationErrors.vehicleColor ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                      placeholder="e.g. Blue"
-                    />
-                    {validationErrors.vehicleColor && (
-                      <p className="mt-1 text-xs text-red-600">{validationErrors.vehicleColor}</p>
-                    )}
-                  </div>
-                  <div>
                     <label htmlFor="registrationNumber" className="block text-xs text-gray-600">
-                      Registration Number
+                      Vehicle Registration Number
                     </label>
                     <input
                       type="text"

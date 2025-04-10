@@ -18,7 +18,6 @@ interface Driver {
   driverProfile?: {
     vehicle?: {
       model: string;
-      color: string;
       registrationNumber?: string;
     };
     reliabilityRate?: number;
@@ -41,7 +40,6 @@ interface RideWithCollegeInfo {
   hitchers?: any[];
   pricePerKm?: number;
   vehicleModel?: string;
-  vehicleColor?: string;
 }
 
 const RideSearch: React.FC = () => {

@@ -16,7 +16,6 @@ interface RideCardProps {
     availableSeats: number;
     pricePerKm: number;
     vehicleModel: string;
-    vehicleColor: string;
   };
   onRequestRide?: (rideId: string) => void;
   showRequestButton?: boolean;
@@ -86,7 +85,7 @@ const RideCard: React.FC<RideCardProps> = ({
             <div>
               <p className="text-sm font-medium">{ride.driverName}</p>
               <p className="text-xs text-gray-500">
-                {ride.vehicleColor} {ride.vehicleModel}
+                {ride.vehicleModel}
               </p>
             </div>
             {showRequestButton ? (
