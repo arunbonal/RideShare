@@ -171,8 +171,9 @@ const AdminUserDetails: React.FC = () => {
             <p>{error || 'User not found'}</p>
             <button
               onClick={() => navigate('/admin')}
-              className="mt-2 text-blue-600 hover:text-blue-800"
+              className="mt-2 inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Admin Dashboard
             </button>
           </div>
@@ -195,9 +196,9 @@ const AdminUserDetails: React.FC = () => {
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center text-gray-600 hover:text-gray-900"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all mb-6 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Admin Dashboard
           </button>
           
@@ -303,7 +304,7 @@ const AdminUserDetails: React.FC = () => {
 
                   <button
                     type="submit"
-                    className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes

@@ -80,14 +80,15 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Main content */}
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-xl relative z-10">
         <div className="text-center">
           <div className="flex justify-center">
             <Car className="h-16 w-16 text-blue-600" />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            PES University Carpooling
+            RideShare
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Share rides with fellow students at PES University

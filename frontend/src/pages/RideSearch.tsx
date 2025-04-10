@@ -744,7 +744,7 @@ const RideSearch: React.FC = () => {
                     <button
                       onClick={() => handleRequestRide(selectedRideDetails._id)}
                       disabled={isLoading}
-                      className={`w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-3 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                       {isLoading ? "Processing..." : "Request This Ride"}
                     </button>

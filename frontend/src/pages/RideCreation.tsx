@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, MessageSquare, Users, Car, CreditCard } from "lucide-react";
+import { Calendar, Clock, MapPin, MessageSquare, Users, Car, CreditCard, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../utils/api"; // Import API utility
@@ -206,9 +206,10 @@ const RideCreation: React.FC = React.memo(() => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <button
           onClick={() => navigate("/driver/dashboard")}
-          className="text-gray-600 hover:text-gray-800 mb-4"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all mb-4 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          ← Back to Dashboard
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
         </button>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Create New Ride</h1>
@@ -549,7 +550,7 @@ const RideCreation: React.FC = React.memo(() => {
               </p>
             <LoadingButton
               onClick={handleCreateSchedule}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               loadingText="Creating Ride..."
               disabled={Object.keys(validationErrors).some(key => validationErrors[key as keyof ValidationErrors])}
             >

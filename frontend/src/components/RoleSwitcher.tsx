@@ -68,7 +68,7 @@ const RoleSwitcher: React.FC = () => {
         >
           <div
             className={`${
-              currentRole === "driver" ? "bg-blue-500" : "bg-blue-100"
+              currentRole === "driver" ? "bg-gradient-to-r from-blue-500 to-indigo-600" : "bg-blue-100"
             } p-2 rounded-full`}
           >
             <Car

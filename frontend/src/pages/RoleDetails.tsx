@@ -466,9 +466,9 @@ const RoleDetails: React.FC = () => {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <button
           onClick={() => navigate("/profile/settings")}
-          className="flex items-center text-gray-600 mb-6 hover:text-gray-900"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all mb-6 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Settings
         </button>
 

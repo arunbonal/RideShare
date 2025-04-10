@@ -33,7 +33,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-blue-600 text-white shadow-md">
+    <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -48,7 +48,7 @@ const Navbar: React.FC = () => {
             {showDriverDashboard && (
               <Link
                 to="/driver/dashboard"
-                className="px-3 py-2 rounded-md hover:bg-blue-700"
+                className="px-3 py-2 rounded-md hover:bg-blue-700/50 transition-colors"
               >
                 Driver Dashboard
               </Link>
@@ -57,13 +57,13 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/hitcher/dashboard"
-                  className="px-3 py-2 rounded-md hover:bg-blue-700"
+                  className="px-3 py-2 rounded-md hover:bg-blue-700/50 transition-colors"
                 >
                   Hitcher Dashboard
                 </Link>
                 <Link
                   to="/rides/search"
-                  className="px-3 py-2 rounded-md hover:bg-blue-700"
+                  className="px-3 py-2 rounded-md hover:bg-blue-700/50 transition-colors"
                 >
                   Find Rides
                 </Link>
@@ -71,14 +71,14 @@ const Navbar: React.FC = () => {
             )}
             <Link
               to="/profile/settings"
-              className="flex items-center px-3 py-2 rounded-md hover:bg-blue-700"
+              className="flex items-center px-3 py-2 rounded-md hover:bg-blue-700/50 transition-colors"
             >
               <Settings className="h-5 w-5 mr-1" />
               <span>Settings</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center px-3 py-2 rounded-md hover:bg-blue-700"
+              className="flex items-center px-3 py-2 rounded-md hover:bg-blue-700/50 transition-colors"
             >
               <LogOut className="h-5 w-5 mr-1" />
               <span>Logout</span>

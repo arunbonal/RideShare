@@ -460,11 +460,11 @@ const Report: React.FC = () => {
         )}
 
         <div className="mb-8">
-          <button 
+          <button
             onClick={() => navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard")}
-            className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all mb-6 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </button>
           <h1 className="text-2xl font-bold text-gray-900">

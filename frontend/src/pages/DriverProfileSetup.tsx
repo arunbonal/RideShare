@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, MapPin, CreditCard, CheckCircle } from "lucide-react";
+import { Car, MapPin, CreditCard, CheckCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import api from "../utils/api"; // Import API utility
@@ -495,7 +495,7 @@ const DriverProfileSetup: React.FC = () => {
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                   currentStep >= 1
-                    ? "border-blue-600 bg-blue-100"
+                    ? "border-blue-600 bg-gradient-to-r from-blue-100 to-indigo-100"
                     : "border-gray-300"
                 }`}
               >
@@ -505,7 +505,7 @@ const DriverProfileSetup: React.FC = () => {
             </div>
             <div
               className={`flex-1 h-1 mx-2 ${
-                currentStep >= 2 ? "bg-blue-600" : "bg-gray-200"
+                currentStep >= 2 ? "bg-gradient-to-r from-blue-600 to-indigo-700" : "bg-gray-200"
               }`}
             ></div>
               </>
@@ -519,7 +519,7 @@ const DriverProfileSetup: React.FC = () => {
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                   currentStep >= 2
-                    ? "border-blue-600 bg-blue-100"
+                    ? "border-blue-600 bg-gradient-to-r from-blue-100 to-indigo-100"
                     : "border-gray-300"
                 }`}
               >
@@ -529,7 +529,7 @@ const DriverProfileSetup: React.FC = () => {
             </div>
             <div
               className={`flex-1 h-1 mx-2 ${
-                currentStep >= 3 ? "bg-blue-600" : "bg-gray-200"
+                currentStep >= 3 ? "bg-gradient-to-r from-blue-600 to-indigo-700" : "bg-gray-200"
               }`}
             ></div>
             <div
@@ -540,7 +540,7 @@ const DriverProfileSetup: React.FC = () => {
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                   currentStep >= 3
-                    ? "border-blue-600 bg-blue-100"
+                    ? "border-blue-600 bg-gradient-to-r from-blue-100 to-indigo-100"
                     : "border-gray-300"
                 }`}
               >
@@ -550,7 +550,7 @@ const DriverProfileSetup: React.FC = () => {
             </div>
             <div
               className={`flex-1 h-1 mx-2 ${
-                currentStep >= 4 ? "bg-blue-600" : "bg-gray-200"
+                currentStep >= 4 ? "bg-gradient-to-r from-blue-600 to-indigo-700" : "bg-gray-200"
               }`}
             ></div>
             <div
@@ -561,7 +561,7 @@ const DriverProfileSetup: React.FC = () => {
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
                   currentStep >= 4
-                    ? "border-blue-600 bg-blue-100"
+                    ? "border-blue-600 bg-gradient-to-r from-blue-100 to-indigo-100"
                     : "border-gray-300"
                 }`}
               >
@@ -791,8 +791,9 @@ const DriverProfileSetup: React.FC = () => {
                     <button
                       type="button"
                       onClick={prevStep}
-                      className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
                       Back
                     </button>
                   )}
@@ -852,8 +853,9 @@ const DriverProfileSetup: React.FC = () => {
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </button>
                   <button
@@ -928,8 +930,9 @@ const DriverProfileSetup: React.FC = () => {
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="text-gray-600 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </button>
                   <SubmitButton />

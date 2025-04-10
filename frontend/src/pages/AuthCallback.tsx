@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
 import React from "react";
+import { ArrowLeft } from "lucide-react";
 
 // Use React.memo to prevent unnecessary rerenders of this component
 const AuthCallback = React.memo(() => {
@@ -49,14 +50,15 @@ const AuthCallback = React.memo(() => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm max-w-md w-full mb-4">
           {error}
         </div>
         <button
           onClick={() => navigate("/")}
-          className="text-blue-600 hover:text-blue-800"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-md shadow-sm hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Return to login page
         </button>
       </div>
@@ -64,7 +66,7 @@ const AuthCallback = React.memo(() => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <LoadingSpinner />
       <p className="text-gray-600 mt-4">Completing authentication...</p>
     </div>

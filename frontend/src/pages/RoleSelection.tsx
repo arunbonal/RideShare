@@ -54,8 +54,8 @@ const RoleSelection: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-xl">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Choose Your Role
@@ -77,7 +77,9 @@ const RoleSelection: React.FC = () => {
             <div className="flex items-center">
               <div
                 className={`${
-                  selectedRole === "driver" ? "bg-blue-500" : "bg-blue-100"
+                  selectedRole === "driver" 
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-600" 
+                    : "bg-blue-100"
                 } p-3 rounded-full`}
               >
                 <Car
@@ -162,7 +164,7 @@ const RoleSelection: React.FC = () => {
             className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
               !selectedRole
                 ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                : "bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             }`}
           >
             Continue
