@@ -484,13 +484,15 @@ const UserProfile: React.FC = () => {
                   <div className="sm:col-span-1">
                     <dt className="text-sm font-medium text-gray-500 flex items-center">
                       <Phone className="h-4 w-4 mr-1" /> Phone Number
-                      <button
-                        onClick={() => setIsEditingPhone(true)}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
-                        title="Edit phone number"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
+                      {(currentUser.hitcherProfileComplete || currentUser.driverProfileComplete) && (
+                        <button
+                          onClick={() => setIsEditingPhone(true)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                          title="Edit phone number"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {currentUser.phone ? currentUser.phone.replace(/^(\+91)(\d+)$/, '$1 $2') : ""}
@@ -499,19 +501,30 @@ const UserProfile: React.FC = () => {
                   <div className="sm:col-span-1">
                     <dt className="text-sm font-medium text-gray-500 flex items-center">
                       <MapPin className="h-4 w-4 mr-1" /> Your Address
-                      <button
-                        onClick={() => setIsEditingAddress(true)}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
-                        title="Edit address"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
+                      {(currentUser.hitcherProfileComplete || currentUser.driverProfileComplete) && (
+                        <button
+                          onClick={() => setIsEditingAddress(true)}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                          title="Edit address"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {currentUser.homeAddress}
                     </dd>
                   </div>
                 </dl>
+                
+                {!currentUser.hitcherProfileComplete && !currentUser.driverProfileComplete && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm text-blue-700">
+                    <p>
+                      <strong>Note:</strong> You'll be able to edit your phone number and address after completing 
+                      either your hitcher or driver profile.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

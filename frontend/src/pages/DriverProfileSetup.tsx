@@ -425,6 +425,11 @@ const DriverProfileSetup: React.FC = () => {
         setIsPhoneVerified(true);
         setIsVerifying(false);
         setError(null);
+        // Also update the formData phone field with the verified phone number
+        setFormData(prev => ({
+          ...prev,
+          phone: formattedPhoneNumber
+        }));
         setSuccessMessage("Phone number verified successfully!");
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000);
