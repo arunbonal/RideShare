@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Plus, Calendar, Clock, MapPin, X, ChevronDown, AlertTriangle, Bug } from "lucide-react";
@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Ride } from "../contexts/AuthContext";
 import axios from "axios";
 import api from "../utils/api"; // Import API utility
+import LoadingButton from "../components/LoadingButton";
 
 // Extend the driver interface to include driverProfile
 interface ExtendedRide extends Ride {
@@ -35,6 +36,8 @@ const HitcherDashboard: React.FC = () => {
   const [hitcherRides, setHitcherRides] = useState<ExtendedRide[]>([]);
   const [upcomingRides, setUpcomingRides] = useState<ExtendedRide[]>([]);
   const [pastRides, setPastRides] = useState<ExtendedRide[]>([]);
+  const [navigating, setNavigating] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -317,7 +320,9 @@ const HitcherDashboard: React.FC = () => {
     }
   };
 
-  const handleCancelClick = async (rideId: string, hitcherId: string) => {
+  const handleCancelClick = async (rideId: string, hitcherId: string): Promise<void> => {
+    if (canceling) return; // Prevent multiple clicks
+    
     try {
       // Get the ride to check if it's accepted
       const ride = hitcherRides.find(r => r._id === rideId);
@@ -363,7 +368,10 @@ const HitcherDashboard: React.FC = () => {
     }
   };
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (): Promise<void> => {
+    if (canceling) return; // Prevent multiple calls
+    
+    setCanceling(true);
     const { rideId, hitcherId } = confirmModal;
 
     try {
@@ -382,6 +390,7 @@ const HitcherDashboard: React.FC = () => {
         await fetchAllRides(); // Refresh to get updated status
         setConfirmModal({ show: false, rideId: "", hitcherId: "" });
         setReliabilityImpact({ currentRate: null, newRate: null });
+        setCanceling(false);
         return;
       }
       
@@ -394,6 +403,7 @@ const HitcherDashboard: React.FC = () => {
         await fetchAllRides(); // Refresh to get updated status
         setConfirmModal({ show: false, rideId: "", hitcherId: "" });
         setReliabilityImpact({ currentRate: null, newRate: null });
+        setCanceling(false);
         return;
       }
 
@@ -412,6 +422,7 @@ const HitcherDashboard: React.FC = () => {
         await fetchAllRides();
         setConfirmModal({ show: false, rideId: "", hitcherId: "" });
         setReliabilityImpact({ currentRate: null, newRate: null });
+        setCanceling(false);
         return;
       }
       
@@ -425,6 +436,7 @@ const HitcherDashboard: React.FC = () => {
         await fetchAllRides();
         setConfirmModal({ show: false, rideId: "", hitcherId: "" });
         setReliabilityImpact({ currentRate: null, newRate: null });
+        setCanceling(false);
         return;
       }
       
@@ -442,6 +454,7 @@ const HitcherDashboard: React.FC = () => {
         await fetchAllRides(); // Refresh to get updated status
         setConfirmModal({ show: false, rideId: "", hitcherId: "" });
         setReliabilityImpact({ currentRate: null, newRate: null });
+        setCanceling(false);
         return;
       }
       
@@ -490,6 +503,7 @@ const HitcherDashboard: React.FC = () => {
       // Close the modal
       setConfirmModal({ show: false, rideId: "", hitcherId: "" });
       setReliabilityImpact({ currentRate: null, newRate: null });
+      setCanceling(false);
     }
   };
 
@@ -501,6 +515,14 @@ const HitcherDashboard: React.FC = () => {
     const period = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${period}`;
+  };
+
+  // Handle navigation with prevention of multiple clicks
+  const handleNavigation = (path: string) => {
+    if (!navigating) {
+      setNavigating(true);
+      navigate(path);
+    }
   };
 
   return (
@@ -555,12 +577,13 @@ const HitcherDashboard: React.FC = () => {
         >
           No, Keep Ride
         </button>
-        <button
+        <LoadingButton
           onClick={handleConfirmCancel}
           className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+          loadingText="Cancelling..."
         >
           Yes, Cancel Ride
-        </button>
+        </LoadingButton>
       </div>
     </div>
   </div>
@@ -647,11 +670,12 @@ const HitcherDashboard: React.FC = () => {
             </p>
             <div className="mt-4 md:mt-0">
               <button
-                onClick={() => navigate("/rides/search")}
-                className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={() => handleNavigation("/rides/search")}
+                disabled={navigating}
+                className={`inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${navigating ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 <Plus className="h-5 w-5 mr-1" />
-                Find Rides
+                {navigating ? 'Navigating...' : 'Find Rides'}
               </button>
             </div>
           </div>
@@ -696,11 +720,12 @@ const HitcherDashboard: React.FC = () => {
                   </p>
                   <div className="mt-4 md:mt-0">
                     <button
-                      onClick={() => navigate("/rides/search")}
-                      className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      onClick={() => handleNavigation("/rides/search")}
+                      disabled={navigating}
+                      className={`inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${navigating ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                       <Plus className="h-5 w-5 mr-1" />
-                      Find Rides
+                      {navigating ? 'Navigating...' : 'Find Rides'}
                     </button>
                   </div>
                 </div>
@@ -858,12 +883,13 @@ const HitcherDashboard: React.FC = () => {
                           ride.status !== 'in-progress' && 
                           ride.status !== 'completed' && 
                           activeTab === "upcoming") && (
-                          <button
+                          <LoadingButton
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            loadingText="Cancelling..."
                           >
                             {hitcherInfo.status === 'pending' ? 'Cancel Request' : 'Cancel Ride'}
-                          </button>
+                          </LoadingButton>
                         )}
                       </div>
                     );

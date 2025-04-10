@@ -1,12 +1,23 @@
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, MessageSquare, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, MessageSquare, Users, Car, CreditCard } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../utils/api"; // Import API utility
+import { formatDate } from '../utils/dateUtils';
+import { toast } from 'react-hot-toast';
+import LoadingButton from '../components/LoadingButton';
 
 // Add detection for iOS devices
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
+// Add validation interface
+interface ValidationErrors {
+  availableSeats?: string;
+  date?: string;
+  time?: string;
+  pricePerKm?: string;
+}
 
 interface RideSchedule {
   driver: string;
@@ -35,6 +46,7 @@ interface RideSchedule {
 const RideCreation: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { currentUser, ride, setRide, resetRide } = useAuth();
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   useEffect(() => {
     if (currentUser) {
@@ -94,11 +106,34 @@ const RideCreation: React.FC = React.memo(() => {
     []
   );
 
+  // Validate available seats
+  const validateAvailableSeats = useCallback((seats: number): string | undefined => {
+    if (seats === undefined || seats === null || isNaN(seats)) {
+      return "Available seats is required";
+    }
+    if (!Number.isInteger(seats)) {
+      return "Available seats must be a whole number";
+    }
+    if (seats < 1) {
+      return "At least 1 seat must be available";
+    }
+    if (seats > 6) {
+      return "Maximum 6 seats are allowed";
+    }
+    return undefined;
+  }, []);
+
   // Memoize the create schedule handler
-  const handleCreateSchedule = useCallback(async () => {
+  const handleCreateSchedule = useCallback(async (): Promise<void> => {
+    // Collect all validation errors
+    const errors: ValidationErrors = {};
+    
+    // Validate available seats
+    const seatsError = validateAvailableSeats(ride.availableSeats);
+    if (seatsError) errors.availableSeats = seatsError;
+
     if (!ride.date) {
-      alert("Please select a date");
-      return;
+      errors.date = "Please select a date";
     }
 
     const selectedDate = new Date(ride.date);
@@ -106,8 +141,7 @@ const RideCreation: React.FC = React.memo(() => {
     todayDate.setHours(0, 0, 0, 0);
 
     if (selectedDate < todayDate) {
-      alert("Cannot schedule rides for past dates");
-      return;
+      errors.date = "Cannot schedule rides for past dates";
     }
 
     // Check time validity for today's rides
@@ -118,63 +152,53 @@ const RideCreation: React.FC = React.memo(() => {
           : ride.fromCollegeTime;
 
       if (!timeToCheck || !isTimeValid(ride.date, timeToCheck)) {
-        alert("Cannot schedule rides for past times. Please select a future time.");
-        return;
+        errors.time = "Cannot schedule rides for past times. Please select a future time.";
       }
     }
 
     if (ride.pricePerKm === undefined) {
-      alert("Please enter a price per kilometer");
+      errors.pricePerKm = "Please enter a price per kilometer";
+    }
+
+    // Set validation errors and return if there are any
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
-    if (ride.availableSeats > 6) {
-      alert("Cannot schedule rides for more than 6 passengers");
-      return;
-    }
+    // Clear validation errors
+    setValidationErrors({});
 
-    try {
-      // Format the ride data to match the backend schema
-      const rideData = {
-        driver: currentUser?.id || "", // Send only the driver ID
-        from: ride.from,
-        to: ride.to,
-        date: new Date(ride.date).toISOString(),
-        direction: ride.direction,
-        toCollegeTime: ride.toCollegeTime, // Keep as HH:MM
-        fromCollegeTime: ride.fromCollegeTime, // Keep as HH:MM
-        availableSeats: Number(ride.availableSeats),
-        status: "scheduled" as const,
-        note: ride.note || "",
-        passengers: [],
-        pricePerKm: Number(ride.pricePerKm),
-        // Add a combined datetime field to help with proper sorting
-        datetime: (() => {
-          const dt = new Date(ride.date);
-          const time = ride.direction === "toCollege" ? ride.toCollegeTime : ride.fromCollegeTime;
-          if (time) {
-            const [hours, minutes] = time.split(":").map(Number);
-            dt.setHours(hours, minutes, 0, 0);
-          }
-          return dt.toISOString();
-        })()
-      };
+    // Format the ride data to match the backend schema
+    const rideData = {
+      driver: currentUser?.id || "", // Send only the driver ID
+      from: ride.from,
+      to: ride.to,
+      date: new Date(ride.date).toISOString(),
+      direction: ride.direction,
+      toCollegeTime: ride.toCollegeTime, // Keep as HH:MM
+      fromCollegeTime: ride.fromCollegeTime, // Keep as HH:MM
+      availableSeats: Number(ride.availableSeats),
+      status: "scheduled" as const,
+      note: ride.note || "",
+      passengers: [],
+      pricePerKm: Number(ride.pricePerKm),
+      // Add a combined datetime field to help with proper sorting
+      datetime: (() => {
+        const dt = new Date(ride.date);
+        const time = ride.direction === "toCollege" ? ride.toCollegeTime : ride.fromCollegeTime;
+        if (time) {
+          const [hours, minutes] = time.split(":").map(Number);
+          dt.setHours(hours, minutes, 0, 0);
+        }
+        return dt.toISOString();
+      })()
+    };
 
-      await api.post("/api/rides/create", rideData);
-
-      resetRide();
-      navigate("/driver/dashboard");
-    } catch (error: any) {
-      console.error("Error creating ride:", error);
-      // Show more specific error message
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to create ride. Please try again.";
-      alert(errorMessage);
-    }
-  }, [ride, currentUser, isTimeValid, resetRide, navigate]);
+    await api.post("/api/rides/create", rideData);
+    resetRide();
+    navigate("/driver/dashboard");
+  }, [ride, currentUser, isTimeValid, resetRide, navigate, validateAvailableSeats]);
 
   return (
     <>
@@ -196,48 +220,88 @@ const RideCreation: React.FC = React.memo(() => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Users className="inline-block w-4 h-4 mr-2" />
-                Available Seats
+                Available Seats<span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 min="1"
                 max="6"
+                required
                 value={ride.availableSeats}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const seats = e.target.value ? parseInt(e.target.value) : undefined;
                   setRide({
                     ...ride,
-                    availableSeats: parseInt(e.target.value),
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    availableSeats: seats as number,
+                  });
+                  // Clear validation error when field is modified
+                  if (validationErrors.availableSeats) {
+                    setValidationErrors({
+                      ...validationErrors,
+                      availableSeats: undefined
+                    });
+                  }
+                }}
+                className={`w-full px-3 py-2 border ${validationErrors.availableSeats ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
+                onBlur={() => {
+                  const error = validateAvailableSeats(ride.availableSeats);
+                  if (error) {
+                    setValidationErrors({
+                      ...validationErrors,
+                      availableSeats: error
+                    });
+                  }
+                }}
               />
+              {validationErrors.availableSeats && (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.availableSeats}
+                </p>
+              )}
+              {!validationErrors.availableSeats && (
+                <p className="mt-1 text-sm text-gray-500">
+                  You can offer between 1 and 6 seats
+                </p>
+              )}
             </div>
 
             {/* Date Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Calendar className="inline-block w-4 h-4 mr-2" />
-                Date
+                Date<span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 min={today}
                 max={maxDateString}
                 value={ride.date}
-                onChange={(e) =>
+                onChange={(e) => {
                   setRide({
                     ...ride,
                     date: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Select date"
+                  });
+                  // Clear date validation error
+                  if (validationErrors.date) {
+                    setValidationErrors({
+                      ...validationErrors,
+                      date: undefined
+                    });
+                  }
+                }}
+                className={`w-full px-3 py-2 border ${validationErrors.date ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
                 required
               />
-              {!ride.date && (
-                <p className="mt-1 text-sm text-gray-500">
-                  Please select a date
+              {validationErrors.date ? (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.date}
                 </p>
+              ) : (
+                !ride.date && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    Please select a date
+                  </p>
+                )
               )}
             </div>
 
@@ -409,7 +473,7 @@ const RideCreation: React.FC = React.memo(() => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <span className="inline-block w-4 h-4 mr-2">₹</span>
-                Price Per Kilometer
+                Price Per Kilometer<span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -421,30 +485,41 @@ const RideCreation: React.FC = React.memo(() => {
                   min="0"
                   step="0.5"
                   value={ride.pricePerKm === undefined ? "" : ride.pricePerKm}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setRide({
                       ...ride,
                       pricePerKm:
                         e.target.value === ""
                           ? undefined
                           : parseFloat(e.target.value),
-                    })
-                  }
-                  className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    });
+                    // Clear price validation error
+                    if (validationErrors.pricePerKm) {
+                      setValidationErrors({
+                        ...validationErrors,
+                        pricePerKm: undefined
+                      });
+                    }
+                  }}
+                  className={`w-full pl-7 pr-3 py-2 border ${validationErrors.pricePerKm ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
                   placeholder={`${currentUser?.driverProfile?.pricePerKm || 0}`}
                 />
               </div>
-              <p className="mt-1 text-sm text-gray-500">
-                
-               
-                {ride.pricePerKm !== undefined && ride.availableSeats > 0 && (
-                  <>
-                    At full capacity ({ride.availableSeats} seats), you'll earn
-                    up to ₹{(ride.pricePerKm * ride.availableSeats).toFixed(0)}
-                    /km
-                  </>
-                )}
-              </p>
+              {validationErrors.pricePerKm ? (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.pricePerKm}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-gray-500">
+                  {ride.pricePerKm !== undefined && ride.availableSeats > 0 && (
+                    <>
+                      At full capacity ({ride.availableSeats} seats), you'll earn
+                      up to ₹{(ride.pricePerKm * ride.availableSeats).toFixed(0)}
+                      /km
+                    </>
+                  )}
+                </p>
+              )}
             </div>
 
             <div>
@@ -472,12 +547,14 @@ const RideCreation: React.FC = React.memo(() => {
             <p className=" text-sm text-gray-500">
               Relevant details will be shared once you accept a request.
               </p>
-            <button
+            <LoadingButton
               onClick={handleCreateSchedule}
               className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              loadingText="Creating Ride..."
+              disabled={Object.keys(validationErrors).some(key => validationErrors[key as keyof ValidationErrors])}
             >
               Create Ride
-            </button>
+            </LoadingButton>
           </div>
         </div>
       </div>

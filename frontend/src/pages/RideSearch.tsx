@@ -51,6 +51,7 @@ const RideSearch: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [direction, setDirection] = useState<"toCollege" | "fromCollege" | "">("");
   const [driverGender, setDriverGender] = useState<"" | "male" | "female">("");
+  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -76,6 +77,7 @@ const RideSearch: React.FC = () => {
 
   // Modified fetch function to only get rides for a specific date
   const fetchRidesForDate = async (date: string) => {
+    setIsLoading(true);
     try {
       const response = await api.get(`/api/rides?date=${date}`);
       setAllRides(response.data.rides);
@@ -87,6 +89,8 @@ const RideSearch: React.FC = () => {
         message: "Error loading rides. Please try again.",
         type: "error",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -248,9 +252,15 @@ const RideSearch: React.FC = () => {
   }, [notification]);
 
   const handleRequestRide = async (rideId: string) => {
+    if (isLoading) return; // Prevent multiple clicks
+    
+    setIsLoading(true);
     try {
       const selectedRide = allRides.find((ride) => ride._id === rideId);
-      if (!selectedRide) return;
+      if (!selectedRide) {
+        setIsLoading(false);
+        return;
+      }
 
       // Check if the hitcher is already in the ride
       const existingRequest = selectedRide?.hitchers?.find(
@@ -263,6 +273,7 @@ const RideSearch: React.FC = () => {
           message: "You have already requested this ride",
           type: "error",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -274,6 +285,7 @@ const RideSearch: React.FC = () => {
           message: "You can only request rides from drivers at your campus",
           type: "error",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -317,6 +329,8 @@ const RideSearch: React.FC = () => {
         message: "Error requesting ride",
         type: "error",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -373,11 +387,12 @@ const RideSearch: React.FC = () => {
                 min={today}
                 max={maxDateString}
                 className="block w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading}
                 required
               />
             </div>
             <p className="text-gray-500 text-sm">
-              Only showing rides for the selected date. Please select a date to continue.
+              {isLoading ? "Loading rides..." : "Only showing rides for the selected date. Please select a date to continue."}
             </p>
           </div>
         </div>
@@ -728,9 +743,10 @@ const RideSearch: React.FC = () => {
                   return (
                     <button
                       onClick={() => handleRequestRide(selectedRideDetails._id)}
-                      className="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium"
+                      disabled={isLoading}
+                      className={`w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                      Request This Ride
+                      {isLoading ? "Processing..." : "Request This Ride"}
                     </button>
                   );
                 })()}
