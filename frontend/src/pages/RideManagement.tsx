@@ -85,21 +85,6 @@ const RideManagement: React.FC = () => {
     return `${hour12}:${minutes} ${period}`;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return "text-green-600";
-      case "in-progress":
-        return "text-green-600";
-      case "completed":
-        return "text-gray-600";
-      case "cancelled":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
   const handleCancelClick = async (index: number, rideId: string) => {
     try {
       // Get the ride to check if any hitchers are accepted
@@ -178,72 +163,6 @@ const RideManagement: React.FC = () => {
       setTimeout(() => {
         setNotification((prev) => ({ ...prev, show: false }));
       }, 3000);
-      setLoading(false);
-    }
-  };
-
-  const cancelRide = async (rideId: string) => {
-    try {
-      setLoading(true);
-      const response = await api.post(
-        "/api/rides/cancel",
-        { rideId, userId: currentUser?.id, userType: 'driver' }
-      );
-      
-      // Update rides list after cancellation
-      await fetchAllRides();
-      
-      // Show success message
-      setNotification({
-        show: true,
-        type: "success",
-        message: "Ride cancelled successfully"
-      });
-    } catch (error: any) {
-      console.error("Error cancelling ride:", error);
-      setNotification({
-        show: true,
-        type: "error",
-        message: error.response?.data?.message || "Failed to cancel ride"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const acceptHitcher = async (rideId: string, hitcherId: string) => {
-    try {
-      setLoading(true);
-      const response = await api.post(
-        "/api/rides/accept",
-        { rideId, hitcherId }
-      );
-      
-      // Update rides list after accepting hitcher
-      await fetchAllRides();
-      
-      // Show success message
-      setNotification({
-        show: true,
-        type: "success",
-        message: "Hitcher request accepted successfully"
-      });
-    } catch (error: any) {
-      console.error("Error accepting hitcher:", error);
-      const errorMessage = error.response?.data?.message || "Failed to accept hitcher";
-      
-      // Check if this is due to the hitcher already cancelling
-      if (error.response?.data?.alreadyCancelled) {
-        // Refresh the rides list to get the updated status
-        await fetchAllRides();
-      }
-      
-      setNotification({
-        show: true,
-        type: "error",
-        message: errorMessage
-      });
-    } finally {
       setLoading(false);
     }
   };

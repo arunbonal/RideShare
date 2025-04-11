@@ -1,11 +1,9 @@
 import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, MapPin, MessageSquare, Users, Car, CreditCard, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
-import api from "../utils/api"; // Import API utility
-import { formatDate } from '../utils/dateUtils';
-import { toast } from 'react-hot-toast';
+import api from "../utils/api";
 import LoadingButton from '../components/LoadingButton';
 
 // Add detection for iOS devices

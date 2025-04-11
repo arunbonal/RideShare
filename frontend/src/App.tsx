@@ -3,13 +3,12 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LoadingProvider } from "./contexts/LoadingContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoadingSpinner from "./components/LoadingSpinner";
-import React, { ReactNode, useEffect } from "react";
+import React, { ReactNode } from "react";
 
 // AdminRoute component to protect admin routes
 interface AdminRouteProps {
@@ -93,7 +92,6 @@ import AuthCallback from "./pages/AuthCallback";
 
 // Route change handler component
 const RouteChangeHandler = ({ children }: { children: ReactNode }) => {
-  const location = useLocation();
   const { loading } = useAuth();
 
   return (

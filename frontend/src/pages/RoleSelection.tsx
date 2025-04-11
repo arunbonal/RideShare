@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Car, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";

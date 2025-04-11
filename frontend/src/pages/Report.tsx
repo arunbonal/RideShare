@@ -5,7 +5,7 @@ import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
-import { ArrowLeft, X, AlertTriangle, Bug } from "lucide-react";
+import { ArrowLeft, X, Bug } from "lucide-react";
 
 interface ExtendedRide extends Ride {
   totalFare: number;
@@ -205,34 +205,6 @@ const Report: React.FC = () => {
     const period = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${period}`;
-  };
-
-  const handleReportNoShow = async (rideId: string, userId: string) => {
-    try {
-      await api.post(
-        "/api/issues/no-show",
-        {
-          rideId,
-          userId
-        }
-      );
-      
-      setNotification({
-        show: true,
-        message: "Report submitted successfully",
-        type: "success"
-      });
-      
-      // Refresh rides data
-      await fetchAllRides();
-    } catch (error: any) {
-      console.error("Error reporting no-show:", error);
-      setNotification({
-        show: true,
-        message: error.response?.data?.message || "Failed to submit report. Please try again.",
-        type: "error"
-      });
-    }
   };
 
   const handleReportIssue = async (rideId: string, userId: string) => {

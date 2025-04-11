@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Plus, Calendar, Clock, MapPin, X, ChevronDown, AlertTriangle, Bug } from "lucide-react";
@@ -66,6 +66,8 @@ const HitcherDashboard: React.FC = () => {
     currentRate: number | null;
     newRate: number | null;
   }>({ currentRate: null, newRate: null });
+
+  const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -525,6 +527,19 @@ const HitcherDashboard: React.FC = () => {
     }
   };
 
+  // Add toggle function for expanding/collapsing rides
+  const toggleRideExpand = (rideId: string) => {
+    setExpandedRides(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rideId)) {
+        newSet.delete(rideId);
+      } else {
+        newSet.add(rideId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <>
       <Navbar />
@@ -750,9 +765,10 @@ const HitcherDashboard: React.FC = () => {
                     return (
                       <div
                         key={ride._id}
-                        className="bg-white rounded-lg shadow-md p-6"
+                        className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
+                        onClick={() => toggleRideExpand(ride._id)}
                       >
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex justify-between items-start">
                           <div>
                             <h3 className="text-lg font-medium text-gray-900">
                               {ride.direction === "toCollege"
@@ -763,129 +779,143 @@ const HitcherDashboard: React.FC = () => {
                               {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
                             </p>
                           </div>
-                          <span
-                            className={`px-2 py-1 text-sm font-medium rounded-full ${
-                              ride.status === "in-progress"
-                                ? "bg-blue-100 text-blue-800"
+                          <div className="flex flex-col items-end">
+                            <span
+                              className={`px-2 py-1 text-sm font-medium rounded-full ${
+                                ride.status === "in-progress"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : ride.status === "completed"
+                                  ? "bg-gray-100 text-gray-800"
+                                  : hitcherInfo.status === "accepted"
+                                  ? "bg-green-100 text-green-800"
+                                  : hitcherInfo.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {ride.status === "in-progress" 
+                                ? "In Progress"
                                 : ride.status === "completed"
-                                ? "bg-gray-100 text-gray-800"
-                                : hitcherInfo.status === "accepted"
-                                ? "bg-green-100 text-green-800"
-                                : hitcherInfo.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {ride.status === "in-progress" 
-                              ? "In Progress"
-                              : ride.status === "completed"
-                              ? "Completed"
-                              : (hitcherInfo.status as string) === "cancelled-by-driver" 
-                              ? "Cancelled by Driver" 
-                              : hitcherInfo.status === "cancelled"
-                              ? "Cancelled by You"
-                              : hitcherInfo.status === "rejected"
-                              ? "Rejected by Driver"
-                              : hitcherInfo.status.charAt(0).toUpperCase() +
-                                hitcherInfo.status.slice(1)}
-                          </span>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex items-center text-gray-600">
-                            <Clock className="h-5 w-5 mr-2" />
-                            {ride.direction === "toCollege"
-                              ? formatTime(ride.toCollegeTime)
-                              : formatTime(ride.fromCollegeTime)}
+                                ? "Completed"
+                                : (hitcherInfo.status as string) === "cancelled-by-driver" 
+                                ? "Cancelled by Driver" 
+                                : hitcherInfo.status === "cancelled"
+                                ? "Cancelled by You"
+                                : hitcherInfo.status === "rejected"
+                                ? "Rejected by Driver"
+                                : hitcherInfo.status.charAt(0).toUpperCase() +
+                                  hitcherInfo.status.slice(1)}
+                            </span>
+                            <button
+                              className="text-gray-400 hover:text-gray-600 focus:outline-none mt-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRideExpand(ride._id);
+                              }}
+                            >
+                              <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                            </button>
                           </div>
-                          {activeTab === "past" ? (
-                            <>
-                              {ride.direction === "toCollege" ? (
-                                <>
-                                  <div className="flex items-center text-gray-600">
-                                    <MapPin className="h-5 w-5 mr-2" />
-                                    From: {hitcherInfo.pickupLocation || "Your Address"}
-                                  </div>
-                                  <div className="flex items-center text-gray-600">
-                                    <MapPin className="h-5 w-5 mr-2" />
-                                    To: {ride.to}
-                                  </div>
-                                </>
-                              ) : (
-                                <>
+                        </div>
+
+                        {expandedRides.has(ride._id) && (
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center text-gray-600">
+                              <Clock className="h-5 w-5 mr-2" />
+                              {ride.direction === "toCollege"
+                                ? formatTime(ride.toCollegeTime)
+                                : formatTime(ride.fromCollegeTime)}
+                            </div>
+                            {activeTab === "past" ? (
+                              <>
+                                {ride.direction === "toCollege" ? (
+                                  <>
+                                    <div className="flex items-center text-gray-600">
+                                      <MapPin className="h-5 w-5 mr-2" />
+                                      From: {hitcherInfo.pickupLocation || "Your Address"}
+                                    </div>
+                                    <div className="flex items-center text-gray-600">
+                                      <MapPin className="h-5 w-5 mr-2" />
+                                      To: {ride.to}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex items-center text-gray-600">
+                                      <MapPin className="h-5 w-5 mr-2" />
+                                      From: {ride.from}
+                                    </div>
+                                    <div className="flex items-center text-gray-600">
+                                      <MapPin className="h-5 w-5 mr-2" />
+                                      To: {hitcherInfo.dropoffLocation || "Your Address"}
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {ride.direction === "fromCollege" && (
                                   <div className="flex items-center text-gray-600">
                                     <MapPin className="h-5 w-5 mr-2" />
                                     From: {ride.from}
                                   </div>
+                                )}
+                                {ride.direction === "toCollege" && (
                                   <div className="flex items-center text-gray-600">
                                     <MapPin className="h-5 w-5 mr-2" />
-                                    To: {hitcherInfo.dropoffLocation || "Your Address"}
+                                    To: {ride.to}
                                   </div>
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {ride.direction === "fromCollege" && (
+                                )}
                                 <div className="flex items-center text-gray-600">
                                   <MapPin className="h-5 w-5 mr-2" />
-                                  From: {ride.from}
+                                  {ride.direction === "toCollege" 
+                                    ? `Your Pickup Point: ${hitcherInfo.pickupLocation || "Not specified"}`
+                                    : `Your Drop-off Point: ${hitcherInfo.dropoffLocation || "Not specified"}`}
                                 </div>
-                              )}
-                              {ride.direction === "toCollege" && (
-                                <div className="flex items-center text-gray-600">
-                                  <MapPin className="h-5 w-5 mr-2" />
-                                  To: {ride.to}
+                              </>
+                            )}
+
+                            {/* Driver Details Section - Only show when ride is accepted/in-progress and not in past rides section */}
+                            {(hitcherInfo.status === 'accepted' || ride.status === 'in-progress') && 
+                              activeTab !== "past" && 
+                              ride.status !== "completed" && (
+                              <div className="mt-2 mb-4 bg-blue-50 p-3 rounded-md">
+                                <h4 className="font-medium text-gray-900 mb-2">Driver Details:</h4>
+                                <div className="space-y-2">
+                                  <p className="text-sm">
+                                    <span className="font-medium">Name:</span> {ride.driver.name.split(' ')[0]}
+                                  </p>
+                                  <p className="text-sm">
+                                    <span className="font-medium">Phone:</span> {ride.driver.phone.substring(3)}
+                                  </p>
+                                  {ride.driver.driverProfile?.vehicle && (
+                                    <p className="text-sm">
+                                      <span className="font-medium">Vehicle Registration:</span> {ride.driver.driverProfile.vehicle.registrationNumber}
+                                    </p>
+                                  )}
+                                  <p className="text-sm">
+                                    <span className="font-medium">Fare:</span> ₹{hitcherInfo.fare || 0}
+                                  </p>
                                 </div>
-                              )}
-                              <div className="flex items-center text-gray-600">
-                                <MapPin className="h-5 w-5 mr-2" />
-                                {ride.direction === "toCollege" 
-                                  ? `Your Pickup Point: ${hitcherInfo.pickupLocation || "Not specified"}`
-                                  : `Your Drop-off Point: ${hitcherInfo.dropoffLocation || "Not specified"}`}
                               </div>
-                            </>
-                          )}
-                        </div>
-                        
-                        <br />
-                        
-                        {/* Driver Details Section - Only show when ride is accepted/in-progress and not in past rides section */}
-                        {(hitcherInfo.status === 'accepted' || ride.status === 'in-progress') && 
-                          activeTab !== "past" && 
-                          ride.status !== "completed" && (
-                          <div className="mt-2 mb-4 bg-blue-50 p-3 rounded-md">
-                            <h4 className="font-medium text-gray-900 mb-2">Driver Details:</h4>
-                            <div className="space-y-2">
-                              <p className="text-sm">
-                                <span className="font-medium">Name:</span> {ride.driver.name.split(' ')[0]}
-                              </p>
-                              <p className="text-sm">
-                                <span className="font-medium">Phone:</span> {ride.driver.phone.substring(3)}
-                              </p>
-                              {ride.driver.driverProfile?.vehicle && (
-                                <p className="text-sm">
-                                  <span className="font-medium">Vehicle Registration:</span> {ride.driver.driverProfile.vehicle.registrationNumber}
-                                </p>
-                              )}
-                              <p className="text-sm">
-                                <span className="font-medium">Fare:</span> ₹{hitcherInfo.fare || 0}
-                              </p>
-                            </div>
+                            )}
+
+                            {/* Show cancel button for both pending and accepted rides in upcoming tab */}
+                            {((hitcherInfo.status === 'accepted' || hitcherInfo.status === 'pending') && 
+                              ride.status !== 'in-progress' && 
+                              ride.status !== 'completed' && 
+                              activeTab === "upcoming") && (
+                              <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                <LoadingButton
+                                  onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                  loadingText="..."
+                                >
+                                  {hitcherInfo.status === 'pending' ? 'Cancel Request' : 'Cancel Ride'}
+                                </LoadingButton>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        
-                        {/* Show cancel button for both pending and accepted rides in upcoming tab */}
-                        {((hitcherInfo.status === 'accepted' || hitcherInfo.status === 'pending') && 
-                          ride.status !== 'in-progress' && 
-                          ride.status !== 'completed' && 
-                          activeTab === "upcoming") && (
-                          <LoadingButton
-                            onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                            loadingText="..."
-                          >
-                            {hitcherInfo.status === 'pending' ? 'Cancel Request' : 'Cancel Ride'}
-                          </LoadingButton>
                         )}
                       </div>
                     );

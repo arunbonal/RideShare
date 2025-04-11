@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Clock, Filter, X, Navigation, Calendar, Car, XCircle } from "lucide-react";
+import { Search, MapPin, Clock, Filter, X, Calendar, XCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
@@ -66,12 +66,19 @@ const RideSearch: React.FC = () => {
   const searchBarRef = useRef<HTMLDivElement>(null);
   const [filteredRides, setFilteredRides] = useState<RideWithCollegeInfo[]>([]);
   const [ridesLoaded, setRidesLoaded] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   // Add these date calculations near the top of the component
   const today = new Date().toISOString().split("T")[0];
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 7);
   const maxDateString = maxDate.toISOString().split("T")[0];
+
+  // Add useEffect to detect iOS
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+  }, []);
 
   // Modified fetch function to only get rides for a specific date and direction
   const fetchRidesForDate = async (date: string, direction: string) => {
@@ -409,6 +416,11 @@ const RideSearch: React.FC = () => {
                 disabled={isLoading || !direction}
                 required
               />
+              {isIOS && (
+                <p className="text-gray-500 text-sm mt-1 text-center">
+                  Select a date
+                </p>
+              )}
             </div>
             <p className="text-gray-500 text-sm">
               {isLoading ? "Loading rides..." : !direction ? "Please select a direction first" : !selectedDate ? "Please select a date to continue" : "Showing rides for selected date and direction"}
@@ -466,8 +478,8 @@ const RideSearch: React.FC = () => {
 
               {/* Time filters */}
               {showFilters && (
-                <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-4">
+                  <div className="flex-1">
                     <label
                       htmlFor="minTime"
                       className="block text-sm font-medium text-gray-700 mb-1"
@@ -483,7 +495,7 @@ const RideSearch: React.FC = () => {
                     />
                   </div>
 
-                  <div>
+                  <div className="flex-1">
                     <label
                       htmlFor="maxTime"
                       className="block text-sm font-medium text-gray-700 mb-1"
@@ -507,7 +519,7 @@ const RideSearch: React.FC = () => {
               onClick={() => {
                 // Implement search functionality
               }}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full bg-blue-600 text-white mb-5 py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
               disabled={!selectedDate || !direction || isLoading}
               loadingText="Searching..."
             >

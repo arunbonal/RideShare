@@ -331,21 +331,6 @@ const HitcherProfileSetup: React.FC = () => {
     }
   };
 
-  const nextStep = () => {
-    if (!isPhoneVerified) {
-      setError("Please verify your phone number");
-      return;
-    }
-    if (!formData.gender || formData.gender === "") {
-      setError("Please select your gender");
-      return;
-    }
-    
-    // Clear any existing error
-    setError(null);
-    setCurrentStep((prev) => prev + 1);
-  };
-
   // Error message component
   const ErrorMessage = () => {
     if (!error) return null;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, UserCircle } from "lucide-react";
+import { UserCircle } from "lucide-react";
 
 interface MapPreviewProps {
   startLocation: string;

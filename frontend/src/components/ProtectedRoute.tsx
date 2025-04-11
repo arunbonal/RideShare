@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { currentUser, getCurrentRole, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking authentication
@@ -23,7 +23,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Get the current path for more readable conditions
   const currentPath = location.pathname;
-  const currentRole = getCurrentRole();
 
   // Check if we're on a path that should be exempt from redirects
   const isExemptPath =

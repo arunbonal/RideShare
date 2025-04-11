@@ -105,7 +105,6 @@ const AdminDashboard: React.FC = () => {
   const [issueStatusFilter, setIssueStatusFilter] = useState<string>('all');
   const [issueTypeFilter, setIssueTypeFilter] = useState<string>('all');
   const [selectedIssue, setSelectedIssue] = useState<AdminIssue | null>(null);
-  const [resolution, setResolution] = useState<string>('');
   const [notification, setNotification] = useState<{ 
     show: boolean; 
     message: string; 

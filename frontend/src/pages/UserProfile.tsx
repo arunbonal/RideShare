@@ -331,7 +331,7 @@ const UserProfile: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await api.post(
+      await api.post(
         "/api/profile/update",
         {
           homeAddress: newAddress,
