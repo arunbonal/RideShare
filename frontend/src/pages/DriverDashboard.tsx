@@ -716,6 +716,23 @@ const DriverDashboard: React.FC = () => {
                                 ride.status.slice(1)}
                           </span>
                           
+                          {/* View ride requests button moved here */}
+                          {getRequestsForRide(ride._id).length > 0 && (
+                            <button
+                              onClick={() => {
+                                setRequestModal({
+                                  show: true,
+                                  rideId: ride._id
+                                });
+                                setCurrentRequestIndex(0);
+                              }}
+                              className="px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
+                            >
+                              <Users className="h-5 w-5 mr-2" />
+                              View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                            </button>
+                          )}
+                          
                           {ride.totalFare > 0 && (
                             <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
@@ -756,11 +773,7 @@ const DriverDashboard: React.FC = () => {
                           })()}
                         </div>
                       </div>
-                      {ride.note && (
-                        <p className="mt-4 text-sm text-gray-500 italic">
-                          Note: {ride.note}
-                        </p>
-                      )}
+                      
                       
                       <p className="mt-4 text-md text-red-700">
                         Your Current Route:
@@ -806,22 +819,6 @@ const DriverDashboard: React.FC = () => {
                             .map(h => h.fare || 0)}
                         />
                       </div>
-
-                      {getRequestsForRide(ride._id).length > 0 && (
-                        <button
-                          onClick={() => {
-                            setRequestModal({
-                              show: true,
-                              rideId: ride._id
-                            });
-                            setCurrentRequestIndex(0);
-                          }}
-                          className="mt-4 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
-                        >
-                          <Users className="h-5 w-5 mr-2" />
-                          View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
-                        </button>
-                      )}
                     </div>
                   ))
                 ) : (

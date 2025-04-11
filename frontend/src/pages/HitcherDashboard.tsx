@@ -846,11 +846,7 @@ const HitcherDashboard: React.FC = () => {
                             </>
                           )}
                         </div>
-                        {ride.note && (
-                          <p className="mt-4 text-sm text-gray-500 italic">
-                            Note: {ride.note}
-                          </p>
-                        )}
+                        
                         <br />
                         
                         {/* Driver Details Section - Only show when ride is accepted/in-progress and not in past rides section */}
@@ -886,7 +882,7 @@ const HitcherDashboard: React.FC = () => {
                           <LoadingButton
                             onClick={() => handleCancelClick(ride._id, hitcherInfo.user._id)}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                            loadingText="Cancelling..."
+                            loadingText="..."
                           >
                             {hitcherInfo.status === 'pending' ? 'Cancel Request' : 'Cancel Ride'}
                           </LoadingButton>

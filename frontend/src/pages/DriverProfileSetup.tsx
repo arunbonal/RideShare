@@ -907,7 +907,7 @@ const DriverProfileSetup: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-between">
+                <div className="mt-6 flex justify-between gap-8">
                   <button
                     type="button"
                     onClick={prevStep}

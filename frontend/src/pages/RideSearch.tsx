@@ -36,7 +36,6 @@ interface RideWithCollegeInfo {
   fromCollegeTime?: string;
   status: string;
   availableSeats: number;
-  note?: string;
   hitchers?: any[];
   pricePerKm?: number;
   vehicleModel?: string;
@@ -539,16 +538,6 @@ const RideSearch: React.FC = () => {
                           To: {ride.to}
                         </div>
                       </div>
-
-                      {ride.note && ride.note.length > 50 ? (
-                        <p className="mt-4 text-sm text-gray-500 italic">
-                          Note: {ride.note.substring(0, 50)}...
-                        </p>
-                      ) : ride.note ? (
-                        <p className="mt-4 text-sm text-gray-500 italic">
-                          Note: {ride.note}
-                        </p>
-                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -703,15 +692,6 @@ const RideSearch: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                {selectedRideDetails.note && (
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-gray-900 mb-2">Driver's Note</h3>
-                    <div className="bg-yellow-50 p-3 rounded-md text-sm text-gray-700">
-                      {selectedRideDetails.note}
-                    </div>
-                  </div>
-                )}
 
                 {/* Get hitcher status if user has requested this ride */}
                 {(() => {

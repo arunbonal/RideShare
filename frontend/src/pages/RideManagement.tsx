@@ -409,11 +409,6 @@ const RideManagement: React.FC = () => {
                           )}
                         </span>
                       </p>
-                      {ride.note && (
-                        <p className="text-sm text-gray-500 italic">
-                          Note: {ride.note}
-                        </p>
-                      )}
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       {ride.status === "scheduled" && (

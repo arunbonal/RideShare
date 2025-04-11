@@ -20,11 +20,11 @@ interface User {
   };
   driverProfile?: {
     reliabilityRate: number;
-    completedTrips: number;
+    completedRides: number;
   };
   hitcherProfile?: {
     reliabilityRate: number;
-    completedTrips: number;
+    completedRides: number;
   };
 }
 
@@ -345,7 +345,7 @@ const AdminUserDetails: React.FC = () => {
                     <p className="text-sm font-medium text-gray-500">Driver Statistics</p>
                     <div className="mt-1 space-y-1">
                       <p className="text-sm">Reliability: {user.driverProfile.reliabilityRate.toFixed(1)}%</p>
-                      <p className="text-sm">Completed Trips: {user.driverProfile.completedTrips}</p>
+                      <p className="text-sm">Completed Rides: {user.driverProfile.completedRides}</p>
                     </div>
                   </div>
                 )}
@@ -355,7 +355,7 @@ const AdminUserDetails: React.FC = () => {
                     <p className="text-sm font-medium text-gray-500">Hitcher Statistics</p>
                     <div className="mt-1 space-y-1">
                       <p className="text-sm">Reliability: {user.hitcherProfile.reliabilityRate.toFixed(1)}%</p>
-                      <p className="text-sm">Completed Trips: {user.hitcherProfile.completedTrips}</p>
+                      <p className="text-sm">Completed Rides: {user.hitcherProfile.completedRides}</p>
                     </div>
                   </div>
                 )}

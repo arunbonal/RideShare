@@ -110,7 +110,6 @@ export interface Ride {
   fromCollegeTime?: string;
   status: string;
   availableSeats: number;
-  note?: string;
   pricePerKm?: number;
   totalFare?: number;
 }
@@ -222,7 +221,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     fromCollegeTime: "17:00",
     availableSeats: 4,
     status: "scheduled",
-    note: "",
     hitchers: [],
     pricePerKm: undefined,
     totalFare: 0,

@@ -22,7 +22,6 @@ interface DetailedRide {
   };
   status: string;
   availableSeats: number;
-  note?: string;
   hitchers: {
     user: {
       name: string;
@@ -159,7 +158,6 @@ const AdminRideDetails: React.FC = () => {
               <p className="text-gray-600">From: <span className="font-medium text-gray-900">{ride.from}</span></p>
               <p className="text-gray-600">To: <span className="font-medium text-gray-900">{ride.to}</span></p>
               <p className="text-gray-600">Available Seats: <span className="font-medium text-gray-900">{ride.availableSeats}</span></p>
-              {ride.note && <p className="text-gray-600">Note: <span className="italic text-gray-900">{ride.note}</span></p>}
             </div>
           </div>
         </div>
