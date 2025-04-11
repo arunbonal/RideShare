@@ -23,7 +23,24 @@ exports.createRide = async (req, res) => {
 
 exports.getRides = async (req, res) => {
   try {
-    const rides = await Ride.find()
+    // Build query based on parameters
+    const query = {};
+    
+    // Add date filter if provided
+    if (req.query.date) {
+      const startOfDay = new Date(req.query.date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(req.query.date);
+      endOfDay.setHours(23, 59, 59, 999);
+      query.date = { $gte: startOfDay, $lte: endOfDay };
+    }
+
+    // Add direction filter if provided
+    if (req.query.direction) {
+      query.direction = req.query.direction;
+    }
+
+    const rides = await Ride.find(query)
       .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
       .populate("hitchers.user", "name email phone gender srn college hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order

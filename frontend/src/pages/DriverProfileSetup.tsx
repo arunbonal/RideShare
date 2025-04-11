@@ -4,6 +4,7 @@ import { Car, MapPin, CreditCard, CheckCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import api from "../utils/api"; // Import API utility
+import LoadingButton from "../components/LoadingButton";
 
 // Add these type declarations at the top of the file
 declare global {
@@ -397,69 +398,42 @@ const DriverProfileSetup: React.FC = () => {
     setCurrentStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation for the current step
-    if (currentStep === 1 && (!formData.phone || !formData.gender)) {
-      setError("Please fill all required fields.");
-      return;
-    } else if (
-      currentStep === 2 && 
-      (
-        !formData.vehicle.model ||
-        !formData.vehicle.registrationNumber ||
-        !formData.vehicle.seats
-      )
-    ) {
-      setError("Please fill all required fields.");
-      return;
-    } else if (
-      currentStep === 2 && 
-      !validateVehicleRegistration(formData.vehicle.registrationNumber)
-    ) {
-      showTemporaryError("Please enter a valid vehicle registration number");
-      return;
-    } else if (currentStep === 3 && (!formData.homeAddress || formData.distanceToCollege === 0)) {
-      setError("Please enter your home address and ensure distance is calculated.");
-      return;
-    } else if (currentStep === 4 && !formData.pricePerKm) {
-      setError("Please set your price per kilometer.");
-      return;
-    } else if (currentStep === 4 && (formData.pricePerKm! < 1 || formData.pricePerKm! > 10)) {
-      setError("Price per kilometer must be between ₹1 and ₹10.");
+  const handleSubmit = async () => {
+    if (!isPhoneVerified) {
+      setError("Please verify your phone number");
       return;
     }
-    
-    try {
-      setIsSubmitting(true);
-      const requestData = {
-        phone: formData.phone,
-        gender: formData.gender,
-        homeAddress: formData.homeAddress,
-        distanceToCollege: formData.distanceToCollege,
-        driverProfile: {
-          vehicle: {
-            model: formData.vehicle.model,
-            registrationNumber: formData.vehicle.registrationNumber,
-            seats: formData.vehicle.seats,
-          },
-          pricePerKm: formData.pricePerKm,
-        }
-      };
+    if (!formData.gender || formData.gender === "") {
+      setError("Please select your gender");
+      return;
+    }
+    if (!formData.homeAddress) {
+      setError("Please enter your home address");
+      return;
+    }
 
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
       await api.post(
         "/api/profile/driver",
-        requestData
+        {
+          ...formData,
+          phone: `+91${phoneNumber}`,
+          driverProfileComplete: true,
+          activeRoles: {
+            driver: true,
+            hitcher: currentUser?.activeRoles?.hitcher || false,
+          },
+        }
       );
+
       await updateDriverProfileComplete(true);
       navigate("/driver/dashboard");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving driver profile:", error);
-      setError(
-        error.response?.data?.message ||
-          "Failed to save profile. Please try again."
-      );
+      setError("Failed to save profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -567,19 +541,6 @@ const DriverProfileSetup: React.FC = () => {
       </div>
     );
   };
-
-  // Modify the submit button to show loading state
-  const SubmitButton = () => (
-    <button
-      type="submit"
-      disabled={!isPhoneVerified}
-      className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-        !isPhoneVerified ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-      } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-    >
-      {isSubmitting ? "Saving..." : "Complete Profile"}
-    </button>
-  );
 
   return (
     <>
@@ -1036,7 +997,14 @@ const DriverProfileSetup: React.FC = () => {
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </button>
-                  <SubmitButton />
+                  <LoadingButton
+                    onClick={handleSubmit}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    disabled={isSubmitting}
+                    loadingText="Saving Profile..."
+                  >
+                    Save Profile
+                  </LoadingButton>
                 </div>
               </div>
             )}

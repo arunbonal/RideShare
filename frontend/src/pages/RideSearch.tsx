@@ -6,6 +6,7 @@ import MapPreview from "../components/MapPreview";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api"; // Import our API utility
+import LoadingButton from "../components/LoadingButton";
 
 // Define interface for Driver that includes college
 interface Driver {
@@ -72,11 +73,11 @@ const RideSearch: React.FC = () => {
   maxDate.setDate(maxDate.getDate() + 7);
   const maxDateString = maxDate.toISOString().split("T")[0];
 
-  // Modified fetch function to only get rides for a specific date
-  const fetchRidesForDate = async (date: string) => {
+  // Modified fetch function to only get rides for a specific date and direction
+  const fetchRidesForDate = async (date: string, direction: string) => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/api/rides?date=${date}`);
+      const response = await api.get(`/api/rides?date=${date}${direction ? `&direction=${direction}` : ''}`);
       setAllRides(response.data.rides);
       setRidesLoaded(true);
     } catch (error) {
@@ -95,10 +96,18 @@ const RideSearch: React.FC = () => {
   const handleDateSelection = (date: string) => {
     setSelectedDate(date);
     if (date) {
-      fetchRidesForDate(date);
+      fetchRidesForDate(date, direction);
     } else {
       setRidesLoaded(false);
       setAllRides([]);
+    }
+  };
+
+  // Handle direction change
+  const handleDirectionChange = (newDirection: string) => {
+    setDirection(newDirection as "toCollege" | "fromCollege" | "");
+    if (selectedDate) {
+      fetchRidesForDate(selectedDate, newDirection);
     }
   };
 
@@ -374,8 +383,21 @@ const RideSearch: React.FC = () => {
 
         {/* Date Selection Panel - Always visible */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Select a Date to View Available Rides</h2>
+          <h2 className="text-lg font-semibold mb-4">Select a Date and Direction to View Available Rides</h2>
           <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-full sm:w-auto">
+              <select
+                value={direction}
+                onChange={(e) => handleDirectionChange(e.target.value)}
+                className="block w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 mb-4 sm:mb-0 sm:mr-4"
+                disabled={isLoading}
+                required
+              >
+                <option value="">Select Direction</option>
+                <option value="toCollege">To College</option>
+                <option value="fromCollege">From College</option>
+              </select>
+            </div>
             <div className="w-full sm:w-auto">
               <input
                 type="date"
@@ -384,12 +406,12 @@ const RideSearch: React.FC = () => {
                 min={today}
                 max={maxDateString}
                 className="block w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
+                disabled={isLoading || !direction}
                 required
               />
             </div>
             <p className="text-gray-500 text-sm">
-              {isLoading ? "Loading rides..." : "Only showing rides for the selected date. Please select a date to continue."}
+              {isLoading ? "Loading rides..." : !direction ? "Please select a direction first" : !selectedDate ? "Please select a date to continue" : "Showing rides for selected date and direction"}
             </p>
           </div>
         </div>
@@ -418,16 +440,6 @@ const RideSearch: React.FC = () => {
 
                 <div className="flex items-center space-x-2">
                   <select
-                    value={direction}
-                    onChange={(e) => setDirection(e.target.value as any)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Directions</option>
-                    <option value="toCollege">To College</option>
-                    <option value="fromCollege">From College</option>
-                  </select>
-
-                  <select
                     id="driverGender"
                     value={driverGender}
                     onChange={(e) => setDriverGender(e.target.value as "" | "male" | "female")}
@@ -440,7 +452,7 @@ const RideSearch: React.FC = () => {
 
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 h-[42px]"
                   >
                     {showFilters ? (
                       <X className="h-4 w-4 mr-1" />
@@ -489,6 +501,18 @@ const RideSearch: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Search Button */}
+            <LoadingButton
+              onClick={() => {
+                // Implement search functionality
+              }}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              disabled={!selectedDate || !direction || isLoading}
+              loadingText="Searching..."
+            >
+              Search Rides
+            </LoadingButton>
 
             {filteredRides.length > 0 ? (
               <div className="space-y-6" ref={rideListRef}>
@@ -719,13 +743,14 @@ const RideSearch: React.FC = () => {
                   }
                   
                   return (
-                    <button
+                    <LoadingButton
                       onClick={() => handleRequestRide(selectedRideDetails._id)}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
                       disabled={isLoading}
-                      className={`w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-3 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      loadingText="Sending Request..."
                     >
-                      {isLoading ? "Processing..." : "Request This Ride"}
-                    </button>
+                      Request Ride
+                    </LoadingButton>
                   );
                 })()}
               </div>

@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
+import LoadingButton from "../components/LoadingButton";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
 
@@ -52,6 +53,7 @@ const DriverDashboard: React.FC = () => {
   const [driverRides, setDriverRides] = useState<ExtendedRide[]>([]);
   const [upcomingRides, setUpcomingRides] = useState<ExtendedRide[]>([]);
   const [pastRides, setPastRides] = useState<ExtendedRide[]>([]);
+  const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -555,6 +557,19 @@ const DriverDashboard: React.FC = () => {
     }
   };
 
+  // Add toggle function for expanding/collapsing rides
+  const toggleRideExpand = (rideId: string) => {
+    setExpandedRides(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rideId)) {
+        newSet.delete(rideId);
+      } else {
+        newSet.add(rideId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <>
       <Navbar />
@@ -683,9 +698,10 @@ const DriverDashboard: React.FC = () => {
                   upcomingRides.map((ride) => (
                     <div
                       key={ride._id}
-                      className="bg-white rounded-lg shadow-md p-6"
+                      className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
+                      onClick={() => toggleRideExpand(ride._id)}
                     >
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start">
                         <div>
                           <h3 className="text-lg font-medium text-gray-900">
                             {ride.direction === "toCollege"
@@ -694,11 +710,18 @@ const DriverDashboard: React.FC = () => {
                           </h3>
                           <p className="text-gray-500">
                             {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                            
                           </p>
+                          {(() => {
+                            const acceptedCount = ride.hitchers?.filter(h => h.status === "accepted").length || 0;
+                            return acceptedCount > 0 && (
+                              <p className="text-sm text-green-600 mt-5">
+                                <Users className="h-4 w-4 inline mr-1" />
+                                {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                              </p>
+                            );
+                          })()}
                         </div>
                         <div className="flex flex-col gap-2 items-end">
-                          {/* Ride status */}
                           <span
                             className={`px-2 py-1 text-sm font-medium rounded-full ${
                               ride.status === "scheduled"
@@ -715,11 +738,19 @@ const DriverDashboard: React.FC = () => {
                               : ride.status.charAt(0).toUpperCase() +
                                 ride.status.slice(1)}
                           </span>
-                          
-                          {/* View ride requests button moved here */}
+                          <button
+                            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRideExpand(ride._id);
+                            }}
+                          >
+                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                          </button>
                           {getRequestsForRide(ride._id).length > 0 && (
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setRequestModal({
                                   show: true,
                                   rideId: ride._id
@@ -732,7 +763,6 @@ const DriverDashboard: React.FC = () => {
                               View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
                             </button>
                           )}
-                          
                           {ride.totalFare > 0 && (
                             <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
@@ -740,85 +770,85 @@ const DriverDashboard: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center text-gray-600">
-                          <Clock className="h-5 w-5 mr-2" />
-                          {ride.direction === "toCollege"
-                            ? formatTime(ride.toCollegeTime || "")
-                            : formatTime(ride.fromCollegeTime || "")}
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <MapPin className="h-5 w-5 mr-2" />
-                          From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <MapPin className="h-5 w-5 mr-2" />
-                          To: {ride.direction === "fromCollege" ? `${ride.to}` : ride.to}
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <Users className="h-5 w-5 mr-2" />
-                          <span>Available Seats: {ride.availableSeats}</span>
-                          {(() => {
-                            const acceptedCount =
-                              ride.hitchers?.filter(
-                                (h) => h.status === "accepted"
-                              ).length || 0;
-                            return (
-                              acceptedCount > 0 && (
-                                <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
-                                  {acceptedCount} Accepted
-                                </span>
-                              )
-                            );
-                          })()}
-                        </div>
-                      </div>
                       
-                      
-                      <p className="mt-4 text-md text-red-700">
-                        Your Current Route:
-                      </p>
-                      {/* External Google Maps link */}
-                      <div className="mt-2 mb-2">
-                        <a 
-                          href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
-                            ride.hitchers
-                              ?.filter(h => h.status === "accepted")
-                              .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
-                              .filter(Boolean)
-                              .join("|")
-                          }&travelmode=driving`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
-                        >
-                          <MapPin className="h-4 w-4 mr-1" />
-                          Open in Google Maps
-                        </a>
-                      </div>
-                      {/* Map Preview for Current Route */}
-                      <div className="mt-4">
-                        <MapPreview
-                          startLocation={`${ride.direction === "toCollege" ? `${ride.from} (Your Address)` : ride.from}`}
-                          endLocation={`${ride.direction === "fromCollege" ? `${ride.to} (Your Address)` : ride.to}`}
-                          userLocation={ride.hitchers
-                            ?.filter(h => h.status === "accepted")
-                            .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
-                            .filter(Boolean)
-                            .join("|")}
-                          className="rounded-lg shadow-sm"
-                          direction={ride.direction}
-                          hitcherNames={ride.hitchers
-                            ?.filter(h => h.status === "accepted")
-                            .map(h => h.user.name)}
-                          hitcherPhones={ride.hitchers
-                            ?.filter(h => h.status === "accepted")
-                            .map(h => h.user.phone)}
-                          hitcherFares={ride.hitchers
-                            ?.filter(h => h.status === "accepted")
-                            .map(h => h.fare || 0)}
-                        />
-                      </div>
+                      {expandedRides.has(ride._id) && (
+                        <div className="mt-4 space-y-3">
+                          <div className="flex items-center text-gray-600">
+                            <Clock className="h-5 w-5 mr-2" />
+                            {ride.direction === "toCollege"
+                              ? formatTime(ride.toCollegeTime || "")
+                              : formatTime(ride.fromCollegeTime || "")}
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="h-5 w-5 mr-2" />
+                            From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="h-5 w-5 mr-2" />
+                            To: {ride.direction === "fromCollege" ? `${ride.to}` : ride.to}
+                          </div>
+                          <div className="flex items-center text-gray-600">
+                            <Users className="h-5 w-5 mr-2" />
+                            <span>Available Seats: {ride.availableSeats}</span>
+                            {(() => {
+                              const acceptedCount =
+                                ride.hitchers?.filter(
+                                  (h) => h.status === "accepted"
+                                ).length || 0;
+                              return (
+                                acceptedCount > 0 && (
+                                  <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
+                                    {acceptedCount} Accepted
+                                  </span>
+                                )
+                              );
+                            })()}
+                          </div>
+                          
+                          <p className="mt-4 text-md text-red-700">
+                            Your Current Route:
+                          </p>
+                          <div className="mt-2 mb-2">
+                            <a 
+                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
+                                ride.hitchers
+                                  ?.filter(h => h.status === "accepted")
+                                  .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
+                                  .filter(Boolean)
+                                  .join("|")
+                              }&travelmode=driving`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
+                            >
+                              <MapPin className="h-4 w-4 mr-1" />
+                              Open in Google Maps
+                            </a>
+                          </div>
+                          <div className="mt-4">
+                            <MapPreview
+                              startLocation={`${ride.direction === "toCollege" ? `${ride.from} (Your Address)` : ride.from}`}
+                              endLocation={`${ride.direction === "fromCollege" ? `${ride.to} (Your Address)` : ride.to}`}
+                              userLocation={ride.hitchers
+                                ?.filter(h => h.status === "accepted")
+                                .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
+                                .filter(Boolean)
+                                .join("|")}
+                              className="rounded-lg shadow-sm"
+                              direction={ride.direction}
+                              hitcherNames={ride.hitchers
+                                ?.filter(h => h.status === "accepted")
+                                .map(h => h.user.name)}
+                              hitcherPhones={ride.hitchers
+                                ?.filter(h => h.status === "accepted")
+                                .map(h => h.user.phone)}
+                              hitcherFares={ride.hitchers
+                                ?.filter(h => h.status === "accepted")
+                                .map(h => h.fare || 0)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -1076,18 +1106,20 @@ const DriverDashboard: React.FC = () => {
                     </div>
                     
                     <div className="flex space-x-3 mt-4">
-                      <button
+                      <LoadingButton
                         onClick={() => handleAcceptRequest(currentRequest.rideId, currentRequest.hitcherId)}
                         className="flex-1 bg-green-600 text-white px-3 py-2 rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                        loadingText="Accepting Request..."
                       >
                         Accept Request
-                      </button>
-                      <button
+                      </LoadingButton>
+                      <LoadingButton
                         onClick={() => handleRejectRequest(currentRequest.rideId, currentRequest.hitcherId)}
                         className="flex-1 bg-white text-gray-700 px-3 py-2 rounded-md text-sm border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        loadingText="Rejecting Request..."
                       >
-                        Decline Request
-                      </button>
+                        Reject Request
+                      </LoadingButton>
                     </div>
                   </div>
                   
