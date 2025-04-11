@@ -726,15 +726,7 @@ const DriverDashboard: React.FC = () => {
                               : ride.status.charAt(0).toUpperCase() +
                                 ride.status.slice(1)}
                           </span>
-                          <button
-                            className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRideExpand(ride._id);
-                            }}
-                          >
-                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
-                          </button>
+                          
                           {getRequestsForRide(ride._id).length > 0 && (
                             <button
                               onClick={(e) => {
@@ -756,6 +748,15 @@ const DriverDashboard: React.FC = () => {
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
                             </span>
                           )}
+                          <button
+                            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRideExpand(ride._id);
+                            }}
+                          >
+                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                          </button>
                         </div>
                       </div>
                       
