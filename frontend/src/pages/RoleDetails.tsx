@@ -122,8 +122,10 @@ const RoleDetails: React.FC = () => {
       errors.pricePerKm = 'Price per km is required';
     } else {
       const price = parseFloat(editedData.pricePerKm);
-      if (isNaN(price) || price <= 0) {
-        errors.pricePerKm = 'Price must be greater than 0';
+      if (isNaN(price) || price < 1) {
+        errors.pricePerKm = 'Price must be at least ₹1';
+      } else if (price > 10) {
+        errors.pricePerKm = 'Price cannot exceed ₹10';
       }
     }
     
@@ -342,13 +344,16 @@ const RoleDetails: React.FC = () => {
                     id="pricePerKm"
                     name="pricePerKm"
                     min="1"
+                    max="10"
                     step="0.5"
                     value={editedData.pricePerKm}
                     onChange={handleInputChange}
                     className={`mt-1 block w-full px-3 py-2 border ${validationErrors.pricePerKm ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                   />
-                  {validationErrors.pricePerKm && (
+                  {validationErrors.pricePerKm ? (
                     <p className="mt-1 text-xs text-red-600">{validationErrors.pricePerKm}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">Price must be between ₹1 and ₹10 per kilometer</p>
                   )}
                 </div>
               )}

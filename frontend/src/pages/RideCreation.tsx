@@ -159,6 +159,10 @@ const RideCreation: React.FC = React.memo(() => {
       errors.pricePerKm = "Please enter a price per kilometer";
     }
 
+    if (ride.pricePerKm !== undefined && (ride.pricePerKm < 1 || ride.pricePerKm > 10)) {
+      errors.pricePerKm = "Price per kilometer must be between ₹1 and ₹10";
+    }
+
     // Set validation errors and return if there are any
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -481,7 +485,8 @@ const RideCreation: React.FC = React.memo(() => {
                 <input
                   type="number"
                   required
-                  min="0"
+                  min="1"
+                  max="10"
                   step="0.5"
                   value={ride.pricePerKm === undefined ? "" : ride.pricePerKm}
                   onChange={(e) => {
@@ -516,6 +521,9 @@ const RideCreation: React.FC = React.memo(() => {
                       up to ₹{(ride.pricePerKm * ride.availableSeats).toFixed(0)}
                       /km
                     </>
+                  )}
+                  {(ride.pricePerKm === undefined || ride.availableSeats <= 0) && (
+                    <>Price must be between ₹1 and ₹10 per kilometer</>
                   )}
                 </p>
               )}

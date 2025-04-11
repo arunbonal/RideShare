@@ -31,7 +31,11 @@ const DriverProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorOpacity, setErrorOpacity] = useState(1);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [registrationFormat, setRegistrationFormat] = useState<'letter' | 'digit' | null>(null);
+  const [registrationPlaceholder, setRegistrationPlaceholder] = useState("KA-01-AB-1234");
+  const [placeholderOpacity, setPlaceholderOpacity] = useState(1);
 
   // Start from step 2 if personal details exist
   const [currentStep, setCurrentStep] = useState(
@@ -203,23 +207,91 @@ const DriverProfileSetup: React.FC = () => {
     };
   }, [currentStep]); // Only depend on currentStep
 
+  // Update the useEffect for alternating placeholder with fade animation
+  useEffect(() => {
+    // Only activate the effect when on the vehicle information step
+    if (currentStep !== 2) return;
+
+    let fadeTimer: number;
+    const placeholderInterval = window.setInterval(() => {
+      // Start the fade out
+      setPlaceholderOpacity(0);
+      
+      // After fading out, change the text and fade back in
+      fadeTimer = window.setTimeout(() => {
+        setRegistrationPlaceholder(prev => 
+          prev === "KA-01-AB-1234" ? "25-BH-1234-AB" : "KA-01-AB-1234"
+        );
+        setPlaceholderOpacity(1);
+      }, 300); // Half the time for fade out, then change text
+      
+    }, 2000); // Increase total time to make animation more visible
+
+    // Clean up the intervals when the component unmounts or step changes
+    return () => {
+      clearInterval(placeholderInterval);
+      clearTimeout(fadeTimer);
+    };
+  }, [currentStep]);
+
   const formatVehicleRegistration = (input: string): string => {
-    // Remove any non-alphanumeric characters
-    const cleaned = input.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    // First remove any non-alphanumeric characters
+    const cleanedInput = input.replace(/[^A-Za-z0-9-]/g, '').toUpperCase();
     
-    if (cleaned.length <= 2) {
-      // First two characters (state code)
-      return cleaned;
-    } else if (cleaned.length <= 4) {
-      // State code + district code
-      return `${cleaned.substring(0, 2)}-${cleaned.substring(2)}`;
-    } else if (cleaned.length <= 6) {
-      // State + district + series
-      return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
-    } else {
-      // Complete format
-      return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4, 6)}-${cleaned.substring(6, 10)}`;
+    // Then remove any hyphens to prepare for reformatting
+    const withoutHyphens = cleanedInput.replace(/-/g, '');
+    
+    // Limit to max 10 characters (which will become 13 with hyphens)
+    const truncated = withoutHyphens.slice(0, 10);
+    
+    // Empty or very short input just returns as is
+    if (truncated.length === 0) {
+      setRegistrationFormat(null);
+      return '';
     }
+    
+    // Determine which pattern to use based on first characters
+    const firstChar = truncated.charAt(0);
+    const isFirstPattern = /[A-Z]/.test(firstChar); // First pattern starts with letters
+    
+    // Update format state for displaying the right hint
+    setRegistrationFormat(isFirstPattern ? 'letter' : 'digit');
+    
+    // For pattern 1: {letter}{letter}-{digit}{digit}-{letter}{letter}-{digit}{digit}{digit}{digit}
+    if (isFirstPattern) {
+      let formatted = '';
+      for (let i = 0; i < truncated.length; i++) {
+        // Add hyphen after positions 2, 4, 6 if they're not the last character
+        if ((i === 2 || i === 4 || i === 6) && i < truncated.length) {
+          formatted += '-';
+        }
+        formatted += truncated.charAt(i);
+      }
+      return formatted;
+    } 
+    // For pattern 2: {digit}{digit}-{letter}{letter}-{digit}{digit}{digit}{digit}-{letter}{letter}
+    else {
+      let formatted = '';
+      for (let i = 0; i < truncated.length; i++) {
+        // Add hyphen after positions 2, 4, 8 if they're not the last character
+        if ((i === 2 || i === 4 || i === 8) && i < truncated.length) {
+          formatted += '-';
+        }
+        formatted += truncated.charAt(i);
+      }
+      return formatted;
+    }
+  };
+
+  const validateVehicleRegistration = (regNum: string): boolean => {
+    // Check if the registration number matches either of our two patterns after formatting
+    const pattern1 = /^[A-Z]{2}-\d{2}-[A-Z]{2}-\d{4}$/; // KA-01-AB-1234
+    const pattern2 = /^\d{2}-[A-Z]{2}-\d{4}-[A-Z]{2}$/; // 01-KA-1234-AB
+    
+    // Check exact length (13 characters including hyphens)
+    const correctLength = regNum.length === 13;
+    
+    return (pattern1.test(regNum) || pattern2.test(regNum)) && correctLength;
   };
 
   const handleVehicleRegistrationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,6 +335,24 @@ const DriverProfileSetup: React.FC = () => {
     }
   };
 
+  // Function to show error with auto-fade
+  const showTemporaryError = (message: string) => {
+    // Reset opacity to full if it was fading
+    setErrorOpacity(1);
+    setError(message);
+    
+    // Start fading out after 1.5 seconds
+    setTimeout(() => {
+      setErrorOpacity(0);
+      // Remove the error message after the fade completes
+      setTimeout(() => {
+        setError(null);
+        // Reset opacity for next error
+        setErrorOpacity(1);
+      }, 500); // 500ms for the fade-out transition
+    }, 1500); // 1.5 seconds before starting fade
+  };
+
   const nextStep = () => {
     if (currentStep === 1) {
       // Validate phone and gender
@@ -285,6 +375,13 @@ const DriverProfileSetup: React.FC = () => {
         setError("Please fill all required fields.");
         return;
       }
+
+      // Validate vehicle registration format
+      if (!validateVehicleRegistration(formData.vehicle.registrationNumber)) {
+        showTemporaryError("Please enter a valid vehicle registration number");
+        return;
+      }
+
       setCurrentStep(3);
     } else if (currentStep === 3) {
       // Validate home address
@@ -317,11 +414,20 @@ const DriverProfileSetup: React.FC = () => {
     ) {
       setError("Please fill all required fields.");
       return;
+    } else if (
+      currentStep === 2 && 
+      !validateVehicleRegistration(formData.vehicle.registrationNumber)
+    ) {
+      showTemporaryError("Please enter a valid vehicle registration number");
+      return;
     } else if (currentStep === 3 && (!formData.homeAddress || formData.distanceToCollege === 0)) {
       setError("Please enter your home address and ensure distance is calculated.");
       return;
     } else if (currentStep === 4 && !formData.pricePerKm) {
       setError("Please set your price per kilometer.");
+      return;
+    } else if (currentStep === 4 && (formData.pricePerKm! < 1 || formData.pricePerKm! > 10)) {
+      setError("Price per kilometer must be between ₹1 and ₹10.");
       return;
     }
     
@@ -441,7 +547,13 @@ const DriverProfileSetup: React.FC = () => {
   const ErrorMessage = () => {
     if (!error) return null;
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div 
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
+        style={{
+          transition: 'opacity 0.5s ease-in-out',
+          opacity: errorOpacity
+        }}
+      >
         {error}
       </div>
     );
@@ -731,16 +843,23 @@ const DriverProfileSetup: React.FC = () => {
                   >
                     Vehicle Registration Number
                   </label>
-                  <input
-                    type="text"
-                    id="vehicleRegistrationNumber"
-                    name="vehicle.registrationNumber"
-                    value={formData.vehicle.registrationNumber}
-                    onChange={handleVehicleRegistrationChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., KA-01-AB-1234"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="vehicleRegistrationNumber"
+                      name="vehicle.registrationNumber"
+                      value={formData.vehicle.registrationNumber}
+                      onChange={handleVehicleRegistrationChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={registrationPlaceholder}
+                      maxLength={13}
+                      style={{ 
+                        transition: 'opacity 0.3s ease-in-out',
+                        opacity: formData.vehicle.registrationNumber ? 1 : placeholderOpacity 
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -878,7 +997,8 @@ const DriverProfileSetup: React.FC = () => {
                     }
                     onChange={handleInputChange}
                     required
-                    min="0"
+                    min="1"
+                    max="10"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter price per Km"
                   />
@@ -886,7 +1006,7 @@ const DriverProfileSetup: React.FC = () => {
                     This is the price each passenger will pay per Km of travel.
                     You can adjust this price later.
                     <br />
-                    (Ideally, it should be between{" "}
+                    (Must be between <span className="font-bold text-green-500">₹1</span> and <span className="font-bold text-red-500">₹10</span>, ideally between{" "}
                     <span className="font-bold text-green-500">₹4</span> to{" "}
                     <span className="font-bold text-red-500">₹6</span>)
                   </p>

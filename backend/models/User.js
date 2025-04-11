@@ -26,7 +26,8 @@ const DriverProfileSchema = new mongoose.Schema({
   pricePerKm: {
     type: Number,
     required: true,
-    min: 0,
+    min: 1,
+    max: 10
   },
   reliabilityRate: {
     type: Number,
