@@ -417,7 +417,7 @@ const RideSearch: React.FC = () => {
                 required
               />
               {isIOS && (
-                <p className="text-gray-500 text-sm mt-1 text-center">
+                <p className="text-gray-500 text-sm mt-1">
                   Select a date
                 </p>
               )}
