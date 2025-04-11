@@ -9,18 +9,6 @@ import LoadingButton from "../components/LoadingButton";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
 
-interface Driver {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  gender: string;
-  srn: string;
-  hitcherProfile?: {
-    reliabilityRate: number;
-  };
-}
-
 // Define the User interface for hitchers
 interface User {
   _id: string;
