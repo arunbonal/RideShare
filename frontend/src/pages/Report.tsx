@@ -313,41 +313,56 @@ const Report: React.FC = () => {
     return true;
   };
 
-  // Handle bug report form submission
-  const handleBugReportSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Modified bug report form submission to not require an event parameter
+  const handleBugReportSubmit = async () => {
     try {
       setIsSubmitting(true);
       
-      if (!bugReportForm.title.trim() || !bugReportForm.description.trim()) {
+      // More robust validation
+      let errorMessage = "";
+      
+      if (!bugReportForm.type) {
+        errorMessage = "Please select a report type (Bug or Feature)";
+      } else if (!bugReportForm.title || bugReportForm.title.trim() === "") {
+        errorMessage = "Title is required";
+      } else if (!bugReportForm.description || bugReportForm.description.trim() === "") {
+        errorMessage = "Description is required";
+      }
+      
+      if (errorMessage) {
         setNotification({
           show: true,
-          message: "Title and description are required",
+          message: errorMessage,
           type: "error"
         });
         setIsSubmitting(false);
         return;
       }
       
-      // Use FormData for better mobile compatibility
-      const formData = new FormData();
-      formData.append('type', bugReportForm.type);
-      formData.append('title', bugReportForm.title);
-      formData.append('description', bugReportForm.description);
-      formData.append('browser', bugReportForm.browser);
-      formData.append('device', bugReportForm.device);
+      // Prepare basic report data
+      const reportData: {
+        type: "bug" | "feature";
+        title: string;
+        description: string;
+        browser: string;
+        device: string;
+        screenshot?: string;
+      } = {
+        type: bugReportForm.type,
+        title: bugReportForm.title,
+        description: bugReportForm.description,
+        browser: bugReportForm.browser || "Unknown",
+        device: bugReportForm.device || "Unknown"
+      };
       
-      // If we have a file, append it directly instead of base64
-      if (selectedFile) {
-        formData.append('screenshotFile', selectedFile);
+      // Add screenshot if available (use the existing base64 string from the preview)
+      if (bugReportForm.screenshot) {
+        reportData.screenshot = bugReportForm.screenshot;
       }
       
-      const response = await api.post("/api/bug-reports", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Send the report data as JSON
+      
+      const response = await api.post("/api/bug-reports", reportData);
       
       if (response.data.success) {
         setNotification({
@@ -376,6 +391,14 @@ const Report: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error submitting bug report:", error);
+      
+      // More detailed error logging
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      }
+      
       setNotification({
         show: true,
         message: error.response?.data?.message || "Failed to submit report. Please try again.",
@@ -427,6 +450,12 @@ const Report: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Handle form submission via the traditional form submit event
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleBugReportSubmit();
   };
 
   if (!currentUser) {
@@ -765,7 +794,7 @@ const Report: React.FC = () => {
         ) : (
           // Bug report/Feature request UI
           <div className="bg-white rounded-lg shadow-md p-6">
-            <form onSubmit={handleBugReportSubmit}>
+            <form onSubmit={handleFormSubmit}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Type
@@ -899,12 +928,7 @@ const Report: React.FC = () => {
                   Cancel
                 </button>
                 <LoadingButton
-                  onClick={async () => {
-                    const form = document.querySelector('form');
-                    if (form) {
-                      form.dispatchEvent(new Event('submit', { cancelable: true }));
-                    }
-                  }}
+                  onClick={handleBugReportSubmit}
                   loadingText="Submitting..."
                   className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
                   disabled={isSubmitting}
