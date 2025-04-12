@@ -340,12 +340,13 @@ const RideManagement: React.FC = () => {
                     </div>
                     <div className="flex mt-4 sm:mt-0 sm:flex-col sm:items-end gap-2 justify-end">
                       {ride.status === "scheduled" && (
-                        <button
+                        <LoadingButton
                           onClick={() => handleCancelClick(index, ride._id)}
                           className="inline-flex items-center px-3 py-1.5 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                          loadingText="..."
                         >
                           Cancel Ride
-                        </button>
+                        </LoadingButton>
                       )}
                     </div>
                   </div>

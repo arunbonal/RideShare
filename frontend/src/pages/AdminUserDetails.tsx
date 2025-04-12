@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api'; // Import API utility
 import { ArrowLeft, Save, Trash2, AlertTriangle } from 'lucide-react';
 import AdminNavbar from '../components/AdminNavbar';
+import LoadingButton from '../components/LoadingButton';
 
 interface User {
   _id: string;
@@ -33,6 +34,8 @@ const AdminUserDetails: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
     show: boolean;
@@ -49,6 +52,8 @@ const AdminUserDetails: React.FC = () => {
     gender: string;
     college: string;
     homeAddress: string;
+    driverReliabilityRate?: number;
+    hitcherReliabilityRate?: number;
   }>({
     name: '',
     phone: '',
@@ -56,6 +61,8 @@ const AdminUserDetails: React.FC = () => {
     gender: '',
     college: '',
     homeAddress: '',
+    driverReliabilityRate: undefined,
+    hitcherReliabilityRate: undefined
   });
 
   useEffect(() => {
@@ -71,6 +78,8 @@ const AdminUserDetails: React.FC = () => {
           gender: response.data.gender || 'male',
           college: response.data.college || '',
           homeAddress: response.data.homeAddress || '',
+          driverReliabilityRate: response.data.driverProfile?.reliabilityRate,
+          hitcherReliabilityRate: response.data.hitcherProfile?.reliabilityRate
         });
         setLoading(false);
       } catch (err: any) {
@@ -93,21 +102,37 @@ const AdminUserDetails: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleFormSubmit = () => {
     // Validate gender field
     if (formData.gender !== 'male' && formData.gender !== 'female') {
       showNotification('Gender must be either Male or Female', 'error');
       return;
     }
+
+    // Validate reliability rates
+    if (
+      (formData.driverReliabilityRate !== undefined && 
+        (formData.driverReliabilityRate < 0 || formData.driverReliabilityRate > 100)) ||
+      (formData.hitcherReliabilityRate !== undefined && 
+        (formData.hitcherReliabilityRate < 0 || formData.hitcherReliabilityRate > 100))
+    ) {
+      showNotification('Reliability rate must be between 0 and 100', 'error');
+      return;
+    }
     
+    submitForm();
+  };
+  
+  const submitForm = async () => {
     try {
+      setSubmitting(true);
       // Only send editable fields
       const editableData = {
         phone: formData.phone,
         gender: formData.gender,
-        homeAddress: formData.homeAddress
+        homeAddress: formData.homeAddress,
+        driverReliabilityRate: formData.driverReliabilityRate,
+        hitcherReliabilityRate: formData.hitcherReliabilityRate
       };
       
       await api.put(
@@ -115,14 +140,17 @@ const AdminUserDetails: React.FC = () => {
         editableData
       );
       showNotification('User updated successfully', 'success');
+      setSubmitting(false);
     } catch (err: any) {
       console.error('Error updating user:', err);
       showNotification(err.response?.data?.error || 'Failed to update user', 'error');
+      setSubmitting(false);
     }
   };
 
   const handleDeleteUser = async () => {
     try {
+      setDeleting(true);
       await api.delete(
         `/api/admin/users/${id}`
       );
@@ -138,6 +166,7 @@ const AdminUserDetails: React.FC = () => {
         'error'
       );
       setShowDeleteModal(false);
+      setDeleting(false);
     }
   };
 
@@ -202,13 +231,15 @@ const AdminUserDetails: React.FC = () => {
             Back to Admin Dashboard
           </button>
           
-          <button
+          <LoadingButton
             onClick={() => setShowDeleteModal(true)}
             className="flex items-center bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 focus:outline-none"
+            loadingText="Loading..."
+            disabled={submitting}
           >
             <Trash2 className="h-4 w-4 mr-1" />
             Delete User
-          </button>
+          </LoadingButton>
         </div>
 
         <div className="bg-white shadow rounded-lg p-6">
@@ -219,98 +250,134 @@ const AdminUserDetails: React.FC = () => {
             <div>
               <h2 className="text-lg font-semibold mb-4">User Information</h2>
 
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      readOnly
-                      className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone
-                    </label>
-                    <input
-                      type="text"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      SRN
-                    </label>
-                    <input
-                      type="text"
-                      name="srn"
-                      value={formData.srn}
-                      readOnly
-                      className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gender
-                    </label>
-                    <select
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleChange}
-                      className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      College
-                    </label>
-                    <input
-                      type="text"
-                      name="college"
-                      value={formData.college}
-                      readOnly
-                      className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Home Address
-                    </label>
-                    <input
-                      type="text"
-                      name="homeAddress"
-                      value={formData.homeAddress}
-                      onChange={handleChange}
-                      className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    readOnly
+                    className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                  />
                 </div>
-              </form>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SRN
+                  </label>
+                  <input
+                    type="text"
+                    name="srn"
+                    value={formData.srn}
+                    readOnly
+                    className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    College
+                  </label>
+                  <input
+                    type="text"
+                    name="college"
+                    value={formData.college}
+                    readOnly
+                    className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Home Address
+                  </label>
+                  <input
+                    type="text"
+                    name="homeAddress"
+                    value={formData.homeAddress}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                {user.driverProfile && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Driver Reliability Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      name="driverReliabilityRate"
+                      value={formData.driverReliabilityRate}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                  </div>
+                )}
+
+                {user.hitcherProfile && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Hitcher Reliability Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      name="hitcherReliabilityRate"
+                      value={formData.hitcherReliabilityRate}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                  </div>
+                )}
+
+                <LoadingButton
+                  onClick={handleFormSubmit}
+                  className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  loadingText="Saving..."
+                  disabled={submitting}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </LoadingButton>
+              </div>
             </div>
 
             <div>
@@ -344,7 +411,6 @@ const AdminUserDetails: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-500">Driver Statistics</p>
                     <div className="mt-1 space-y-1">
-                      <p className="text-sm">Reliability: {user.driverProfile.reliabilityRate.toFixed(1)}%</p>
                       <p className="text-sm">Completed Rides: {user.driverProfile.completedRides}</p>
                     </div>
                   </div>
@@ -354,7 +420,6 @@ const AdminUserDetails: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-500">Hitcher Statistics</p>
                     <div className="mt-1 space-y-1">
-                      <p className="text-sm">Reliability: {user.hitcherProfile.reliabilityRate.toFixed(1)}%</p>
                       <p className="text-sm">Completed Rides: {user.hitcherProfile.completedRides}</p>
                     </div>
                   </div>
@@ -384,12 +449,14 @@ const AdminUserDetails: React.FC = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   onClick={handleDeleteUser}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  loadingText="Deleting..."
+                  disabled={deleting}
                 >
                   Delete User
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </div>

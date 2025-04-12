@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
 import api from '../utils/api'; // Import API utility
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import LoadingButton from '../components/LoadingButton';
 
@@ -119,6 +119,9 @@ const AdminDashboard: React.FC = () => {
   const [showBugReportModal, setShowBugReportModal] = useState<boolean>(false);
   const [loadingIssue, setLoadingIssue] = useState<string | null>(null);
   const [loadingBugReport, setLoadingBugReport] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState<string | null>(null);
+  const [loadingRide, setLoadingRide] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
   const formatName = (name: string) => {
@@ -189,18 +192,13 @@ const AdminDashboard: React.FC = () => {
       );
     }
     
-    // Apply status filter
-    if (issueStatusFilter !== 'all') {
-      filtered = filtered.filter(issue => issue.status === issueStatusFilter);
-    }
-    
     // Apply type filter
     if (issueTypeFilter !== 'all') {
       filtered = filtered.filter(issue => issue.type === issueTypeFilter);
     }
     
     setFilteredIssues(filtered);
-  }, [issueSearchTerm, issueStatusFilter, issueTypeFilter, issues]);
+  }, [issueSearchTerm, issueTypeFilter, issues]);
 
   // Filter bug reports based on search term and type filter
   useEffect(() => {
@@ -418,12 +416,17 @@ const AdminDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {!user.isAdmin && (
-                          <Link 
-                            to={`/admin/users/${user._id}`}
+                          <LoadingButton 
+                            onClick={() => {
+                              setLoadingUser(user._id);
+                              navigate(`/admin/users/${user._id}`);
+                            }}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                            loadingText="Loading..."
+                            disabled={loadingUser === user._id}
                           >
                             View Details
-                          </Link>
+                          </LoadingButton>
                         )}
                       </td>
                     </tr>
@@ -494,12 +497,17 @@ const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Link 
-                          to={`/admin/rides/${ride._id}`}
+                        <LoadingButton 
+                          onClick={() => {
+                            setLoadingRide(ride._id);
+                            navigate(`/admin/rides/${ride._id}`);
+                          }}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                          loadingText="Loading..."
+                          disabled={loadingRide === ride._id}
                         >
                           View Details
-                        </Link>
+                        </LoadingButton>
                       </td>
                     </tr>
                   ))}
@@ -529,17 +537,6 @@ const AdminDashboard: React.FC = () => {
 
             {/* Issue Filters */}
             <div className="flex gap-4 mb-6">
-              <select
-                value={issueStatusFilter}
-                onChange={(e) => setIssueStatusFilter(e.target.value)}
-                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Statuses</option>
-                <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
               <select
                 value={issueTypeFilter}
                 onChange={(e) => setIssueTypeFilter(e.target.value)}
