@@ -787,8 +787,8 @@ const Report: React.FC = () => {
                   rows={5}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder={bugReportForm.type === "bug" 
-                    ? "Please describe the bug in detail. What were you trying to do? What happened? What did you expect to happen?" 
-                    : "Please describe the feature you'd like to see. How would it work? Why would it be useful?"}
+                    ? "Please describe the bug in as much detail as possible." 
+                    : "Please describe the feature you'd like to see."}
                   value={bugReportForm.description}
                   onChange={(e) => setBugReportForm({ ...bugReportForm, description: e.target.value })}
                   required

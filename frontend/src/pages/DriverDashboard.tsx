@@ -699,15 +699,22 @@ const DriverDashboard: React.FC = () => {
                           <p className="text-gray-500">
                             {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
                           </p>
+                          <p className="text-md text-gray-600 mt-2">
+                            <Clock className="h-5 w-4 inline mr-1" />
+                            {ride.direction === "toCollege"
+                              ? formatTime(ride.toCollegeTime || "")
+                              : formatTime(ride.fromCollegeTime || "")}
+                          </p>
                           {(() => {
                             const acceptedCount = ride.hitchers?.filter(h => h.status === "accepted").length || 0;
                             return acceptedCount > 0 && (
-                              <p className="text-sm text-green-600 mt-5">
+                              <p className="text-sm text-green-600 mt-2">
                                 <Users className="h-4 w-4 inline mr-1" />
                                 {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
                               </p>
                             );
                           })()}
+                          
                         </div>
                         <div className="flex flex-col gap-2 items-end">
                           <span
@@ -755,7 +762,7 @@ const DriverDashboard: React.FC = () => {
                               toggleRideExpand(ride._id);
                             }}
                           >
-                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                            <ChevronDown className={`h-5 w-5 mt-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
                           </button>
                         </div>
                       </div>

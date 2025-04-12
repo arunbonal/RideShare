@@ -67,12 +67,62 @@ const RideSearch: React.FC = () => {
   const [filteredRides, setFilteredRides] = useState<RideWithCollegeInfo[]>([]);
   const [ridesLoaded, setRidesLoaded] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [searchPlaceholder, setSearchPlaceholder] = useState("");
+  const [placeholderOpacity, setPlaceholderOpacity] = useState(1);
 
   // Add these date calculations near the top of the component
   const today = new Date().toISOString().split("T")[0];
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 7);
   const maxDateString = maxDate.toISOString().split("T")[0];
+
+  // Define placeholder locations based on college
+  const ecCampusLocations = [
+    "Bannerghatta", 
+    "HSR Layout", 
+    "Koramangala", 
+    "Electronic City Phase 2", 
+    "Jayanagar", 
+    "Neeladri"
+  ];
+  
+  const rrCampusLocations = [
+    "Bannerghatta", 
+    "Jayanagar", 
+    "Koramangala",
+    "Uttarahalli", 
+    "Kanakpura"
+  ];
+
+  // Update useEffect for dynamic placeholder with fading animation
+  useEffect(() => {
+    // Determine which set of locations to use based on user's college
+    const locations = currentUser?.college === "PES University Electronic City Campus" 
+      ? ecCampusLocations 
+      : rrCampusLocations;
+    
+    let currentIndex = 0;
+    
+    // Set initial placeholder
+    setSearchPlaceholder(locations[currentIndex]);
+    setPlaceholderOpacity(1);
+    
+    // Create interval to rotate through placeholders
+    const interval = setInterval(() => {
+      // Start fading out
+      setPlaceholderOpacity(0);
+      
+      // After fading out, change the text and fade back in
+      setTimeout(() => {
+        currentIndex = (currentIndex + 1) % locations.length;
+        setSearchPlaceholder(locations[currentIndex]);
+        setPlaceholderOpacity(1);
+      }, 300); // Half the time for fade out, then change text
+    }, 1500);
+    
+    // Clear interval on component unmount
+    return () => clearInterval(interval);
+  }, [currentUser?.college]);
 
   // Add useEffect to detect iOS
   useEffect(() => {
@@ -357,6 +407,24 @@ const RideSearch: React.FC = () => {
     return `${hour12}:${minutes} ${period}`;
   };
 
+  // Add a style tag in the component to define the CSS for placeholder opacity
+  useEffect(() => {
+    // Add a style tag to the document head for custom placeholder styling
+    const styleTag = document.createElement('style');
+    styleTag.innerHTML = `
+      #locationSearch::placeholder {
+        transition: opacity 0.3s ease-in-out;
+        opacity: var(--placeholder-opacity, 1);
+      }
+    `;
+    document.head.appendChild(styleTag);
+    
+    // Clean up the style tag when component unmounts
+    return () => {
+      document.head.removeChild(styleTag);
+    };
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -437,17 +505,29 @@ const RideSearch: React.FC = () => {
               className="bg-white rounded-lg shadow-md p-4 mb-6"
             >
               <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-                <div className="flex-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label
+                    htmlFor="locationSearch"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Search by Location
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="locationSearch"
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={searchPlaceholder}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      style={{ 
+                        "--placeholder-opacity": placeholderOpacity
+                      } as React.CSSProperties}
+                    />
                   </div>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by location"
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
                 </div>
 
                 <div className="flex items-center space-x-2">
