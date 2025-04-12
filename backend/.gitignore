@@ -2,6 +2,4 @@
 node_modules
 .env.production
 secret-generator.js
-deleteBugReports.js
-deleteAllRides.js
-initRelability.js
+resetEverything.js

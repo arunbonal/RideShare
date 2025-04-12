@@ -813,7 +813,7 @@ const HitcherDashboard: React.FC = () => {
                                   hitcherInfo.status.slice(1)}
                             </span>
                             <button
-                              className="text-gray-400 hover:text-gray-600 focus:outline-none mt-2"
+                              className="text-gray-400 hover:text-gray-600 focus:outline-none mt-8"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleRideExpand(ride._id);

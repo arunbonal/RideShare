@@ -97,16 +97,38 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     return fullName.split(' ')[0];
   };
 
-  // Function to handle clicking on a profile button
-  const handleProfileClick = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event bubbling
-    setSelectedHitcherIndex(index);
-  };
-
   // Function to close the profile modal
   const closeProfileModal = () => {
     setSelectedHitcherIndex(null);
   };
+
+  // Add click handler for the profile button
+  const handleProfileButtonClick = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    setSelectedHitcherIndex(index);
+  };
+
+  // Add an effect to handle clicks outside the modal
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      // Only run this if the modal is open
+      if (selectedHitcherIndex !== null) {
+        // Check if the click was outside the modal content
+        const modal = document.querySelector('.profile-modal-content');
+        if (modal && !modal.contains(e.target as Node)) {
+          setSelectedHitcherIndex(null);
+        }
+      }
+    };
+
+    // Add the click event listener to the document
+    document.addEventListener('mousedown', handleOutsideClick);
+
+    // Clean up the event listener when component unmounts or dependencies change
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [selectedHitcherIndex]); // Only re-run if selectedHitcherIndex changes
 
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
@@ -164,7 +186,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                       <div className="relative">
                         <button 
                           className="flex items-center text-blue-500 text-xs border border-blue-500 rounded px-1 py-0.5"
-                          onClick={(e) => handleProfileClick(index, e)}
+                          onClick={(e) => handleProfileButtonClick(e, index)}
                         >
                           <UserCircle className="h-3 w-3 mr-1" />
                           Profile
@@ -206,20 +228,23 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
       {/* Profile Modal - displays when a profile is clicked */}
       {selectedHitcherIndex !== null && hitcherNames && hitcherNames.length > selectedHitcherIndex && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeProfileModal}>
-          <div className="bg-white rounded-lg p-4 max-w-xs w-full shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="profile-modal-content bg-white rounded-lg p-4 max-w-xs w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-3">
-              
-              <button onClick={closeProfileModal} className="text-gray-400 hover:text-gray-500">
+              <h3 className="text-lg font-medium text-gray-900 pointer-events-none">Hitcher Profile</h3>
+              <button 
+                onClick={closeProfileModal} 
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 pointer-events-none">
               <p className="text-base font-medium text-gray-900">{getFirstName(hitcherNames[selectedHitcherIndex])}</p>
               {hitcherPhones && hitcherPhones.length > selectedHitcherIndex && (
                 <div className="flex items-center">
                   <span className="text-gray-500 mr-2">Phone:</span>
-                  <span className="text-gray-900">{hitcherPhones[selectedHitcherIndex].substring(3)}</span>
+                  <span className="text-gray-900">+91 {hitcherPhones[selectedHitcherIndex].substring(3)}</span>
                 </div>
               )}
               {hitcherFares && hitcherFares.length > selectedHitcherIndex && (
