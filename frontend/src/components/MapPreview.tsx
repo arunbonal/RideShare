@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { UserCircle } from "lucide-react";
+import { Loader } from "@googlemaps/js-api-loader";
+import { UserCircle, X } from "lucide-react";
 
 interface MapPreviewProps {
   startLocation: string;
@@ -34,6 +35,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directionsRenderer, setDirectionsRenderer] =
     useState<google.maps.DirectionsRenderer | null>(null);
+  const [selectedHitcherIndex, setSelectedHitcherIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -95,6 +97,17 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     return fullName.split(' ')[0];
   };
 
+  // Function to handle clicking on a profile button
+  const handleProfileClick = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    setSelectedHitcherIndex(index);
+  };
+
+  // Function to close the profile modal
+  const closeProfileModal = () => {
+    setSelectedHitcherIndex(null);
+  };
+
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
       {/* Google Map */}
@@ -146,21 +159,16 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                       </span>
                     )}
                     
-                    {/* Profile icon with user details on hover - only show if showHitcherDetails is true */}
+                    {/* Profile button - smaller and click-based */}
                     {showHitcherDetails && hitcherNames && hitcherNames.length > index && hitcherNames[index] && (
-                      <div className="relative group">
-                        <UserCircle className="h-4 w-4 text-blue-500 cursor-pointer" />
-                        
-                        {/* Hover tooltip - positioned on the left to stay within container */}
-                        <div className="absolute z-10 left-0 mt-2 w-48 p-2 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-200">
-                          <p className="text-sm font-medium text-gray-900">{getFirstName(hitcherNames[index])}</p>
-                          {hitcherPhones && hitcherPhones.length > index && (
-                            <p className="text-sm text-gray-600">{hitcherPhones[index].substring(3)}</p>
-                          )}
-                          {hitcherFares && hitcherFares.length > index && (
-                            <p className="text-sm font-medium text-green-600">₹{hitcherFares[index]}</p>
-                          )}
-                        </div>
+                      <div className="relative">
+                        <button 
+                          className="flex items-center text-blue-500 text-xs border border-blue-500 rounded px-1 py-0.5"
+                          onClick={(e) => handleProfileClick(index, e)}
+                        >
+                          <UserCircle className="h-3 w-3 mr-1" />
+                          Profile
+                        </button>
                       </div>
                     )}
                   </div>
@@ -195,6 +203,35 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Profile Modal - displays when a profile is clicked */}
+      {selectedHitcherIndex !== null && hitcherNames && hitcherNames.length > selectedHitcherIndex && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50" onClick={closeProfileModal}>
+          <div className="bg-white rounded-lg p-4 max-w-xs w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-3">
+              
+              <button onClick={closeProfileModal} className="text-gray-400 hover:text-gray-500">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-medium text-gray-900">{getFirstName(hitcherNames[selectedHitcherIndex])}</p>
+              {hitcherPhones && hitcherPhones.length > selectedHitcherIndex && (
+                <div className="flex items-center">
+                  <span className="text-gray-500 mr-2">Phone:</span>
+                  <span className="text-gray-900">{hitcherPhones[selectedHitcherIndex].substring(3)}</span>
+                </div>
+              )}
+              {hitcherFares && hitcherFares.length > selectedHitcherIndex && (
+                <div className="flex items-center">
+                  <span className="text-gray-500 mr-2">Fare:</span>
+                  <span className="font-medium text-green-600">₹{hitcherFares[selectedHitcherIndex]}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -769,12 +769,7 @@ const DriverDashboard: React.FC = () => {
                       
                       {expandedRides.has(ride._id) && (
                         <div className="mt-4 space-y-3">
-                          <div className="flex items-center text-gray-600">
-                            <Clock className="h-5 w-5 mr-2" />
-                            {ride.direction === "toCollege"
-                              ? formatTime(ride.toCollegeTime || "")
-                              : formatTime(ride.fromCollegeTime || "")}
-                          </div>
+                          
                           <div className="flex items-center text-gray-600">
                             <MapPin className="h-5 w-5 mr-2" />
                             From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
