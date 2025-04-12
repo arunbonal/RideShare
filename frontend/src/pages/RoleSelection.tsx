@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Car, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import LoadingButton from "../components/LoadingButton";
 
 const RoleSelection: React.FC = () => {
   const { updateActiveRoles, currentUser } = useAuth();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect admin users to the admin dashboard
   if (currentUser?.isAdmin) {
@@ -29,6 +31,7 @@ const RoleSelection: React.FC = () => {
     }
 
     try {
+      setIsSubmitting(true);
       // Update active roles in the backend
       await updateActiveRoles({
         driver: selectedRole === "driver",
@@ -50,6 +53,8 @@ const RoleSelection: React.FC = () => {
       }
     } catch (error) {
       console.error("Error updating roles:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -158,17 +163,18 @@ const RoleSelection: React.FC = () => {
         </div>
 
         <div className="mt-6">
-          <button
+          <LoadingButton
             onClick={handleContinue}
-            disabled={!selectedRole}
+            disabled={!selectedRole || isSubmitting}
             className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
               !selectedRole
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             }`}
+            loadingText="Setting up your profile..."
           >
             Continue
-          </button>
+          </LoadingButton>
         </div>
 
         <div className="mt-4 text-center">

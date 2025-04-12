@@ -68,7 +68,6 @@ const AuthCallback = React.memo(() => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <LoadingSpinner />
-      <p className="text-gray-600 mt-4">Completing authentication...</p>
     </div>
   );
 });

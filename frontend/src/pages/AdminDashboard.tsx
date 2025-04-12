@@ -4,6 +4,7 @@ import AdminNavbar from '../components/AdminNavbar';
 import api from '../utils/api'; // Import API utility
 import { Navigate, Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
+import LoadingButton from '../components/LoadingButton';
 
 // Define interfaces for the data we'll be working with
 interface AdminUser {
@@ -116,6 +117,8 @@ const AdminDashboard: React.FC = () => {
   const [bugReportTypeFilter, setBugReportTypeFilter] = useState<string>('all');
   const [selectedBugReport, setSelectedBugReport] = useState<AdminBugReport | null>(null);
   const [showBugReportModal, setShowBugReportModal] = useState<boolean>(false);
+  const [loadingIssue, setLoadingIssue] = useState<string | null>(null);
+  const [loadingBugReport, setLoadingBugReport] = useState<string | null>(null);
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
   const formatName = (name: string) => {
@@ -268,6 +271,29 @@ const AdminDashboard: React.FC = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
            ' ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Function to handle viewing issue details
+  const viewIssueDetails = async (issue: AdminIssue) => {
+    setLoadingIssue(issue._id);
+    try {
+      // You could fetch more details here if needed
+      setSelectedIssue(issue);
+    } finally {
+      setLoadingIssue(null);
+    }
+  };
+
+  // Function to handle viewing bug report details
+  const viewBugReportDetails = async (report: AdminBugReport) => {
+    setLoadingBugReport(report._id);
+    try {
+      // You could fetch more details here if needed
+      setSelectedBugReport(report);
+      setShowBugReportModal(true);
+    } finally {
+      setLoadingBugReport(null);
+    }
   };
 
   return (
@@ -602,12 +628,14 @@ const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => setSelectedIssue(issue)}
+                        <LoadingButton
+                          onClick={() => viewIssueDetails(issue)}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                          loadingText="Loading..."
+                          disabled={loadingIssue === issue._id}
                         >
                           View Details
-                        </button>
+                        </LoadingButton>
                       </td>
                     </tr>
                   ))}
@@ -714,15 +742,14 @@ const AdminDashboard: React.FC = () => {
                             {formatDateTime(report.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => {
-                                setSelectedBugReport(report);
-                                setShowBugReportModal(true);
-                              }}
+                            <LoadingButton
+                              onClick={() => viewBugReportDetails(report)}
                               className="text-blue-600 hover:text-blue-900"
+                              loadingText="Loading..."
+                              disabled={loadingBugReport === report._id}
                             >
                               Details
-                            </button>
+                            </LoadingButton>
                           </td>
                         </tr>
                       ))

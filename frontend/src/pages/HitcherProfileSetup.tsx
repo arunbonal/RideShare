@@ -4,6 +4,7 @@ import { User, MapPin, CheckCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import api from "../utils/api"; // Import API utility
+import LoadingButton from "../components/LoadingButton";
 
 declare global {
   interface Window {
@@ -68,6 +69,10 @@ const HitcherProfileSetup: React.FC = () => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Add new state variables for LoadingButton
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
 
   useEffect(() => {
     let autocomplete: google.maps.places.Autocomplete | null = null;
@@ -214,6 +219,7 @@ const HitcherProfileSetup: React.FC = () => {
     }));
   };
 
+  // Send verification code
   const sendVerificationCode = async () => {
     try {
       if (!phoneNumber) {
@@ -228,6 +234,7 @@ const HitcherProfileSetup: React.FC = () => {
         return;
       }
 
+      setIsLoadingVerification(true);
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
       const response = await api.post(
         "/api/verify/send",
@@ -238,6 +245,8 @@ const HitcherProfileSetup: React.FC = () => {
         setIsVerifying(true);
         setError(null);
         setSuccessMessage("Verification code sent successfully!");
+        // Set the resend timer to 90 seconds
+        setResendTimer(90);
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000);
       }
@@ -248,10 +257,16 @@ const HitcherProfileSetup: React.FC = () => {
       // Check for specific Twilio error messages
       if (error.response?.data?.message?.includes("unverified")) {
         errorMessage = "This phone number is not verified in our system. For development, please use one of these test numbers: +14155552671, +14155552672, +14155552673, +14155552674, or +14155552675";
+      } else if (error.response?.data?.remainingTime) {
+        // If there's a cooldown period remaining
+        setResendTimer(error.response.data.remainingTime);
+        errorMessage = `Please wait ${error.response.data.remainingTime} seconds before requesting another code`;
       }
       
       setError(errorMessage);
       setSuccessMessage(null);
+    } finally {
+      setIsLoadingVerification(false);
     }
   };
 
@@ -287,8 +302,11 @@ const HitcherProfileSetup: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    // Prevent default if event is provided
+    if (e) {
+      e.preventDefault();
+    }
 
     // Validate all fields
     if (!isPhoneVerified) {
@@ -386,7 +404,7 @@ const HitcherProfileSetup: React.FC = () => {
         <div className="bg-white shadow-md rounded-lg p-6">
           <ErrorMessage />
           <SuccessMessage />
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => handleSubmit(e)}>
             <div className="space-y-6">
               {/* Personal Information */}
               <div>
@@ -425,13 +443,16 @@ const HitcherProfileSetup: React.FC = () => {
                   </div>
 
                   {!isPhoneVerified && !isVerifying && (
-                    <button
-                      type="button"
+                    <LoadingButton
                       onClick={sendVerificationCode}
+                      disabled={resendTimer > 0}
+                      loadingText="Sending..."
                       className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                      Send Verification Code
-                    </button>
+                      {resendTimer > 0 
+                        ? `Resend (${resendTimer}s)` 
+                        : "Send Verification Code"}
+                    </LoadingButton>
                   )}
 
                   {isVerifying && (
@@ -448,13 +469,25 @@ const HitcherProfileSetup: React.FC = () => {
                           placeholder="Enter verification code"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={verifyCode}
-                        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                      >
-                        Verify Code
-                      </button>
+                      <div className="flex space-x-2">
+                        <LoadingButton
+                          onClick={verifyCode}
+                          loadingText="Verifying..."
+                          className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          Verify Code
+                        </LoadingButton>
+                        <LoadingButton
+                          onClick={sendVerificationCode}
+                          disabled={resendTimer > 0}
+                          loadingText="Sending..."
+                          className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          {resendTimer > 0 
+                            ? `Resend (${resendTimer}s)` 
+                            : "Resend Code"}
+                        </LoadingButton>
+                      </div>
                     </div>
                   )}
 
@@ -538,17 +571,18 @@ const HitcherProfileSetup: React.FC = () => {
 
               
               <div className="pt-4">
-                <button
-                  type="submit"
+                <LoadingButton
+                  onClick={() => handleSubmit()}
                   disabled={isSubmitting}
+                  loadingText="Saving..."
                   className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
                     isSubmitting
                       ? "bg-blue-400"
                       : "bg-blue-600 hover:bg-blue-700"
                   } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
-                  {isSubmitting ? "Saving..." : "Complete Profile"}
-                </button>
+                  Complete Profile
+                </LoadingButton>
               </div>
             </div>
           </form>

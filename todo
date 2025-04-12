@@ -1,6 +1,3 @@
-fix completed rides in admin user dashboard
-move the requested rides button up in driver dashboard
-remove note field in driver profile
-dont show canceling while canceling ride (for hitcher)
 check sessions in mongo
 24 free twilio requests left
+backend url issue

@@ -63,6 +63,8 @@ const DriverProfileSetup: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(!!currentUser?.phone);
+  const [isLoadingVerification, setIsLoadingVerification] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Add these state variables to store map and marker references
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -337,12 +339,12 @@ const DriverProfileSetup: React.FC = () => {
   };
 
   // Function to show error with auto-fade
-  const showTemporaryError = (message: string) => {
+  const showError = (message: string) => {
     // Reset opacity to full if it was fading
     setErrorOpacity(1);
     setError(message);
     
-    // Start fading out after 1.5 seconds
+    // Start fading out after 3 seconds
     setTimeout(() => {
       setErrorOpacity(0);
       // Remove the error message after the fade completes
@@ -351,18 +353,21 @@ const DriverProfileSetup: React.FC = () => {
         // Reset opacity for next error
         setErrorOpacity(1);
       }, 500); // 500ms for the fade-out transition
-    }, 1500); // 1.5 seconds before starting fade
+    }, 3000); // 3 seconds before starting fade
   };
+
+  // Function to show error with auto-fade (alias for compatibility with existing code)
+  const showTemporaryError = showError;
 
   const nextStep = () => {
     if (currentStep === 1) {
       // Validate phone and gender
       if (!formData.phone || !formData.gender) {
-        setError("Please fill all required fields.");
+        showError("Please fill all required fields.");
         return;
       }
       if (!isPhoneVerified) {
-        setError("Please verify your phone number.");
+        showError("Please verify your phone number.");
         return;
       }
       setCurrentStep(2);
@@ -373,13 +378,13 @@ const DriverProfileSetup: React.FC = () => {
         !formData.vehicle.registrationNumber ||
         !formData.vehicle.seats
       ) {
-        setError("Please fill all required fields.");
+        showError("Please fill all required fields.");
         return;
       }
 
       // Validate vehicle registration format
       if (!validateVehicleRegistration(formData.vehicle.registrationNumber)) {
-        showTemporaryError("Please enter a valid vehicle registration number");
+        showError("Please enter a valid vehicle registration number");
         return;
       }
 
@@ -387,7 +392,7 @@ const DriverProfileSetup: React.FC = () => {
     } else if (currentStep === 3) {
       // Validate home address
       if (!formData.homeAddress || formData.distanceToCollege === 0) {
-        setError("Please enter your home address and ensure distance is calculated.");
+        showError("Please enter your home address and ensure distance is calculated.");
         return;
       }
       setCurrentStep(4);
@@ -398,61 +403,141 @@ const DriverProfileSetup: React.FC = () => {
     setCurrentStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    // Prevent default form submission if event is provided
+    if (e) {
+      e.preventDefault();
+    }
+    
+    // Validate phone verification
     if (!isPhoneVerified) {
-      setError("Please verify your phone number");
+      showError("Please verify your phone number");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    
+    // Validate gender
     if (!formData.gender || formData.gender === "") {
-      setError("Please select your gender");
+      showError("Please select your gender");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (!formData.homeAddress) {
-      setError("Please enter your home address");
+    
+    // Validate vehicle information
+    if (!formData.vehicle.model || formData.vehicle.model.trim() === "") {
+      showError("Please enter your vehicle model");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
+    
+    if (!formData.vehicle.registrationNumber || formData.vehicle.registrationNumber.trim() === "") {
+      showError("Please enter your vehicle registration number");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    if (!validateVehicleRegistration(formData.vehicle.registrationNumber)) {
+      showError("Please enter a valid vehicle registration number");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Validate home address
+    if (!formData.homeAddress || formData.homeAddress.trim() === "") {
+      showError("Please enter your home address");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Validate price per km exists and is between 1 and 10
+    if (formData.pricePerKm === undefined || isNaN(formData.pricePerKm)) {
+      showError("Please enter a valid price per kilometer");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Validate price per km is between 1 and 10
+    if (formData.pricePerKm < 1 || formData.pricePerKm > 10) {
+      showError("Price per kilometer must be between ₹1 and ₹10");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // All validations passed, proceed with submission
     setIsSubmitting(true);
     setError(null);
-
+    
     try {
-      await api.post(
+      // Ensure phone number is properly formatted
+      const phoneForSubmit = phoneNumber.startsWith("+91") 
+        ? phoneNumber 
+        : `+91${phoneNumber}`;
+      
+      // Format data according to backend API expectations
+      const driverProfileData = {
+        phone: phoneForSubmit,
+        gender: formData.gender,
+        homeAddress: formData.homeAddress,
+        distanceToCollege: formData.distanceToCollege,
+        driverProfile: {
+          vehicle: formData.vehicle,
+          pricePerKm: formData.pricePerKm
+        },
+        driverProfileComplete: true,
+        activeRoles: {
+          driver: true,
+          hitcher: currentUser?.activeRoles?.hitcher || false,
+        },
+      };
+      
+      // Log the data being sent to help with debugging
+      console.log("Submitting driver profile data:", driverProfileData);
+      
+      const response = await api.post(
         "/api/profile/driver",
-        {
-          ...formData,
-          phone: `+91${phoneNumber}`,
-          driverProfileComplete: true,
-          activeRoles: {
-            driver: true,
-            hitcher: currentUser?.activeRoles?.hitcher || false,
-          },
-        }
+        driverProfileData
       );
-
+      
+      console.log("Driver profile update successful:", response.data);
       await updateDriverProfileComplete(true);
       navigate("/driver/dashboard");
     } catch (error) {
       console.error("Error saving driver profile:", error);
-      setError("Failed to save profile. Please try again.");
+      showError("Failed to save profile. Please try again.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Add a useEffect for the resend timer countdown
+  useEffect(() => {
+    // Only run the timer if resendTimer is greater than 0
+    if (resendTimer <= 0) return;
+    
+    const interval = setInterval(() => {
+      setResendTimer(prev => prev - 1);
+    }, 1000);
+    
+    // Clear the interval when component unmounts or timer reaches 0
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
   const sendVerificationCode = async () => {
     try {
       if (!phoneNumber) {
-        setError("Please enter your phone number");
+        showError("Please enter your phone number");
         return;
       }
 
       // Validate phone number
       const phoneRegex = /^[6-9]\d{9}$/; // Indian mobile number pattern (10 digits, starting with 6, 7, 8, or 9)
       if (!phoneRegex.test(phoneNumber)) {
-        setError("Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9)");
+        showError("Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9)");
         return;
       }
 
+      setIsLoadingVerification(true);
       const formattedPhoneNumber = `+91${phoneNumber}`; // Assuming Indian numbers
       const response = await api.post(
         "/api/verify/send",
@@ -463,6 +548,8 @@ const DriverProfileSetup: React.FC = () => {
         setIsVerifying(true);
         setError(null);
         setSuccessMessage("Verification code sent successfully!");
+        // Set the resend timer to 90 seconds
+        setResendTimer(90);
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000);
       }
@@ -473,17 +560,23 @@ const DriverProfileSetup: React.FC = () => {
       // Check for specific Twilio error messages
       if (error.response?.data?.message?.includes("unverified")) {
         errorMessage = "This phone number is not verified in our system. For development, please use one of these test numbers: +14155552671, +14155552672, +14155552673, +14155552674, or +14155552675";
+      } else if (error.response?.data?.remainingTime) {
+        // If there's a cooldown period remaining
+        setResendTimer(error.response.data.remainingTime);
+        errorMessage = `Please wait ${error.response.data.remainingTime} seconds before requesting another code`;
       }
       
-      setError(errorMessage);
+      showError(errorMessage);
       setSuccessMessage(null);
+    } finally {
+      setIsLoadingVerification(false);
     }
   };
 
   const verifyCode = async () => {
     try {
       if (!verificationCode) {
-        setError("Please enter the verification code");
+        showError("Please enter the verification code");
         return;
       }
 
@@ -512,7 +605,7 @@ const DriverProfileSetup: React.FC = () => {
     } catch (error: any) {
       console.error("Error verifying code:", error);
       const errorMessage = error.response?.data?.message || "Invalid verification code. Please try again.";
-      setError(errorMessage);
+      showError(errorMessage);
       setSuccessMessage(null);
     }
   };
@@ -648,7 +741,7 @@ const DriverProfileSetup: React.FC = () => {
         <div className="bg-white shadow-md rounded-lg p-6">
           <ErrorMessage />
           <SuccessMessage />
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => handleSubmit(e)}>
             {/* Step 1: Personal Information - Only show if not already collected */}
             {currentStep === 1 && !currentUser?.phone && (
               <div className="space-y-4">
@@ -704,15 +797,17 @@ const DriverProfileSetup: React.FC = () => {
                   </div>
                 </div>
 
-
                 {!isPhoneVerified && !isVerifying && (
-                  <button
-                    type="button"
+                  <LoadingButton
                     onClick={sendVerificationCode}
+                    disabled={resendTimer > 0}
+                    loadingText="Sending..."
                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Send Verification Code
-                  </button>
+                    {resendTimer > 0 
+                      ? `Resend (${resendTimer}s)` 
+                      : "Send Verification Code"}
+                  </LoadingButton>
                 )}
 
                 {isVerifying && (
@@ -729,13 +824,25 @@ const DriverProfileSetup: React.FC = () => {
                         placeholder="Enter verification code"
                   />
                 </div>
-                    <button
-                      type="button"
-                      onClick={verifyCode}
-                      className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      Verify Code
-                    </button>
+                    <div className="flex space-x-2">
+                      <LoadingButton
+                        onClick={verifyCode}
+                        loadingText="Verifying..."
+                        className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        Verify Code
+                      </LoadingButton>
+                      <LoadingButton
+                        onClick={sendVerificationCode}
+                        disabled={resendTimer > 0}
+                        loadingText="Sending..."
+                        className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        {resendTimer > 0 
+                          ? `Resend (${resendTimer}s)` 
+                          : "Resend Code"}
+                      </LoadingButton>
+                    </div>
                   </div>
                 )}
 
@@ -956,10 +1063,20 @@ const DriverProfileSetup: React.FC = () => {
                         ? ""
                         : formData.pricePerKm
                     }
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (e.target.value === "" || (value >= 1 && value <= 10)) {
+                        handleInputChange(e);
+                      } else {
+                        // If outside range, show error but still update the field
+                        handleInputChange(e);
+                        showError("Price per kilometer must be between ₹1 and ₹10");
+                      }
+                    }}
                     required
                     min="1"
                     max="10"
+                    step="0.1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter price per Km"
                   />
@@ -967,9 +1084,9 @@ const DriverProfileSetup: React.FC = () => {
                     This is the price each passenger will pay per Km of travel.
                     You can adjust this price later.
                     <br />
-                    (Must be between <span className="font-bold text-green-500">₹1</span> and <span className="font-bold text-red-500">₹10</span>, ideally between{" "}
+                    Ideally, it must be between{" "}
                     <span className="font-bold text-green-500">₹4</span> to{" "}
-                    <span className="font-bold text-red-500">₹6</span>)
+                    <span className="font-bold text-red-500">₹6</span>
                   </p>
                 </div>
 
@@ -998,7 +1115,7 @@ const DriverProfileSetup: React.FC = () => {
                     Back
                   </button>
                   <LoadingButton
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit()}
                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     disabled={isSubmitting}
                     loadingText="Saving Profile..."
