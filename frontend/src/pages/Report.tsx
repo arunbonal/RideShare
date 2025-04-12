@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
 import { ArrowLeft, X, Bug } from "lucide-react";
 import LoadingButton from "../components/LoadingButton";
+import heic2any from "heic2any"; // Import heic2any library for HEIC conversion
+import LoadingSpinner from "../components/LoadingSpinner";
 
 interface ExtendedRide extends Ride {
   totalFare: number;
@@ -81,6 +83,7 @@ const Report: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   // Helper functions to detect browser and device
   function getBrowser() {
@@ -384,6 +387,9 @@ const Report: React.FC = () => {
         });
         setSelectedFile(null);
         
+        // Show loading spinner while redirecting
+        setRedirecting(true);
+        
         // Redirect back to dashboard after 2 seconds
         setTimeout(() => {
           navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
@@ -410,45 +416,95 @@ const Report: React.FC = () => {
   };
 
   // Handle file upload for screenshots
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const file = files[0];
+      let file = files[0];
       
-      // Check if file is an image
-      if (!file.type.match('image.*')) {
-        setNotification({
-          show: true,
-          message: "Please select an image file",
-          type: "error"
-        });
-        return;
-      }
-      
-      // Check if file size is less than 500KB (not 5MB)
-      if (file.size > 500 * 1024) {
-        setNotification({
-          show: true,
-          message: "Image size should be less than 500KB",
-          type: "error"
-        });
-        return;
-      }
-      
-      // Store the file object for later FormData submission
-      setSelectedFile(file);
-      
-      // Also display a preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setBugReportForm({
-            ...bugReportForm,
-            screenshot: e.target.result as string
+      try {
+        // Check if file is an image
+        if (!file.type.match('image.*')) {
+          setNotification({
+            show: true,
+            message: "Please select an image file",
+            type: "error"
           });
+          return;
         }
-      };
-      reader.readAsDataURL(file);
+        
+        // Check if file size is less than 500KB
+        if (file.size > 500 * 1024) {
+          setNotification({
+            show: true,
+            message: "Image size should be less than 500KB",
+            type: "error"
+          });
+          return;
+        }
+        
+        // Check if the file is in HEIC format
+        if (file.type === "image/heic" || file.type === "image/heif" || 
+            file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+          try {
+            setNotification({
+              show: true,
+              message: "Converting image format...",
+              type: "success"
+            });
+            
+            // Convert HEIC to PNG using heic2any
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: "image/png",
+              quality: 0.8
+            });
+            
+            // If it's an array, take the first item
+            const pngBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            
+            // Create a new File object from the blob
+            file = new File([pngBlob], 
+                      file.name.replace(/\.(heic|heif)$/i, '.png'), 
+                      { type: 'image/png' });
+            
+            setNotification({
+              show: true,
+              message: "Image converted successfully",
+              type: "success"
+            });
+          } catch (conversionError) {
+            console.error("Error converting HEIC image:", conversionError);
+            setNotification({
+              show: true,
+              message: "Failed to convert image format. Please try a different image.",
+              type: "error"
+            });
+            return;
+          }
+        }
+        
+        // Store the file object for later FormData submission
+        setSelectedFile(file);
+        
+        // Also display a preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setBugReportForm({
+              ...bugReportForm,
+              screenshot: e.target.result as string
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error processing file:", error);
+        setNotification({
+          show: true,
+          message: "Error processing image. Please try again.",
+          type: "error"
+        });
+      }
     }
   };
 
@@ -474,6 +530,10 @@ const Report: React.FC = () => {
   return (
     <>
       <Navbar />
+      
+      {/* Loading Spinner when redirecting */}
+      {redirecting && <LoadingSpinner fullScreen />}
+      
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Notification Toast */}
         {notification.show && (
