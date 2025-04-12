@@ -109,7 +109,7 @@ const AdminDashboard: React.FC = () => {
   const [notification, setNotification] = useState<{ 
     show: boolean; 
     message: string; 
-    type: 'success' | 'error' 
+    type: 'success' | 'error'  
   }>({ show: false, message: '', type: 'success' });
   const [bugReports, setBugReports] = useState<AdminBugReport[]>([]);
   const [filteredBugReports, setFilteredBugReports] = useState<AdminBugReport[]>([]);
