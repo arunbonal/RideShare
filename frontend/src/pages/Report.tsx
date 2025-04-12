@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
 import { ArrowLeft, X, Bug } from "lucide-react";
+import LoadingButton from "../components/LoadingButton";
 
 interface ExtendedRide extends Ride {
   totalFare: number;
@@ -77,6 +78,9 @@ const Report: React.FC = () => {
     type: "success" | "error";
   }>({ show: false, message: "", type: "success" });
   const [rideIssues, setRideIssues] = useState<{ [key: string]: { [key: string]: boolean } }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [issueSubmitting, setIssueSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Helper functions to detect browser and device
   function getBrowser() {
@@ -209,6 +213,7 @@ const Report: React.FC = () => {
 
   const handleReportIssue = async (rideId: string, userId: string) => {
     try {
+      setIssueSubmitting(true);
       // Check if an issue already exists for this ride
       const existingIssue = await api.get(
         `/api/issues/ride/${rideId}`
@@ -253,6 +258,8 @@ const Report: React.FC = () => {
         message: error.response?.data?.message || "Failed to submit report. Please try again.",
         type: "error"
       });
+    } finally {
+      setIssueSubmitting(false);
     }
   };
 
@@ -311,16 +318,36 @@ const Report: React.FC = () => {
     e.preventDefault();
     
     try {
+      setIsSubmitting(true);
+      
       if (!bugReportForm.title.trim() || !bugReportForm.description.trim()) {
         setNotification({
           show: true,
           message: "Title and description are required",
           type: "error"
         });
+        setIsSubmitting(false);
         return;
       }
       
-      const response = await api.post("/api/bug-reports", bugReportForm);
+      // Use FormData for better mobile compatibility
+      const formData = new FormData();
+      formData.append('type', bugReportForm.type);
+      formData.append('title', bugReportForm.title);
+      formData.append('description', bugReportForm.description);
+      formData.append('browser', bugReportForm.browser);
+      formData.append('device', bugReportForm.device);
+      
+      // If we have a file, append it directly instead of base64
+      if (selectedFile) {
+        formData.append('screenshotFile', selectedFile);
+      }
+      
+      const response = await api.post("/api/bug-reports", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       if (response.data.success) {
         setNotification({
@@ -340,6 +367,7 @@ const Report: React.FC = () => {
           device: getDevice(),
           screenshot: ""
         });
+        setSelectedFile(null);
         
         // Redirect back to dashboard after 2 seconds
         setTimeout(() => {
@@ -353,6 +381,8 @@ const Report: React.FC = () => {
         message: error.response?.data?.message || "Failed to submit report. Please try again.",
         type: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -372,16 +402,20 @@ const Report: React.FC = () => {
         return;
       }
       
-      // Check if file size is less than 5MB
-      if (file.size > 5 * 1024 * 1024) {
+      // Check if file size is less than 500KB (not 5MB)
+      if (file.size > 500 * 1024) {
         setNotification({
           show: true,
-          message: "Image size should be less than 5MB",
+          message: "Image size should be less than 500KB",
           type: "error"
         });
         return;
       }
       
+      // Store the file object for later FormData submission
+      setSelectedFile(file);
+      
+      // Also display a preview
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -860,15 +894,23 @@ const Report: React.FC = () => {
                   type="button"
                   onClick={() => navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard")}
                   className="mr-4 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
+                <LoadingButton
+                  onClick={async () => {
+                    const form = document.querySelector('form');
+                    if (form) {
+                      form.dispatchEvent(new Event('submit', { cancelable: true }));
+                    }
+                  }}
+                  loadingText="Submitting..."
                   className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  disabled={isSubmitting}
                 >
                   Submit
-                </button>
+                </LoadingButton>
               </div>
             </form>
           </div>
@@ -916,21 +958,23 @@ const Report: React.FC = () => {
                     });
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  disabled={issueSubmitting}
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   onClick={() => handleReportIssue(
                     selectedRide._id,
                     currentUser.activeRoles.driver
                       ? selectedRide.hitchers?.find(h => h.status === "accepted")?.user._id || ""
                       : selectedRide.driver._id
                   )}
-                  disabled={!issueForm.description.trim()}
+                  disabled={!issueForm.description.trim() || issueSubmitting}
+                  loadingText="Submitting..."
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Submit Report
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </div>

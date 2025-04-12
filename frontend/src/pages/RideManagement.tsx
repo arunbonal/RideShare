@@ -5,6 +5,7 @@ import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import { Plus, ArrowLeft } from "lucide-react";
 import api from "../utils/api"; // Import API utility
+import LoadingButton from "../components/LoadingButton"; // Import LoadingButton
 
 const RideManagement: React.FC = () => {
   const { currentUser, allRides, setAllRides, fetchAllRides, refreshUserData } = useAuth();
@@ -232,12 +233,14 @@ const RideManagement: React.FC = () => {
                 >
                   Keep Ride
                 </button>
-                <button
+                <LoadingButton
                   onClick={handleCancelRide}
                   className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  disabled={loading}
+                  loadingText="Cancelling..."
                 >
                   Yes, Cancel Ride
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </div>
