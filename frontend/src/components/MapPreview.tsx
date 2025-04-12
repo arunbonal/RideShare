@@ -244,7 +244,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
               {hitcherPhones && hitcherPhones.length > selectedHitcherIndex && (
                 <div className="flex items-center">
                   <span className="text-gray-500 mr-2">Phone:</span>
-                  <span className="text-gray-900">+91 {hitcherPhones[selectedHitcherIndex].substring(3)}</span>
+                  <span className="text-gray-900">+91{hitcherPhones[selectedHitcherIndex].substring(3)}</span>
                 </div>
               )}
               {hitcherFares && hitcherFares.length > selectedHitcherIndex && (
