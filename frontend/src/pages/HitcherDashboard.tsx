@@ -778,6 +778,12 @@ const HitcherDashboard: React.FC = () => {
                             <p className="text-gray-500">
                               {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
                             </p>
+                            <div className="flex items-center text-gray-600 mt-1">
+                              <Clock className="h-5 w-5 mr-2" />
+                              {ride.direction === "toCollege"
+                                ? formatTime(ride.toCollegeTime)
+                                : formatTime(ride.fromCollegeTime)}
+                            </div>
                           </div>
                           <div className="flex flex-col items-end">
                             <span
@@ -820,12 +826,7 @@ const HitcherDashboard: React.FC = () => {
 
                         {expandedRides.has(ride._id) && (
                           <div className="mt-4 space-y-3">
-                            <div className="flex items-center text-gray-600">
-                              <Clock className="h-5 w-5 mr-2" />
-                              {ride.direction === "toCollege"
-                                ? formatTime(ride.toCollegeTime)
-                                : formatTime(ride.fromCollegeTime)}
-                            </div>
+                            
                             {activeTab === "past" ? (
                               <>
                                 {ride.direction === "toCollege" ? (
