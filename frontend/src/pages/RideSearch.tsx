@@ -524,29 +524,37 @@ const RideSearch: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <select
-                    id="driverGender"
-                    value={driverGender}
-                    onChange={(e) => setDriverGender(e.target.value as "" | "male" | "female")}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                <div>
+                  <label
+                    htmlFor="driverGender"
+                    className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    <option value="">Any Gender</option>
-                    <option value="male">Male Drivers</option>
-                    <option value="female">Female Drivers</option>
-                  </select>
+                    Driver Gender
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <select
+                      id="driverGender"
+                      value={driverGender}
+                      onChange={(e) => setDriverGender(e.target.value as "" | "male" | "female")}
+                      className="block w-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Any Gender</option>
+                      <option value="male">Male Drivers</option>
+                      <option value="female">Female Drivers</option>
+                    </select>
 
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 h-[42px]"
-                  >
-                    {showFilters ? (
-                      <X className="h-4 w-4 mr-1" />
-                    ) : (
-                      <Filter className="h-4 w-4 mr-1" />
-                    )}
-                    {showFilters ? "Hide Filters" : "Time Filters"}
-                  </button>
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 h-[42px]"
+                    >
+                      {showFilters ? (
+                        <X className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Filter className="h-4 w-4 mr-1" />
+                      )}
+                      {showFilters ? "Hide Filters" : "Time Filters"}
+                    </button>
+                  </div>
                 </div>
               </div>
 

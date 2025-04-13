@@ -15,20 +15,31 @@ function initializeSentry(app) {
                 new Sentry.Integrations.Express({ app }),
                 new ProfilingIntegration(),
             ],
-            tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-            profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+            tracesSampleRate: 1.0,
+            profilesSampleRate: 1.0,
             environment: process.env.NODE_ENV,
-            enabled: process.env.NODE_ENV === 'production',
-            debug: process.env.NODE_ENV !== 'production',
+            enabled: true,
+            debug: true,
             minimumBreadcrumbLevel: 'debug',
             minimumEventLevel: 'info',
             beforeSend(event) {
+                console.log('Sending event to Sentry:', {
+                    eventId: event.event_id,
+                    level: event.level,
+                    type: event.type
+                });
+                
                 if (event.request && event.request.headers) {
                     delete event.request.headers.cookie;
                     delete event.request.headers.authorization;
                 }
                 return event;
             }
+        });
+
+        Sentry.captureMessage('Sentry initialization test', {
+            level: 'info',
+            tags: { test: true }
         });
 
         console.log('Sentry initialized successfully');
