@@ -289,7 +289,7 @@ const RideManagement: React.FC = () => {
                     className="border border-gray-200 rounded-md p-4 flex flex-col sm:flex-row justify-between"
                   >
                     <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center justify-between">
                         <p className="font-medium text-blue-600">
                           {formatDate(ride.date)}
                         </p>
@@ -320,8 +320,8 @@ const RideManagement: React.FC = () => {
                           </>
                         )}
                       </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm text-gray-600 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
                           Available Seats: <span className="font-semibold">{ride.availableSeats}</span>
                           {(ride.hitchers?.filter(
                             (h) => h.status === "accepted"
@@ -336,19 +336,19 @@ const RideManagement: React.FC = () => {
                             </span>
                           )}
                         </span>
+                        
+                        {ride.status === "scheduled" && (
+                          <LoadingButton
+                            onClick={() => handleCancelClick(index, ride._id)}
+                            className="px-4 py-1 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            loadingText="..."
+                          >
+                            Cancel Ride
+                          </LoadingButton>
+                        )}
                       </p>
                     </div>
-                    <div className="flex mt-4 sm:mt-0 sm:flex-col sm:items-end gap-2 justify-end">
-                      {ride.status === "scheduled" && (
-                        <LoadingButton
-                          onClick={() => handleCancelClick(index, ride._id)}
-                          className="inline-flex items-center px-3 py-1.5 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                          loadingText="..."
-                        >
-                          Cancel Ride
-                        </LoadingButton>
-                      )}
-                    </div>
+                    
                   </div>
                 ))}
               </div>

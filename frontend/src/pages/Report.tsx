@@ -316,105 +316,6 @@ const Report: React.FC = () => {
     return true;
   };
 
-  // Modified bug report form submission to not require an event parameter
-  const handleBugReportSubmit = async () => {
-    try {
-      setIsSubmitting(true);
-      
-      // More robust validation
-      let errorMessage = "";
-      
-      if (!bugReportForm.type) {
-        errorMessage = "Please select a report type (Bug or Feature)";
-      } else if (!bugReportForm.title || bugReportForm.title.trim() === "") {
-        errorMessage = "Title is required";
-      } else if (!bugReportForm.description || bugReportForm.description.trim() === "") {
-        errorMessage = "Description is required";
-      }
-      
-      if (errorMessage) {
-        setNotification({
-          show: true,
-          message: errorMessage,
-          type: "error"
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Prepare basic report data
-      const reportData: {
-        type: "bug" | "feature";
-        title: string;
-        description: string;
-        browser: string;
-        device: string;
-        screenshot?: string;
-      } = {
-        type: bugReportForm.type,
-        title: bugReportForm.title,
-        description: bugReportForm.description,
-        browser: bugReportForm.browser || "Unknown",
-        device: bugReportForm.device || "Unknown"
-      };
-      
-      // Add screenshot if available (use the existing base64 string from the preview)
-      if (bugReportForm.screenshot) {
-        reportData.screenshot = bugReportForm.screenshot;
-      }
-      
-      // Send the report data as JSON
-      
-      const response = await api.post("/api/bug-reports", reportData);
-      
-      if (response.data.success) {
-        setNotification({
-          show: true,
-          message: bugReportForm.type === "bug" 
-            ? "Bug report submitted successfully" 
-            : "Feature request submitted successfully",
-          type: "success"
-        });
-        
-        // Clear form after successful submission
-        setBugReportForm({
-          type: bugReportForm.type,
-          title: "",
-          description: "",
-          browser: getBrowser(),
-          device: getDevice(),
-          screenshot: ""
-        });
-        setSelectedFile(null);
-        
-        // Show loading spinner while redirecting
-        setRedirecting(true);
-        
-        // Redirect back to dashboard after 2 seconds
-        setTimeout(() => {
-          navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
-        }, 2000);
-      }
-    } catch (error: any) {
-      console.error("Error submitting bug report:", error);
-      
-      // More detailed error logging
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-      }
-      
-      setNotification({
-        show: true,
-        message: error.response?.data?.message || "Failed to submit report. Please try again.",
-        type: "error"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Handle file upload for screenshots
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -423,7 +324,7 @@ const Report: React.FC = () => {
       
       try {
         // Check if file is an image
-        if (!file.type.match('image.*')) {
+        if (!file.type.match('image.*') && !file.name.match(/\.(jpg|jpeg|png|gif|heic|heif)$/i)) {
           setNotification({
             show: true,
             message: "Please select an image file",
@@ -486,15 +387,23 @@ const Report: React.FC = () => {
         // Store the file object for later FormData submission
         setSelectedFile(file);
         
-        // Also display a preview
+        // Also display a preview using FileReader
         const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
+        reader.onloadend = () => {
+          if (reader.result) {
             setBugReportForm({
               ...bugReportForm,
-              screenshot: e.target.result as string
+              screenshot: reader.result as string
             });
           }
+        };
+        reader.onerror = () => {
+          console.error("Error reading file:", reader.error);
+          setNotification({
+            show: true,
+            message: "Error reading image file. Please try again.",
+            type: "error"
+          });
         };
         reader.readAsDataURL(file);
       } catch (error) {
@@ -505,6 +414,110 @@ const Report: React.FC = () => {
           type: "error"
         });
       }
+    }
+  };
+
+  // Modified bug report form submission to handle mobile uploads better
+  const handleBugReportSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // More robust validation
+      let errorMessage = "";
+      
+      if (!bugReportForm.type) {
+        errorMessage = "Please select a report type (Bug or Feature)";
+      } else if (!bugReportForm.title || bugReportForm.title.trim() === "") {
+        errorMessage = "Title is required";
+      } else if (!bugReportForm.description || bugReportForm.description.trim() === "") {
+        errorMessage = "Description is required";
+      }
+      
+      if (errorMessage) {
+        setNotification({
+          show: true,
+          message: errorMessage,
+          type: "error"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Prepare basic report data
+      const reportData: any = {
+        type: bugReportForm.type,
+        title: bugReportForm.title,
+        description: bugReportForm.description,
+        browser: bugReportForm.browser || "Unknown",
+        device: bugReportForm.device || "Unknown"
+      };
+      
+      // Add screenshot if available
+      if (bugReportForm.screenshot) {
+        // Use the base64 image string for the screenshot
+        reportData.screenshot = bugReportForm.screenshot;
+        
+        // Check if the base64 string is too large
+        const approximateSize = Math.ceil((bugReportForm.screenshot.length * 3) / 4);
+        if (approximateSize > 1024 * 1024) {
+          setNotification({
+            show: true,
+            message: "Screenshot is too large. Please use a smaller image.",
+            type: "error"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      console.log("Sending bug report data, screenshot included:", !!reportData.screenshot);
+      const response = await api.post("/api/bug-reports", reportData);
+      
+      if (response.data.success) {
+        setNotification({
+          show: true,
+          message: bugReportForm.type === "bug" 
+            ? "Bug report submitted successfully" 
+            : "Feature request submitted successfully",
+          type: "success"
+        });
+        
+        // Clear form after successful submission
+        setBugReportForm({
+          type: bugReportForm.type,
+          title: "",
+          description: "",
+          browser: getBrowser(),
+          device: getDevice(),
+          screenshot: ""
+        });
+        setSelectedFile(null);
+        
+        // Show loading spinner while redirecting
+        setRedirecting(true);
+        
+        // Redirect back to dashboard after 2 seconds
+        setTimeout(() => {
+          navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
+        }, 2000);
+      }
+    } catch (error: any) {
+      console.error("Error submitting bug report:", error);
+      
+      // More detailed error logging
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      }
+      
+      setNotification({
+        show: true,
+        message: error.response?.data?.message || "Failed to submit report. Please try again.",
+        type: "error"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -542,15 +555,9 @@ const Report: React.FC = () => {
               notification.type === "success"
                 ? "bg-green-50 text-green-800 border border-green-200"
                 : "bg-red-50 text-red-800 border border-red-200"
-            } transition-all duration-300 z-50 flex items-center`}
+            } transition-all duration-300 z-50`}
           >
             <span>{notification.message}</span>
-            <button
-              onClick={() => setNotification({ ...notification, show: false })}
-              className="ml-3 text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
         )}
 
@@ -1026,7 +1033,7 @@ const Report: React.FC = () => {
                 <textarea
                   value={issueForm.description}
                   onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-2 py-2"
                   rows={3}
                   placeholder="Please describe the issue in detail..."
                 />
