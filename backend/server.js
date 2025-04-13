@@ -21,24 +21,15 @@ const PORT = process.env.PORT || 5000;
 // Trust proxy - required when running behind a reverse proxy like Render
 app.set('trust proxy', 1);
 
-// Apply security middleware first
-app.use(securityMiddleware);
-
-// Apply rate limiters
-app.use('/api/auth', authLimiter);
-app.use('/api/verify', verificationLimiter);
-app.use('/api', generalLimiter);
-
 // Body parsing middleware with size limits
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// Middleware
+// CORS configuration
 app.use(
   cors({
     origin: function(origin, callback) {
       const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173", "https://rideshare-frontend.vercel.app"];
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
@@ -51,6 +42,9 @@ app.use(
   })
 );
 
+// Apply security middleware
+app.use(securityMiddleware);
+
 // Session configuration
 app.use(
   session({
@@ -62,7 +56,7 @@ app.use(
       collectionName: "sessions",
     }),
     cookie: {
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
+      maxAge: 1000 * 60 * 60 * 24,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
@@ -74,13 +68,19 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Apply rate limiters to specific routes before route handlers
+app.use('/api/auth/*', authLimiter);
+app.use('/api/verify/*', verificationLimiter);
+// Apply general limiter last to avoid double counting
+app.use('/api/*', generalLimiter);
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/rides", rideRoutes);
 app.use("/api/verify", verificationRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/issues", issuesRoutes); 
+app.use("/api/issues", issuesRoutes);
 app.use("/api/bug-reports", bugReportRoutes);
 
 // Health check route

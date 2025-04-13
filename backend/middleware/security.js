@@ -15,18 +15,32 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
     // Use Redis as store if available
     store: redisClient ? {
         async increment(key) {
-            const hits = await redisClient.incr(key);
-            if (hits === 1) {
-                await redisClient.expire(key, Math.ceil(windowMs / 1000));
+            const current = await redisClient.get(key);
+            if (current !== null) {
+                const hits = parseInt(current) + 1;
+                await redisClient.set(key, hits.toString());
+                return {
+                    totalHits: hits,
+                    resetTime: new Date(Date.now() + windowMs)
+                };
             }
+            await redisClient.set(key, '1');
+            await redisClient.expire(key, Math.ceil(windowMs / 1000));
             return {
-                totalHits: hits,
+                totalHits: 1,
                 resetTime: new Date(Date.now() + windowMs)
             };
         },
         async decrement(key) {
-            const hits = await redisClient.decr(key);
-            return hits < 0 ? await redisClient.del(key) : hits;
+            const current = await redisClient.get(key);
+            if (current === null) return 0;
+            const hits = parseInt(current) - 1;
+            if (hits <= 0) {
+                await redisClient.del(key);
+                return 0;
+            }
+            await redisClient.set(key, hits.toString());
+            return hits;
         },
         async resetKey(key) {
             await redisClient.del(key);
@@ -36,6 +50,15 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
     keyGenerator: (req) => {
         return req.ip;
     },
+    // Skip OPTIONS requests
+    skip: (req) => req.method === 'OPTIONS',
+    // Handler for when rate limit is exceeded
+    handler: (req, res) => {
+        res.status(429).json({
+            error: message,
+            retryAfter: windowMs / 1000
+        });
+    }
 });
 
 // General rate limiter - 100 requests per minute
