@@ -5,6 +5,7 @@ const MongoStore = require("connect-mongo");
 const passport = require("./auth");
 const { connectRedis } = require("./config/redis");
 const connectDB = require("./config/database");
+const { generalLimiter, authLimiter, verificationLimiter, securityMiddleware } = require("./middleware/security");
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
 const rideRoutes = require("./routes/ride");
@@ -16,6 +17,14 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Apply security middleware first
+app.use(securityMiddleware);
+
+// Apply rate limiters
+app.use('/api/auth', authLimiter);
+app.use('/api/verify', verificationLimiter);
+app.use('/api', generalLimiter);
 
 // Middleware
 app.use(
