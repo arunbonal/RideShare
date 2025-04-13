@@ -121,6 +121,9 @@ const AdminDashboard: React.FC = () => {
   const [loadingBugReport, setLoadingBugReport] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState<string | null>(null);
   const [loadingRide, setLoadingRide] = useState<string | null>(null);
+  const [deletingBugReport, setDeletingBugReport] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
+  const [bugReportToDelete, setBugReportToDelete] = useState<AdminBugReport | null>(null);
   const navigate = useNavigate();
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
@@ -292,6 +295,41 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setLoadingBugReport(null);
     }
+  };
+
+  // Add function to handle bug report deletion
+  const deleteBugReport = async (reportId: string) => {
+    try {
+      setDeletingBugReport(reportId);
+      const response = await api.delete(`/api/bug-reports/${reportId}`);
+      
+      if (response.data.success) {
+        // Remove the deleted report from state
+        setBugReports(bugReports.filter(report => report._id !== reportId));
+        setFilteredBugReports(filteredBugReports.filter(report => report._id !== reportId));
+        
+        // If we're viewing the details of the deleted report, close the modal
+        if (selectedBugReport && selectedBugReport._id === reportId) {
+          setSelectedBugReport(null);
+          setShowBugReportModal(false);
+        }
+        
+        showNotification('Report deleted successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Error deleting bug report:', error);
+      showNotification('Failed to delete report', 'error');
+    } finally {
+      setDeletingBugReport(null);
+      setShowDeleteConfirmation(false);
+      setBugReportToDelete(null);
+    }
+  };
+
+  // Function to confirm deletion
+  const confirmDeleteBugReport = (report: AdminBugReport) => {
+    setBugReportToDelete(report);
+    setShowDeleteConfirmation(true);
   };
 
   return (
@@ -739,14 +777,24 @@ const AdminDashboard: React.FC = () => {
                             {formatDateTime(report.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <LoadingButton
-                              onClick={() => viewBugReportDetails(report)}
-                              className="text-blue-600 hover:text-blue-900"
-                              loadingText="Loading..."
-                              disabled={loadingBugReport === report._id}
-                            >
-                              Details
-                            </LoadingButton>
+                            <div className="flex justify-end space-x-2">
+                              <LoadingButton
+                                onClick={() => viewBugReportDetails(report)}
+                                className="text-blue-600 hover:text-blue-900 px-2 py-1"
+                                loadingText="Loading..."
+                                disabled={loadingBugReport === report._id}
+                              >
+                                Details
+                              </LoadingButton>
+                              <LoadingButton
+                                onClick={() => confirmDeleteBugReport(report)}
+                                className="text-red-600 hover:text-red-900 px-2 py-1"
+                                loadingText="Deleting..."
+                                disabled={deletingBugReport === report._id}
+                              >
+                                Delete
+                              </LoadingButton>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -776,29 +824,39 @@ const AdminDashboard: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900">
                 {selectedBugReport.type === 'bug' ? 'Bug Report' : 'Feature Request'} Details
               </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBugReportModal(false);
-                  setSelectedBugReport(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <span className="sr-only">Close</span>
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div className="flex items-center space-x-2">
+                <LoadingButton
+                  onClick={() => confirmDeleteBugReport(selectedBugReport)}
+                  className="text-white bg-red-600 hover:bg-red-700 rounded-md px-3 py-1 text-sm mr-3"
+                  loadingText="Deleting..."
+                  disabled={deletingBugReport === selectedBugReport._id}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  Delete
+                </LoadingButton>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBugReportModal(false);
+                    setSelectedBugReport(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="px-6 py-4 divide-y divide-gray-200">
               {/* Title and Description */}
@@ -868,6 +926,198 @@ const AdminDashboard: React.FC = () => {
                   {formatDateTime(selectedBugReport.createdAt)}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && bugReportToDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-20 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Deletion</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete this {bugReportToDelete.type === 'bug' ? 'bug report' : 'feature request'}?
+              <span className="block font-medium mt-2">"{bugReportToDelete.title}"</span>
+              <span className="block text-xs mt-1">This action cannot be undone.</span>
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  setBugReportToDelete(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <LoadingButton
+                onClick={() => deleteBugReport(bugReportToDelete._id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                loadingText="Deleting..."
+                disabled={deletingBugReport === bugReportToDelete._id}
+              >
+                Delete
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Issue Details Modal */}
+      {selectedIssue && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-10 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium text-gray-900">
+                Issue Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedIssue(null)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <span className="sr-only">Close</span>
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 divide-y divide-gray-200">
+              {/* Issue Type and Status */}
+              <div className="py-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-medium text-gray-900">
+                    {selectedIssue.type.charAt(0).toUpperCase() + selectedIssue.type.slice(1)} Issue
+                  </h4>
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      selectedIssue.status === 'open'
+                        ? 'bg-red-100 text-red-800'
+                        : selectedIssue.status === 'in-progress'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    {selectedIssue.status.charAt(0).toUpperCase() + selectedIssue.status.slice(1)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {selectedIssue.description}
+                </p>
+              </div>
+
+              {/* Ride Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Ride Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Date</p>
+                    <p className="text-gray-700">{formatDate(selectedIssue.ride.date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Direction</p>
+                    <p className="text-gray-700">
+                      {selectedIssue.ride.direction === 'toCollege' ? 'To College' : 'From College'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">From</p>
+                    <p className="text-gray-700">{selectedIssue.ride.from}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">To</p>
+                    <p className="text-gray-700">{selectedIssue.ride.to}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reporter Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Reporter</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Name</p>
+                    <p className="text-gray-700">{selectedIssue.reporter.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Phone</p>
+                    <p className="text-gray-700">{selectedIssue.reporter.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Email</p>
+                    <p className="text-gray-700">{selectedIssue.reporter.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Role</p>
+                    <p className="text-gray-700">
+                      {selectedIssue.reporter.activeRoles?.driver ? 'Driver' : 
+                       selectedIssue.reporter.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reported User Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Reported User</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Name</p>
+                    <p className="text-gray-700">{selectedIssue.reportedUser.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Phone</p>
+                    <p className="text-gray-700">{selectedIssue.reportedUser.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Email</p>
+                    <p className="text-gray-700">{selectedIssue.reportedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Role</p>
+                    <p className="text-gray-700">
+                      {selectedIssue.reportedUser.activeRoles?.driver ? 'Driver' : 
+                       selectedIssue.reportedUser.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Information */}
+              <div className="py-3">
+                <h4 className="font-medium text-gray-900 mb-2">Date Reported</h4>
+                <p className="text-sm text-gray-700">
+                  {formatDateTime(selectedIssue.createdAt)}
+                </p>
+              </div>
+
+              {/* Resolution Information (if resolved) */}
+              {selectedIssue.status === 'resolved' && (
+                <div className="py-3">
+                  <h4 className="font-medium text-gray-900 mb-2">Resolution</h4>
+                  <div className="text-sm">
+                    <p className="text-gray-700">{selectedIssue.resolution || 'No resolution details provided.'}</p>
+                    {selectedIssue.resolvedBy && (
+                      <div className="mt-2">
+                        <p className="text-gray-500">Resolved By</p>
+                        <p className="text-gray-700">{selectedIssue.resolvedBy.name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

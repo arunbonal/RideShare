@@ -84,6 +84,7 @@ const Report: React.FC = () => {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [dailyBugReportsCount, setDailyBugReportsCount] = useState<number>(0);
 
   // Helper functions to detect browser and device
   function getBrowser() {
@@ -503,10 +504,52 @@ const Report: React.FC = () => {
     });
   };
 
-  // Modified bug report form submission with extreme compression and potential splitting
+  // Add this function to check daily report limit
+  const checkDailyReportLimit = async (): Promise<boolean> => {
+    try {
+      const response = await api.get('/api/bug-reports/daily-count');
+      const count = response.data.count || 0;
+      setDailyBugReportsCount(count);
+      
+      // If count is already 2 or more, return false (limit reached)
+      return count < 2;
+    } catch (error) {
+      console.error("Error checking daily report limit:", error);
+      // Show error notification to user
+      setNotification({
+        show: true,
+        message: "Couldn't verify your daily report count. Please try again.",
+        type: "error"
+      });
+      // Fail closed if we can't verify the count (don't allow more reports)
+      return false;
+    }
+  };
+
+  // Fetch the daily count on component mount and when switching to bug/feature tab
+  useEffect(() => {
+    if (reportType === "bug" || reportType === "feature") {
+      checkDailyReportLimit();
+    }
+  }, [reportType]);
+
+  // Modified bug report form submission to include limit check
   const handleBugReportSubmit = async () => {
     try {
       setIsSubmitting(true);
+      
+      // Always check daily limit first and get fresh count
+      const underLimit = await checkDailyReportLimit();
+      
+      if (!underLimit) {
+        setNotification({
+          show: true,
+          message: "You've reached the limit of 2 reports per day. Please try again tomorrow.",
+          type: "error"
+        });
+        setIsSubmitting(false);
+        return;
+      }
       
       // More robust validation
       let errorMessage = "";
@@ -1199,6 +1242,15 @@ const Report: React.FC = () => {
                   </div>
                 </>
               )}
+
+              <div className="mb-4 flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  Daily reports: <span className={dailyBugReportsCount >= 2 ? 'text-red-600 font-bold' : 'font-medium'}>{dailyBugReportsCount}/2</span>
+                </p>
+                {dailyBugReportsCount >= 2 && (
+                  <p className="text-sm text-red-600">Daily limit reached</p>
+                )}
+              </div>
 
               <div className="flex justify-end">
                 <button

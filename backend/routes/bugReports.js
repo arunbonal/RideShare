@@ -17,6 +17,13 @@ router.get('/', isAuthenticated, function(req, res) {
   return bugReportController.getAllBugReports(req, res);
 });
 
+// @route   GET /api/bug-reports/daily-count
+// @desc    Get current user's bug report count for today
+// @access  Private
+router.get('/daily-count', isAuthenticated, function(req, res) {
+  return bugReportController.getDailyBugReportCount(req, res);
+});
+
 // @route   GET /api/bug-reports/user
 // @desc    Get bug reports by current user
 // @access  Private

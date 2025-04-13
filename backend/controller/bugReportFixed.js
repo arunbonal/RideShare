@@ -72,6 +72,34 @@ const bugReportController = {
     }
   },
 
+  // Get daily bug report count for current user
+  getDailyBugReportCount: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get start of today (midnight)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Count reports submitted today by this user
+      const count = await BugReport.countDocuments({
+        reporter: userId,
+        createdAt: { $gte: today }
+      });
+      
+      res.json({
+        success: true,
+        count: count
+      });
+    } catch (error) {
+      console.error('Error getting daily bug report count:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error while checking report count'
+      });
+    }
+  },
+
   // Get bug reports by user
   getUserBugReports: async (req, res) => {
     try {
