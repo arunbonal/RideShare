@@ -588,18 +588,6 @@ const RideSearch: React.FC = () => {
               )}
             </div>
 
-            {/* Search Button */}
-            <LoadingButton
-              onClick={() => {
-                // Implement search functionality
-              }}
-              className="w-full bg-blue-600 text-white mb-5 py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-              disabled={!selectedDate || !direction || isLoading}
-              loadingText="Searching..."
-            >
-              Search Rides
-            </LoadingButton>
-
             {filteredRides.length > 0 ? (
               <div className="space-y-6" ref={rideListRef}>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
