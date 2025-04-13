@@ -1,3 +1,4 @@
+const express = require('express');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const hpp = require('hpp');
@@ -65,10 +66,6 @@ const securityMiddleware = [
 
     // Prevent parameter pollution
     hpp(),
-
-    // Parse body with size limits
-    express.json({ limit: '10kb' }),
-    express.urlencoded({ extended: true, limit: '10kb' }),
 ];
 
 // Export all middleware

@@ -26,6 +26,10 @@ app.use('/api/auth', authLimiter);
 app.use('/api/verify', verificationLimiter);
 app.use('/api', generalLimiter);
 
+// Body parsing middleware with size limits
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
 // Middleware
 app.use(
   cors({
@@ -43,7 +47,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
-app.use(express.json());
 
 // Session configuration
 app.use(
