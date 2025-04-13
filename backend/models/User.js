@@ -128,6 +128,7 @@ const UserSchema = new mongoose.Schema({
   phone: {
     type: String,
     unique: true,
+    sparse: true,
   },
   isPhoneVerified: {
     type: Boolean,
@@ -184,15 +185,12 @@ const UserSchema = new mongoose.Schema({
   },
   notifications: [NotificationSchema],
 }, {
-  timestamps: true, // Automatically manage createdAt and updatedAt
-  toJSON: { virtuals: true }, // Include virtuals when converting to JSON
+  timestamps: true,
+  toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
-// Add compound indexes for common queries
-UserSchema.index({ googleId: 1 });
-UserSchema.index({ email: 1 });
-UserSchema.index({ phone: 1 });
+// Only add indexes that don't conflict with existing ones
 UserSchema.index({ college: 1, gender: 1 }); // For filtering users by college and gender
 UserSchema.index({ 'activeRoles.driver': 1, college: 1 }); // For finding active drivers in a college
 UserSchema.index({ 'activeRoles.hitcher': 1, college: 1 }); // For finding active hitchers in a college
@@ -317,6 +315,11 @@ UserSchema.statics.updateHitcherReliability = async function(userId, action) {
 const User = mongoose.model("User", UserSchema);
 
 // Create indexes in background
-User.createIndexes().catch(err => console.error('Error creating indexes:', err));
+User.createIndexes().catch(err => {
+    // Log error but don't crash the app - indexes might already exist
+    if (err.code !== 86) { // Ignore index conflict errors
+        console.error('Error creating indexes:', err);
+    }
+});
 
 module.exports = User;
