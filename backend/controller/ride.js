@@ -1,19 +1,36 @@
 const Ride = require("../models/Ride");
 const User = require("../models/User");
+const { logger } = require("../config/logger");
 
 exports.createRide = async (req, res) => {
   try {
+    logger.info('Creating new ride', {
+      userId: req.user.id,
+      direction: req.body.direction,
+      date: req.body.date
+    });
+
     const newRide = new Ride(req.body);
     const savedRide = await newRide.save();
 
     // Update driver reliability metrics
     await User.updateDriverReliability(savedRide.driver, 'RIDE_CREATED');
 
+    logger.info('Ride created successfully', {
+      rideId: savedRide._id,
+      driverId: savedRide.driver,
+      availableSeats: savedRide.availableSeats
+    });
+
     res
       .status(200)
       .json({ message: "Ride created successfully", ride: savedRide });
   } catch (err) {
-    console.error("Error creating ride:", err);
+    logger.error("Error creating ride", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({
       message: "Error creating ride",
       error: err.message || "Unknown error occurred",
@@ -23,6 +40,14 @@ exports.createRide = async (req, res) => {
 
 exports.getRides = async (req, res) => {
   try {
+    logger.info('Fetching rides', {
+      filters: {
+        date: req.query.date,
+        direction: req.query.direction
+      },
+      userId: req.user?.id
+    });
+
     // Build query based on parameters
     const query = {};
     
@@ -44,9 +69,21 @@ exports.getRides = async (req, res) => {
       .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
       .populate("hitchers.user", "name email phone gender srn college hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order
+
+    logger.info('Rides fetched successfully', {
+      count: rides.length,
+      filters: query,
+      userId: req.user?.id
+    });
+
     res.status(200).json({ message: "Rides fetched successfully", rides });
   } catch (err) {
-    console.error("Error fetching rides:", err);
+    logger.error("Error fetching rides", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id,
+      query: req.query
+    });
     res.status(500).json({
       message: "Error fetching rides",
       error: err.message || "Unknown error occurred",
@@ -58,9 +95,21 @@ exports.cancelRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.body;
     
+    logger.info('Attempting to cancel ride', {
+      rideId,
+      hitcherId,
+      userId: req.user.id,
+      isCancellingEntireRide: !hitcherId
+    });
+
     // Find the ride
     const ride = await Ride.findById(rideId).populate('driver', 'name').populate('hitchers.user', 'name');
     if (!ride) {
+      logger.warn('Ride not found during cancellation', {
+        rideId,
+        hitcherId,
+        userId: req.user.id
+      });
       return res.status(404).json({ success: false, message: 'Ride not found' });
     }
 
@@ -204,7 +253,11 @@ exports.cancelRide = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error cancelling ride:', error);
+    logger.error('Error cancelling ride', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ success: false, message: 'Error cancelling ride' });
   }
 };
@@ -270,7 +323,11 @@ exports.requestRide = async (req, res) => {
     await ride.save();
     res.status(200).json({ message: "Ride request sent successfully" });
   } catch (err) {
-    console.error("Error requesting ride:", err);
+    logger.error("Error requesting ride", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({
       message: "Error requesting ride",
       error: err.message || "Unknown error occurred",
@@ -332,7 +389,11 @@ exports.acceptRide = async (req, res) => {
     await ride.save();
     res.status(200).json({ message: "Ride request accepted successfully" });
   } catch (err) {
-    console.error("Error accepting ride:", err);
+    logger.error("Error accepting ride", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({
       message: "Error accepting ride",
       error: err.message || "Unknown error occurred",
@@ -383,7 +444,11 @@ exports.rejectRide = async (req, res) => {
     await ride.save();
     res.status(200).json({ message: "Ride rejected successfully" });
   } catch (err) {
-    console.error("Error declining ride:", err);
+    logger.error("Error declining ride", {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({
       message: "Error declining ride",
       error: err.message || "Unknown error occurred",
@@ -419,7 +484,11 @@ exports.markNotificationAsRead = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error('Error marking notification as read', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ success: false, message: 'Error marking notification as read' });
   }
 };
@@ -490,7 +559,11 @@ exports.updateRideStatus = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error updating ride status:', error);
+    logger.error('Error updating ride status', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ success: false, message: 'Error updating ride status' });
   }
 };
@@ -521,7 +594,11 @@ exports.calculateReliabilityImpact = async (req, res) => {
     
     res.json({ currentRate, newRate });
   } catch (error) {
-    console.error("Error calculating reliability impact:", error);
+    logger.error("Error calculating reliability impact", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -544,7 +621,11 @@ exports.getRideStatus = async (req, res) => {
       rideStatus: ride.status
     });
   } catch (error) {
-    console.error('Error getting ride status:', error);
+    logger.error('Error getting ride status', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ 
       success: false, 
       message: 'Error retrieving ride status' 
@@ -578,7 +659,11 @@ exports.getHitcherStatus = async (req, res) => {
       hitcherStatus: hitcher.status
     });
   } catch (error) {
-    console.error('Error getting hitcher status:', error);
+    logger.error('Error getting hitcher status', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
     res.status(500).json({ 
       success: false, 
       message: 'Error retrieving hitcher status' 

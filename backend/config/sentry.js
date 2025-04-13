@@ -2,9 +2,15 @@ const Sentry = require('@sentry/node');
 const { ProfilingIntegration } = require("@sentry/profiling-node");
 
 function initializeSentry(app) {
+    // Skip Sentry initialization in development
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('Development environment detected, Sentry disabled');
+        return false;
+    }
+
     if (!process.env.SENTRY_DSN) {
         console.log('Sentry DSN not found, skipping Sentry initialization');
-        return;
+        return false;
     }
 
     try {
@@ -19,27 +25,15 @@ function initializeSentry(app) {
             profilesSampleRate: 1.0,
             environment: process.env.NODE_ENV,
             enabled: true,
-            debug: true,
             minimumBreadcrumbLevel: 'debug',
             minimumEventLevel: 'info',
             beforeSend(event) {
-                console.log('Sending event to Sentry:', {
-                    eventId: event.event_id,
-                    level: event.level,
-                    type: event.type
-                });
-                
                 if (event.request && event.request.headers) {
                     delete event.request.headers.cookie;
                     delete event.request.headers.authorization;
                 }
                 return event;
             }
-        });
-
-        Sentry.captureMessage('Sentry initialization test', {
-            level: 'info',
-            tags: { test: true }
         });
 
         console.log('Sentry initialized successfully');
@@ -51,6 +45,15 @@ function initializeSentry(app) {
 }
 
 function getSentryHandlers() {
+    // Return no-op handlers in development
+    if (process.env.NODE_ENV !== 'production') {
+        return {
+            requestHandler: (req, res, next) => next(),
+            errorHandler: (err, req, res, next) => next(err),
+            tracingHandler: (req, res, next) => next()
+        };
+    }
+
     return {
         requestHandler: Sentry.Handlers.requestHandler({
             request: ['data', 'headers', 'method', 'query_string', 'url'],

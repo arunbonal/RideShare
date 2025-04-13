@@ -6,16 +6,11 @@ class SentryTransport extends winston.Transport {
     constructor(opts) {
         super(opts);
         this.name = 'SentryTransport';
-        this.silent = !process.env.SENTRY_DSN;
-        console.log('SentryTransport initialized:', {
-            silent: this.silent,
-            dsn: !!process.env.SENTRY_DSN
-        });
+        this.silent = process.env.NODE_ENV !== 'production' || !process.env.SENTRY_DSN;
     }
 
     log(info, callback) {
         if (this.silent) {
-            console.log('Sentry transport is silent, skipping log:', info);
             callback();
             return;
         }
@@ -33,37 +28,24 @@ class SentryTransport extends winston.Transport {
                     verbose: 'debug'
                 };
 
-                // Send all important logs to Sentry
-                if (process.env.NODE_ENV === 'production') {
-                    // Always send errors and warnings
-                    if (level === 'error' || level === 'warn') {
-                        if (message instanceof Error) {
-                            console.log('Sending error to Sentry:', message);
-                            Sentry.captureException(message);
-                        } else {
-                            console.log('Sending message to Sentry:', { level, message });
-                            Sentry.captureMessage(message, {
-                                level: levelMap[level],
-                                extra: meta,
-                                tags: { type: level }
-                            });
-                        }
-                    }
-                    // Send all info logs
-                    else if (level === 'info') {
-                        console.log('Sending info to Sentry:', message);
+                // Send all important logs to Sentry in production
+                if (level === 'error' || level === 'warn') {
+                    if (message instanceof Error) {
+                        Sentry.captureException(message);
+                    } else {
                         Sentry.captureMessage(message, {
-                            level: 'info',
+                            level: levelMap[level],
                             extra: meta,
-                            tags: { type: 'info' }
+                            tags: { type: level }
                         });
                     }
-                } else {
-                    // In development, send all logs to Sentry
+                }
+                // Send all info logs
+                else if (level === 'info') {
                     Sentry.captureMessage(message, {
-                        level: levelMap[level] || 'info',
+                        level: 'info',
                         extra: meta,
-                        tags: { type: level }
+                        tags: { type: 'info' }
                     });
                 }
             } catch (error) {
@@ -98,9 +80,10 @@ const logger = winston.createLogger({
                     winston.format.simple()
                 )
             })
-        ] : []),
-        // Sentry transport
-        new SentryTransport()
+        ] : [
+            // Sentry transport only in production
+            new SentryTransport()
+        ])
     ]
 });
 
