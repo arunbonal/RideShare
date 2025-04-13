@@ -506,7 +506,7 @@ const Report: React.FC = () => {
     });
   };
 
-  // Modified bug report form submission to handle mobile uploads better
+  // Modified bug report form submission with extreme compression and potential splitting
   const handleBugReportSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -533,7 +533,7 @@ const Report: React.FC = () => {
         return;
       }
       
-      // Prepare basic report data
+      // Prepare basic report data without screenshot
       const reportData: any = {
         type: bugReportForm.type,
         title: bugReportForm.title,
@@ -542,98 +542,80 @@ const Report: React.FC = () => {
         device: bugReportForm.device || "Unknown"
       };
       
-      // Add screenshot if available
+      // If we have a screenshot, apply extreme compression
+      let screenshotData = null;
       if (bugReportForm.screenshot) {
-        // Further compress the base64 string if needed
-        let screenshotData = bugReportForm.screenshot;
-        const approximateSize = Math.ceil((screenshotData.length * 3) / 4);
-        
-        // If still too large, we need to further reduce the quality
-        if (approximateSize > 500 * 1024) { // If over 500KB
-          setDebugError(`Base64 size before compression: ${approximateSize / 1024} KB`);
+        try {
+          // Apply extreme compression 
+          screenshotData = await applyExtremeCompression(bugReportForm.screenshot);
           
-          // Create a temporary image to compress again
-          const img = new Image();
-          img.src = screenshotData;
-          await new Promise(resolve => {
-            img.onload = resolve;
-          });
+          // Log the size for debugging
+          const finalSize = Math.ceil((screenshotData.length * 3) / 4) / 1024;
+          setDebugError(`Original size: ${Math.ceil((bugReportForm.screenshot.length * 3) / 4) / 1024} KB, Final compressed size: ${finalSize} KB`);
           
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            // Reduce dimensions if needed
-            let width = img.width;
-            let height = img.height;
-            
-            // Max dimension for server upload
-            const MAX_DIM = 800;
-            if (width > height && width > MAX_DIM) {
-              height = Math.round((height * MAX_DIM) / width);
-              width = MAX_DIM;
-            } else if (height > MAX_DIM) {
-              width = Math.round((width * MAX_DIM) / height);
-              height = MAX_DIM;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // Very low quality for upload
-            screenshotData = canvas.toDataURL('image/jpeg', 0.4);
-            
-            const newSize = Math.ceil((screenshotData.length * 3) / 4);
-            setDebugError(`Base64 size after additional compression: ${newSize / 1024} KB`);
+          // If still over 100KB (which should be safe for most servers), don't include it
+          if (finalSize > 100) {
+            setNotification({
+              show: true,
+              message: "Screenshot is still too large after compression. Submitting report without image.",
+              type: "error"
+            });
+            screenshotData = null;
           }
+        } catch (error) {
+          console.error("Error compressing screenshot:", error);
+          setDebugError(`Error during extreme compression: ${error instanceof Error ? error.message : String(error)}`);
+          screenshotData = null;
         }
-        
-        // Use the compressed base64 image string
-        reportData.screenshot = screenshotData;
       }
       
-      console.log("Sending bug report data, screenshot included:", !!reportData.screenshot);
-      // Add image size logging for debugging
-      if (reportData.screenshot) {
-        console.log("Screenshot size (approx):", Math.ceil((reportData.screenshot.length * 3) / 4) / 1024, "KB");
+      // First try to submit with the screenshot if we have it
+      if (screenshotData) {
+        try {
+          reportData.screenshot = screenshotData;
+          const response = await api.post("/api/bug-reports", reportData);
+          
+          if (response.data.success) {
+            handleSubmissionSuccess();
+            return;
+          }
+        } catch (error: any) {
+          // If we get a payload too large error, try without the screenshot
+          if (error.response && error.response.status === 413) {
+            setDebugError("Got 413 error with compressed image. Trying without image...");
+            
+            // Wait a moment before trying again
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            // For other errors, just throw to be caught by the outer catch
+            throw error;
+          }
+        }
       }
+      
+      // If we get here, either we had no screenshot or the submission with screenshot failed
+      // Try submitting without the screenshot
+      delete reportData.screenshot;
       
       try {
         const response = await api.post("/api/bug-reports", reportData);
         
         if (response.data.success) {
-          setNotification({
-            show: true,
-            message: bugReportForm.type === "bug" 
-              ? "Bug report submitted successfully" 
-              : "Feature request submitted successfully",
-            type: "success"
-          });
-          
-          // Clear form after successful submission
-          setBugReportForm({
-            type: bugReportForm.type,
-            title: "",
-            description: "",
-            browser: getBrowser(),
-            device: getDevice(),
-            screenshot: ""
-          });
-          setSelectedFile(null);
-          
-          // Show loading spinner while redirecting
-          setRedirecting(true);
-          
-          // Redirect back to dashboard after 2 seconds
-          setTimeout(() => {
-            navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
-          }, 2000);
+          // If this succeeded but we had a screenshot that we couldn't send,
+          // notify the user that their report was submitted without the image
+          if (bugReportForm.screenshot && !reportData.screenshot) {
+            setNotification({
+              show: true,
+              message: "Report submitted successfully, but without the screenshot due to size limitations.",
+              type: "success"
+            });
+          } else {
+            handleSubmissionSuccess();
+          }
         }
-      } catch (error: any) {
-        // More specific error handling for API call
-        const errorDetails = error.response?.data?.message || error.message || "Unknown error";
-        setDebugError(`API Error: ${errorDetails}`);
-        throw error; // Re-throw for the outer catch
+      } catch (error) {
+        // If even this fails, then throw to be caught by the outer catch
+        throw error;
       }
     } catch (error: any) {
       console.error("Error submitting bug report:", error);
@@ -662,6 +644,102 @@ const Report: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper to handle successful submission
+  const handleSubmissionSuccess = () => {
+    setNotification({
+      show: true,
+      message: bugReportForm.type === "bug" 
+        ? "Bug report submitted successfully" 
+        : "Feature request submitted successfully",
+      type: "success"
+    });
+    
+    // Clear form after successful submission
+    setBugReportForm({
+      type: bugReportForm.type,
+      title: "",
+      description: "",
+      browser: getBrowser(),
+      device: getDevice(),
+      screenshot: ""
+    });
+    setSelectedFile(null);
+    
+    // Show loading spinner while redirecting
+    setRedirecting(true);
+    
+    // Redirect back to dashboard after 2 seconds
+    setTimeout(() => {
+      navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
+    }, 2000);
+  };
+
+  // Function for extreme image compression
+  const applyExtremeCompression = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas for resizing
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+          
+          // Calculate new dimensions - make it very small
+          let width = img.width;
+          let height = img.height;
+          
+          // Aggressive resizing to 400px max dimension
+          const MAX_DIM = 400;
+          if (width > height && width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+          
+          // Set canvas size
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Apply some pre-processing to reduce complexity
+          ctx.imageSmoothingQuality = 'low';
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to extremely low quality JPEG
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.3);
+          
+          // Check if we need to go even lower
+          const currentSize = Math.ceil((compressedDataUrl.length * 3) / 4) / 1024;
+          if (currentSize > 70) {
+            // Try with black and white + even smaller
+            ctx.filter = 'grayscale(100%)';
+            canvas.width = Math.min(300, width);
+            canvas.height = Math.min(300, height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Super low quality
+            resolve(canvas.toDataURL('image/jpeg', 0.2));
+          } else {
+            resolve(compressedDataUrl);
+          }
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to load image for extreme compression'));
+        };
+        
+        img.src = dataUrl;
+      } catch (error) {
+        reject(error);
+      }
+    });
   };
 
   // Handle form submission via the traditional form submit event
