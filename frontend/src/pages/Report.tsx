@@ -338,7 +338,7 @@ const Report: React.FC = () => {
         if (file.size > 1536 * 1024) {
           setNotification({
             show: true,
-            message: "Image size should be less than 1.5MB",
+            message: "Image size should be less than 1.5MB. Please compress the image or select a smaller one.",
             type: "error"
           });
           return;
@@ -385,8 +385,11 @@ const Report: React.FC = () => {
           }
         }
         
+        // Compress the image before storing it
+        const compressedFile = await compressImage(file);
+        
         // Store the file object for later FormData submission
-        setSelectedFile(file);
+        setSelectedFile(compressedFile);
         
         // Also display a preview using FileReader
         const reader = new FileReader();
@@ -406,7 +409,7 @@ const Report: React.FC = () => {
             type: "error"
           });
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
       } catch (error) {
         console.error("Error processing file:", error);
         setNotification({
@@ -416,6 +419,91 @@ const Report: React.FC = () => {
         });
       }
     }
+  };
+
+  // Add a function to compress images
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+
+      // Create an image element and load the file
+      const img = new Image();
+      img.onload = () => {
+        // Set a target max dimension (width or height) for the compressed image
+        const MAX_DIMENSION = 1200; // Adjust this value as needed
+        
+        // Calculate the new dimensions while preserving aspect ratio
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height && width > MAX_DIMENSION) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+        
+        // Resize the canvas to the new dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw the image on the canvas with the new dimensions
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert the canvas to a blob with reduced quality
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create blob from canvas'));
+            return;
+          }
+
+          // Check if we compressed enough - if not, compress more
+          if (blob.size > 800 * 1024) { // If still more than 800KB
+            // Try with even lower quality
+            canvas.toBlob((smallerBlob) => {
+              if (!smallerBlob) {
+                reject(new Error('Failed to create smaller blob'));
+                return;
+              }
+              
+              // Create a new file from the blob
+              const compressedFile = new File([smallerBlob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              
+              console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
+              setDebugError(`Original size: ${file.size / 1024} KB, Compressed size: ${compressedFile.size / 1024} KB`);
+              resolve(compressedFile);
+            }, 'image/jpeg', 0.5); // Very aggressive compression
+          } else {
+            // Create a new file from the blob
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            
+            console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
+            setDebugError(`Original size: ${file.size / 1024} KB, Compressed size: ${compressedFile.size / 1024} KB`);
+            resolve(compressedFile);
+          }
+        }, 'image/jpeg', 0.7); // Medium compression
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      // Create a URL for the file
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   // Modified bug report form submission to handle mobile uploads better
@@ -456,20 +544,52 @@ const Report: React.FC = () => {
       
       // Add screenshot if available
       if (bugReportForm.screenshot) {
-        // Use the base64 image string for the screenshot
-        reportData.screenshot = bugReportForm.screenshot;
+        // Further compress the base64 string if needed
+        let screenshotData = bugReportForm.screenshot;
+        const approximateSize = Math.ceil((screenshotData.length * 3) / 4);
         
-        // Check if the base64 string is too large (approx 2MB)
-        const approximateSize = Math.ceil((bugReportForm.screenshot.length * 3) / 4);
-        if (approximateSize > 2 * 1024 * 1024) {
-          setNotification({
-            show: true,
-            message: "Screenshot is too large. Please use a smaller image (less than 1.5MB).",
-            type: "error"
+        // If still too large, we need to further reduce the quality
+        if (approximateSize > 500 * 1024) { // If over 500KB
+          setDebugError(`Base64 size before compression: ${approximateSize / 1024} KB`);
+          
+          // Create a temporary image to compress again
+          const img = new Image();
+          img.src = screenshotData;
+          await new Promise(resolve => {
+            img.onload = resolve;
           });
-          setIsSubmitting(false);
-          return;
+          
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // Reduce dimensions if needed
+            let width = img.width;
+            let height = img.height;
+            
+            // Max dimension for server upload
+            const MAX_DIM = 800;
+            if (width > height && width > MAX_DIM) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else if (height > MAX_DIM) {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Very low quality for upload
+            screenshotData = canvas.toDataURL('image/jpeg', 0.4);
+            
+            const newSize = Math.ceil((screenshotData.length * 3) / 4);
+            setDebugError(`Base64 size after additional compression: ${newSize / 1024} KB`);
+          }
         }
+        
+        // Use the compressed base64 image string
+        reportData.screenshot = screenshotData;
       }
       
       console.log("Sending bug report data, screenshot included:", !!reportData.screenshot);
