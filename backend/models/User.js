@@ -183,7 +183,56 @@ const UserSchema = new mongoose.Schema({
     default: false
   },
   notifications: [NotificationSchema],
+}, {
+  timestamps: true, // Automatically manage createdAt and updatedAt
+  toJSON: { virtuals: true }, // Include virtuals when converting to JSON
+  toObject: { virtuals: true }
 });
+
+// Add compound indexes for common queries
+UserSchema.index({ googleId: 1 });
+UserSchema.index({ email: 1 });
+UserSchema.index({ phone: 1 });
+UserSchema.index({ college: 1, gender: 1 }); // For filtering users by college and gender
+UserSchema.index({ 'activeRoles.driver': 1, college: 1 }); // For finding active drivers in a college
+UserSchema.index({ 'activeRoles.hitcher': 1, college: 1 }); // For finding active hitchers in a college
+UserSchema.index({ 'notifications.read': 1, 'notifications.createdAt': -1 }); // For fetching unread notifications
+
+// Add text index for search functionality
+UserSchema.index({ name: 'text', email: 'text' });
+
+// Add TTL index for notifications older than 30 days
+UserSchema.index({ 'notifications.createdAt': 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
+// Optimize frequently used queries with lean()
+UserSchema.statics.findByGoogleId = function(googleId) {
+    return this.findOne({ googleId }).lean();
+};
+
+UserSchema.statics.findActiveDrivers = function(college) {
+    return this.find({
+        'activeRoles.driver': true,
+        college,
+        driverProfileComplete: true
+    }).lean();
+};
+
+UserSchema.statics.findActiveHitchers = function(college) {
+    return this.find({
+        'activeRoles.hitcher': true,
+        college,
+        hitcherProfileComplete: true
+    }).lean();
+};
+
+// Add method to clean up old notifications
+UserSchema.methods.cleanupOldNotifications = function() {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    this.notifications = this.notifications.filter(notification => 
+        notification.createdAt > thirtyDaysAgo || !notification.read
+    );
+    return this.save();
+};
 
 // Method to update driver reliability rate
 UserSchema.statics.updateDriverReliability = async function(userId, action) {
@@ -265,4 +314,9 @@ UserSchema.statics.updateHitcherReliability = async function(userId, action) {
   return user;
 };
 
-module.exports = mongoose.model("User", UserSchema);
+const User = mongoose.model("User", UserSchema);
+
+// Create indexes in background
+User.createIndexes().catch(err => console.error('Error creating indexes:', err));
+
+module.exports = User;

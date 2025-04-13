@@ -1,10 +1,10 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("./auth");
 const { connectRedis } = require("./config/redis");
+const connectDB = require("./config/database");
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
 const rideRoutes = require("./routes/ride");
@@ -74,11 +74,8 @@ app.get("/api/health", (req, res) => {
 });
 
 // Connect to MongoDB and start server
-mongoose
-  .connect(process.env.MONGODB_URI)
+connectDB()
   .then(async () => {
-    console.log("Connected to MongoDB Atlas");
-    
     // Initialize Redis connection
     await connectRedis();
     
@@ -87,6 +84,6 @@ mongoose
     });
   })
   .catch((err) => {
-    console.error("Error connecting to MongoDB:", err);
+    console.error("Error during startup:", err);
     process.exit(1);
   });
