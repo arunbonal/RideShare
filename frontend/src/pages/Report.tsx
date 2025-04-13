@@ -958,7 +958,6 @@ const Report: React.FC = () => {
                       type="file"
                       id="screenshot"
                       accept="image/jpeg,image/png,image/gif,image/heic,image/heif"
-                      capture="environment"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       onChange={handleScreenshotUpload}
                     />
