@@ -19,8 +19,10 @@ function initializeSentry(app) {
             profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
             environment: process.env.NODE_ENV,
             enabled: process.env.NODE_ENV === 'production',
+            debug: process.env.NODE_ENV !== 'production',
+            minimumBreadcrumbLevel: 'debug',
+            minimumEventLevel: 'info',
             beforeSend(event) {
-                // Sanitize sensitive data if needed
                 if (event.request && event.request.headers) {
                     delete event.request.headers.cookie;
                     delete event.request.headers.authorization;
@@ -39,8 +41,16 @@ function initializeSentry(app) {
 
 function getSentryHandlers() {
     return {
-        requestHandler: Sentry.Handlers.requestHandler(),
-        errorHandler: Sentry.Handlers.errorHandler(),
+        requestHandler: Sentry.Handlers.requestHandler({
+            request: ['data', 'headers', 'method', 'query_string', 'url'],
+            serverName: true,
+            transaction: true
+        }),
+        errorHandler: Sentry.Handlers.errorHandler({
+            shouldHandleError(error) {
+                return true;
+            }
+        }),
         tracingHandler: Sentry.Handlers.tracingHandler()
     };
 }

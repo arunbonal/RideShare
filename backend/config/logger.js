@@ -20,30 +20,46 @@ class SentryTransport extends winston.Transport {
             try {
                 const { level, message, ...meta } = info;
                 
+                // Map Winston levels to Sentry levels
                 const levelMap = {
                     error: 'error',
                     warn: 'warning',
                     info: 'info',
-                    debug: 'debug'
+                    debug: 'debug',
+                    verbose: 'debug'
                 };
 
+                // Always add breadcrumb for log context
                 Sentry.addBreadcrumb({
                     level: levelMap[level] || 'info',
                     message: message,
                     data: meta,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    category: meta.category || 'general'
                 });
 
+                // For errors, capture as exceptions
                 if (level === 'error') {
                     if (message instanceof Error) {
                         Sentry.captureException(message);
                     } else {
                         Sentry.captureException(new Error(message));
                     }
-                } else {
+                } 
+                // For warnings, capture as issues
+                else if (level === 'warn') {
+                    Sentry.captureMessage(message, {
+                        level: 'warning',
+                        extra: meta,
+                        tags: { type: 'warning' }
+                    });
+                }
+                // For info and debug, capture as messages
+                else {
                     Sentry.captureMessage(message, {
                         level: levelMap[level] || 'info',
-                        extra: meta
+                        extra: meta,
+                        tags: { type: level }
                     });
                 }
             } catch (error) {
@@ -70,7 +86,7 @@ const logger = winston.createLogger({
         environment: process.env.NODE_ENV 
     },
     transports: [
-        // Console transport
+        // Console transport with colors
         new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
@@ -105,12 +121,17 @@ const stream = {
     },
 };
 
+// Helper functions for consistent logging
+const logHelpers = {
+    error: (message, meta = {}) => logger.error(message, { ...meta, type: 'error' }),
+    warn: (message, meta = {}) => logger.warn(message, { ...meta, type: 'warning' }),
+    info: (message, meta = {}) => logger.info(message, { ...meta, type: 'info' }),
+    debug: (message, meta = {}) => logger.debug(message, { ...meta, type: 'debug' }),
+    http: (message, meta = {}) => logger.http(message, { ...meta, type: 'http' })
+};
+
 module.exports = {
     logger,
     stream,
-    error: (message, meta = {}) => logger.error(message, meta),
-    warn: (message, meta = {}) => logger.warn(message, meta),
-    info: (message, meta = {}) => logger.info(message, meta),
-    debug: (message, meta = {}) => logger.debug(message, meta),
-    http: (message, meta = {}) => logger.http(message, meta)
+    ...logHelpers
 }; 
