@@ -38,9 +38,25 @@ app.use(metricsMiddleware);
 // Request logging
 app.use(morgan('combined', { stream }));
 
-// Body parsing middleware with size limits
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// General body parser configuration
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Route-specific body size limits
+const bugReportLimits = express.json({
+    limit: '1.5mb', // Reduced limit for bug reports
+    verify: (req, res, buf) => {
+        try {
+            JSON.parse(buf);
+        } catch (e) {
+            res.status(400).json({ error: 'Invalid JSON payload' });
+            throw new Error('Invalid JSON payload');
+        }
+    }
+});
+
+// Apply the larger limit only to bug reports route
+app.use('/api/bug-reports', bugReportLimits);
 
 // Security headers
 app.use(helmet());
