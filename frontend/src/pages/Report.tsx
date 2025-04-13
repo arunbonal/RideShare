@@ -553,8 +553,8 @@ const Report: React.FC = () => {
           const finalSize = Math.ceil((screenshotData.length * 3) / 4) / 1024;
           setDebugError(`Original size: ${Math.ceil((bugReportForm.screenshot.length * 3) / 4) / 1024} KB, Final compressed size: ${finalSize} KB`);
           
-          // If still over 100KB (which should be safe for most servers), don't include it
-          if (finalSize > 100) {
+          // If still over 150KB (increased from 100KB), don't include it
+          if (finalSize > 150) {
             setNotification({
               show: true,
               message: "Screenshot is still too large after compression. Submitting report without image.",
@@ -676,7 +676,7 @@ const Report: React.FC = () => {
     }, 2000);
   };
 
-  // Function for extreme image compression
+  // Function for extreme image compression with better quality
   const applyExtremeCompression = (dataUrl: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       try {
@@ -690,12 +690,12 @@ const Report: React.FC = () => {
             return;
           }
           
-          // Calculate new dimensions - make it very small
+          // Calculate new dimensions - bigger than before for better readability
           let width = img.width;
           let height = img.height;
           
-          // Aggressive resizing to 400px max dimension
-          const MAX_DIM = 400;
+          // Less aggressive resizing (600px instead of 400px)
+          const MAX_DIM = 600;
           if (width > height && width > MAX_DIM) {
             height = Math.round((height * MAX_DIM) / width);
             width = MAX_DIM;
@@ -708,31 +708,32 @@ const Report: React.FC = () => {
           canvas.width = width;
           canvas.height = height;
           
-          // Apply some pre-processing to reduce complexity
-          ctx.imageSmoothingQuality = 'low';
+          // Apply some pre-processing with better quality
+          ctx.imageSmoothingQuality = 'medium';
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Convert to extremely low quality JPEG
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.3);
+          // Convert to medium quality JPEG (0.5 instead of 0.3)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
           
-          // Check if we need to go even lower
+          // Check if we need to go lower
           const currentSize = Math.ceil((compressedDataUrl.length * 3) / 4) / 1024;
-          if (currentSize > 70) {
-            // Try with black and white + even smaller
-            ctx.filter = 'grayscale(100%)';
-            canvas.width = Math.min(300, width);
-            canvas.height = Math.min(300, height);
+          
+          // If still too big, apply stronger compression but maintain readability
+          if (currentSize > 150) {
+            // Try with slightly reduced quality but keep colors
+            canvas.width = Math.min(500, width);
+            canvas.height = Math.min(500, height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             
-            // Super low quality
-            resolve(canvas.toDataURL('image/jpeg', 0.2));
+            // Medium-low quality
+            resolve(canvas.toDataURL('image/jpeg', 0.4));
           } else {
             resolve(compressedDataUrl);
           }
         };
         
         img.onerror = () => {
-          reject(new Error('Failed to load image for extreme compression'));
+          reject(new Error('Failed to load image for compression'));
         };
         
         img.src = dataUrl;
