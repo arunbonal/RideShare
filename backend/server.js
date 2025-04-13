@@ -16,7 +16,9 @@ const verificationRoutes = require("./routes/verification");
 const adminRoutes = require("./routes/admin");
 const issuesRoutes = require("./routes/issues");
 const bugReportRoutes = require("./routes/bugReports");
-require("dotenv").config();
+const winston = require('winston');
+const uuid = require('uuid');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,22 +36,21 @@ app.use(morgan('combined', { stream }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// CORS configuration
-app.use(
-  cors({
-    origin: function(origin, callback) {
-      const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173", "https://rideshare-frontend.vercel.app"];
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+// Security headers
+app.use(helmet());
+app.use(helmet.hidePoweredBy());
+app.use(helmet.noSniff());
+app.use(helmet.xssFilter());
+app.use(helmet.frameguard({ action: 'deny' }));
+
+// CORS configuration with specific origins
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS.split(','),
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+}));
 
 // Apply security middleware
 app.use(securityMiddleware);
@@ -108,21 +109,37 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Error handling middleware
+// Add request ID middleware
+app.use((req, res, next) => {
+  req.id = uuid.v4();
+  next();
+});
+
+// Enhanced logging middleware
+app.use(morgan((tokens, req, res) => {
+  return JSON.stringify({
+    method: tokens.method(req, res),
+    url: tokens.url(req, res),
+    status: tokens.status(req, res),
+    requestId: req.id,
+    userAgent: tokens['user-agent'](req, res),
+    responseTime: tokens['response-time'](req, res),
+    timestamp: new Date().toISOString()
+  });
+}, { stream: { write: message => logger.info(message) } }));
+
+// Global error handler
 app.use((err, req, res, next) => {
-    logger.error('Unhandled error:', { 
-        error: err.message,
-        stack: err.stack,
-        path: req.path,
-        method: req.method,
-        ip: req.ip
-    });
-    
-    res.status(500).json({
-        error: process.env.NODE_ENV === 'production' 
-            ? 'Internal server error' 
-            : err.message
-    });
+  logger.error({
+    message: err.message,
+    stack: err.stack,
+    requestId: req.id,
+    path: req.path,
+    method: req.method
+  });
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+  });
 });
 
 // Connect to MongoDB and start server
