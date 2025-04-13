@@ -1,5 +1,6 @@
 require("dotenv").config();
 const jwt = require('jsonwebtoken');
+const { invalidateUserProfileCache } = require('../utils/cacheUtils');
 
 // Helper function to generate JWT token
 const generateToken = (user) => {
@@ -45,83 +46,86 @@ exports.logout = (req, res) => {
 };
 
 // understand from here
-exports.updateActiveRoles = (req, res) => {
-  // User is already authenticated by the middleware
-  const { driver, hitcher } = req.body;
+exports.updateActiveRoles = async (req, res) => {
+  try {
+    // User is already authenticated by the middleware
+    const { driver, hitcher } = req.body;
 
-  // Validate input
-  if (typeof driver !== "boolean" && typeof hitcher !== "boolean") {
-    return res.status(400).json({ message: "Invalid role settings" });
-  }
+    // Validate input
+    if (typeof driver !== "boolean" && typeof hitcher !== "boolean") {
+      return res.status(400).json({ message: "Invalid role settings" });
+    }
 
-  // Update active roles
-  if (typeof driver === "boolean") {
-    req.user.activeRoles.driver = driver;
-  }
+    // Update active roles
+    if (typeof driver === "boolean") {
+      req.user.activeRoles.driver = driver;
+    }
 
-  if (typeof hitcher === "boolean") {
-    req.user.activeRoles.hitcher = hitcher;
-  }
+    if (typeof hitcher === "boolean") {
+      req.user.activeRoles.hitcher = hitcher;
+    }
 
-  req.user
-    .save()
-    .then(() => {
-      res.json({
-        message: "Active roles updated successfully",
-        activeRoles: req.user.activeRoles,
-      });
-    })
-    .catch((err) => {
-      res
-        .status(500)
-        .json({ message: "Error updating active roles", error: err.message });
+    await req.user.save();
+    
+    // Invalidate the user's profile cache
+    await invalidateUserProfileCache(req.user._id);
+
+    res.json({
+      message: "Active roles updated successfully",
+      activeRoles: req.user.activeRoles,
     });
+  } catch (err) {
+    console.error("Error updating active roles:", err);
+    res.status(500).json({ message: "Error updating active roles", error: err.message });
+  }
 };
 
-exports.updateDriverProfileComplete = (req, res) => {
-  // User is already authenticated by the middleware
-  const { complete } = req.body;
+exports.updateDriverProfileComplete = async (req, res) => {
+  try {
+    // User is already authenticated by the middleware
+    const { complete } = req.body;
 
-  if (typeof complete !== "boolean") {
-    return res.status(400).json({ message: "Invalid profile complete status" });
-  }
+    if (typeof complete !== "boolean") {
+      return res.status(400).json({ message: "Invalid profile complete status" });
+    }
 
-  req.user.driverProfileComplete = complete;
-  req.user
-    .save()
-    .then(() => {
-      res.json({
-        message: "Driver profile status updated successfully",
-        driverProfileComplete: complete,
-      });
-    })
-    .catch((err) => {
-      res
-        .status(500)
-        .json({ message: "Error updating profile status", error: err.message });
+    req.user.driverProfileComplete = complete;
+    await req.user.save();
+    
+    // Invalidate the user's profile cache
+    await invalidateUserProfileCache(req.user._id);
+
+    res.json({
+      message: "Driver profile status updated successfully",
+      driverProfileComplete: complete,
     });
+  } catch (err) {
+    console.error("Error updating profile status:", err);
+    res.status(500).json({ message: "Error updating profile status", error: err.message });
+  }
 };
 
-exports.updateHitcherProfileComplete = (req, res) => {
-  // User is already authenticated by the middleware
-  const { complete } = req.body;
+exports.updateHitcherProfileComplete = async (req, res) => {
+  try {
+    // User is already authenticated by the middleware
+    const { complete } = req.body;
 
-  if (typeof complete !== "boolean") {
-    return res.status(400).json({ message: "Invalid profile complete status" });
-  }
+    if (typeof complete !== "boolean") {
+      return res.status(400).json({ message: "Invalid profile complete status" });
+    }
 
-  req.user.hitcherProfileComplete = complete;
-  req.user
-    .save()
-    .then(() => {
-      res.json({
-        message: "Hitcher profile status updated successfully",
-        hitcherProfileComplete: complete,
-      });
-    })
-    .catch((err) => {
-      res
-        .status(500)
-        .json({ message: "Error updating profile status", error: err.message });
+    req.user.hitcherProfileComplete = complete;
+    await req.user.save();
+    
+    // Invalidate the user's profile cache
+    await invalidateUserProfileCache(req.user._id);
+
+    res.json({
+      message: "Hitcher profile status updated successfully",
+      hitcherProfileComplete: complete,
     });
+  } catch (err) {
+    console.error("Error updating profile status:", err);
+    res.status(500).json({ message: "Error updating profile status", error: err.message });
+  }
 };
