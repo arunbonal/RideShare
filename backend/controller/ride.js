@@ -1,6 +1,17 @@
 const Ride = require("../models/Ride");
 const User = require("../models/User");
 const { logger } = require("../config/logger");
+const {
+  cacheActiveRide,
+  getCachedActiveRide,
+  cacheUserActiveRides,
+  getCachedUserActiveRides,
+  invalidateActiveRideCache,
+  invalidateUserActiveRidesCache,
+  cacheUserNotifications,
+  getCachedUserNotifications,
+  invalidateUserNotificationsCache
+} = require("../utils/cacheUtils");
 
 exports.createRide = async (req, res) => {
   try {
@@ -48,6 +59,21 @@ exports.getRides = async (req, res) => {
       userId: req.user?.id
     });
 
+    // Try to get cached active rides for the user if no filters are applied
+    if (!req.query.date && !req.query.direction && req.user?.id) {
+      const cachedRides = await getCachedUserActiveRides(req.user.id);
+      if (cachedRides) {
+        logger.info('Returning cached active rides', {
+          count: cachedRides.length,
+          userId: req.user?.id
+        });
+        return res.status(200).json({ 
+          message: "Rides fetched from cache successfully", 
+          rides: cachedRides 
+        });
+      }
+    }
+
     // Build query based on parameters
     const query = {};
     
@@ -69,6 +95,14 @@ exports.getRides = async (req, res) => {
       .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
       .populate("hitchers.user", "name email phone gender srn college hitcherProfile.reliabilityRate")
       .sort({ date: 1 }); // Sort by date in ascending order
+
+    // Cache active rides for the user if no filters are applied
+    if (!req.query.date && !req.query.direction && req.user?.id) {
+      const activeRides = rides.filter(ride => 
+        ride.status === 'scheduled' || ride.status === 'in-progress'
+      );
+      await cacheUserActiveRides(req.user.id, activeRides);
+    }
 
     logger.info('Rides fetched successfully', {
       count: rides.length,
@@ -266,9 +300,17 @@ exports.requestRide = async (req, res) => {
   try {
     const { rideId, user, pickupLocation, dropoffLocation, fare, status, gender } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('driver', 'college').populate('hitchers.user', 'name');
+    // Try to get ride from cache first
+    let ride = await getCachedActiveRide(rideId);
     if (!ride) {
-      return res.status(404).json({ message: "Ride not found" });
+      ride = await Ride.findById(rideId).populate('driver', 'college').populate('hitchers.user', 'name');
+      if (!ride) {
+        return res.status(404).json({ message: "Ride not found" });
+      }
+      // Cache the ride if found
+      if (ride.status === 'scheduled' || ride.status === 'in-progress') {
+        await cacheActiveRide(rideId, ride);
+      }
     }
 
     // Check if the hitcher is already in the ride
@@ -321,6 +363,12 @@ exports.requestRide = async (req, res) => {
     await User.updateHitcherReliability(user, 'RIDE_REQUESTED');
 
     await ride.save();
+
+    // After successful save, invalidate caches
+    await invalidateActiveRideCache(rideId);
+    await invalidateUserActiveRidesCache(user);
+    await invalidateUserActiveRidesCache(ride.driver._id);
+
     res.status(200).json({ message: "Ride request sent successfully" });
   } catch (err) {
     logger.error("Error requesting ride", {
@@ -460,10 +508,17 @@ exports.markNotificationAsRead = async (req, res) => {
   try {
     const { rideId, notificationId } = req.body;
     
-    // Find the ride
-    const ride = await Ride.findById(rideId);
+    // Try to get ride from cache first
+    let ride = await getCachedActiveRide(rideId);
     if (!ride) {
-      return res.status(404).json({ success: false, message: 'Ride not found' });
+      ride = await Ride.findById(rideId);
+      if (!ride) {
+        return res.status(404).json({ success: false, message: 'Ride not found' });
+      }
+      // Cache the ride if active
+      if (ride.status === 'scheduled' || ride.status === 'in-progress') {
+        await cacheActiveRide(rideId, ride);
+      }
     }
 
     // Find and update the notification
@@ -477,6 +532,10 @@ exports.markNotificationAsRead = async (req, res) => {
     
     // Save the updated ride
     await ride.save();
+
+    // Invalidate caches
+    await invalidateActiveRideCache(rideId);
+    await invalidateUserNotificationsCache(req.user.id);
 
     res.json({ 
       success: true, 
@@ -504,10 +563,17 @@ exports.updateRideStatus = async (req, res) => {
       });
     }
     
-    // Find and update the ride
-    const ride = await Ride.findById(rideId);
+    // Try to get ride from cache first
+    let ride = await getCachedActiveRide(rideId);
     if (!ride) {
-      return res.status(404).json({ success: false, message: 'Ride not found' });
+      ride = await Ride.findById(rideId);
+      if (!ride) {
+        return res.status(404).json({ success: false, message: 'Ride not found' });
+      }
+      // Cache the ride if active
+      if (ride.status === 'scheduled' || ride.status === 'in-progress') {
+        await cacheActiveRide(rideId, ride);
+      }
     }
     
     // Only allow specific transitions:
@@ -552,6 +618,15 @@ exports.updateRideStatus = async (req, res) => {
     
     await ride.save();
     
+    // Invalidate caches after status update
+    await invalidateActiveRideCache(rideId);
+    await invalidateUserActiveRidesCache(ride.driver);
+    if (ride.hitchers && ride.hitchers.length > 0) {
+      for (const hitcher of ride.hitchers) {
+        await invalidateUserActiveRidesCache(hitcher.user);
+      }
+    }
+
     res.json({ 
       success: true, 
       message: `Ride status updated to ${status}`,
@@ -608,12 +683,20 @@ exports.getRideStatus = async (req, res) => {
   try {
     const { rideId } = req.params;
     
-    const ride = await Ride.findById(rideId);
+    // Try to get ride from cache first
+    let ride = await getCachedActiveRide(rideId);
     if (!ride) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Ride not found' 
-      });
+      ride = await Ride.findById(rideId);
+      if (!ride) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Ride not found' 
+        });
+      }
+      // Cache the ride if active
+      if (ride.status === 'scheduled' || ride.status === 'in-progress') {
+        await cacheActiveRide(rideId, ride);
+      }
     }
     
     res.json({
