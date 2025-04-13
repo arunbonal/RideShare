@@ -21,13 +21,17 @@ function initializeSentry(app) {
                 new Sentry.Integrations.Express({ app }),
                 new ProfilingIntegration(),
             ],
-            tracesSampleRate: 1.0,
-            profilesSampleRate: 1.0,
+            tracesSampleRate: 0.1,
+            profilesSampleRate: 0.1,
             environment: process.env.NODE_ENV,
             enabled: true,
             minimumBreadcrumbLevel: 'debug',
             minimumEventLevel: 'info',
             beforeSend(event) {
+                if (event.level !== 'error' && Math.random() > 0.1) {
+                    return null;
+                }
+                
                 if (event.request && event.request.headers) {
                     delete event.request.headers.cookie;
                     delete event.request.headers.authorization;

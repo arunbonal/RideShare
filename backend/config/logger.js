@@ -28,7 +28,7 @@ class SentryTransport extends winston.Transport {
                     verbose: 'debug'
                 };
 
-                // Send all important logs to Sentry in production
+                // Always send errors and warnings to Sentry in production
                 if (level === 'error' || level === 'warn') {
                     if (message instanceof Error) {
                         Sentry.captureException(message);
@@ -40,8 +40,8 @@ class SentryTransport extends winston.Transport {
                         });
                     }
                 }
-                // Send all info logs
-                else if (level === 'info') {
+                // Sample info logs (10%)
+                else if (level === 'info' && Math.random() < 0.1) {
                     Sentry.captureMessage(message, {
                         level: 'info',
                         extra: meta,
