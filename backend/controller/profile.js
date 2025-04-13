@@ -1,6 +1,11 @@
 const User = require("../models/User");
 const Ride = require("../models/Ride");
 const { getCompleteUserData } = require("../utils/userUtils");
+const { 
+  cacheUserProfile, 
+  getCachedUserProfile,
+  invalidateUserProfileCache
+} = require("../utils/cacheUtils");
 
 // Update driver profile
 exports.updateDriverProfile = async (req, res) => {
@@ -43,6 +48,9 @@ exports.updateDriverProfile = async (req, res) => {
 
     // Save the updated user
     await user.save();
+
+    // Cache the updated profile
+    await cacheUserProfile(userId, user);
 
     res.status(200).json({
       message: "Driver profile updated successfully",
@@ -90,6 +98,9 @@ exports.updateDriverVehicleAndPricing = async (req, res) => {
     // Return the updated profile
     const updatedUserData = await getCompleteUserData(userId);
 
+    // Cache the updated profile
+    await cacheUserProfile(userId, updatedUserData);
+
     res.status(200).json({
       message: "Vehicle and pricing updated successfully",
       user: updatedUserData
@@ -100,7 +111,7 @@ exports.updateDriverVehicleAndPricing = async (req, res) => {
   }
 };
 
-// Update hitcher profile\
+// Update hitcher profile
 exports.updateHitcherProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -127,6 +138,9 @@ exports.updateHitcherProfile = async (req, res) => {
     // Save the updated user
     await user.save();
 
+    // Cache the updated profile
+    await cacheUserProfile(userId, user);
+
     res.status(200).json({
       message: "Hitcher profile updated successfully",
       hitcherProfile: user.hitcherProfile,
@@ -139,7 +153,20 @@ exports.updateHitcherProfile = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   try {
-    const userData = await getCompleteUserData(req.user._id);
+    const userId = req.user._id;
+    
+    // Try to get profile from cache first
+    const cachedProfile = await getCachedUserProfile(userId);
+    if (cachedProfile) {
+      return res.json(cachedProfile);
+    }
+
+    // If not in cache, get from database
+    const userData = await getCompleteUserData(userId);
+    
+    // Cache the profile
+    await cacheUserProfile(userId, userData);
+    
     res.json(userData);
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -216,7 +243,6 @@ exports.updateBasicProfileInfo = async (req, res) => {
       if (distanceToCollege !== undefined) {
         // Update the user's distanceToCollege field
         user.distanceToCollege = distanceToCollege;
-        
       }
     } else if (distanceToCollege !== undefined) {
       // Handle case where only distanceToCollege is updated without changing address
@@ -230,6 +256,9 @@ exports.updateBasicProfileInfo = async (req, res) => {
 
     // Return the updated user data
     const updatedUserData = await getCompleteUserData(userId);
+
+    // Cache the updated profile
+    await cacheUserProfile(userId, updatedUserData);
 
     res.status(200).json({
       message: "Profile updated successfully",

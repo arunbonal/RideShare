@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AdminNavbar from '../components/AdminNavbar';
 import api from '../utils/api'; // Import API utility
 import { Navigate, Link, useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import LoadingButton from '../components/LoadingButton';
 
 // Define interfaces for the data we'll be working with
@@ -91,6 +91,28 @@ interface AdminBugReport {
   createdAt: string;
 }
 
+// Add interface for cache stats
+interface CacheStats {
+  profiles: {
+    total: number;
+    hitRate: number;
+    hits: number;
+    misses: number;
+  };
+  rides: {
+    total: number;
+    hitRate: number;
+    hits: number;
+    misses: number;
+  };
+  notifications: {
+    total: number;
+    hitRate: number;
+    hits: number;
+    misses: number;
+  };
+}
+
 const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -124,6 +146,8 @@ const AdminDashboard: React.FC = () => {
   const [deletingBugReport, setDeletingBugReport] = useState<string | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
   const [bugReportToDelete, setBugReportToDelete] = useState<AdminBugReport | null>(null);
+  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   const navigate = useNavigate();
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
@@ -145,6 +169,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (currentUser?.isAdmin) {
       fetchData();
+      fetchCacheStats(); // Fetch cache stats initially
     }
   }, [currentUser, activeTab]);
 
@@ -332,6 +357,65 @@ const AdminDashboard: React.FC = () => {
     setShowDeleteConfirmation(true);
   };
 
+  // Add function to fetch cache stats
+  const fetchCacheStats = async () => {
+    try {
+      setLoadingStats(true);
+      const response = await api.get('/api/admin/cache-stats');
+      setCacheStats(response.data);
+    } catch (error) {
+      console.error('Error fetching cache stats:', error);
+      showNotification('Failed to fetch cache statistics', 'error');
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Add Cache Statistics Component
+  const CacheStatsBar = ({ type, stats }: { type: string; stats: { total: number; hitRate: number; hits: number; misses: number } }) => (
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-sm font-medium text-gray-700 capitalize">{type}</span>
+        <span className="text-sm text-gray-500">
+          {stats.hits} hits / {stats.total} total ({stats.hitRate.toFixed(1)}%)
+        </span>
+      </div>
+      <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${stats.hitRate}%` }}
+        />
+      </div>
+    </div>
+  );
+
+  // Add this before the tabs section in the return statement
+  const renderCacheStats = () => (
+    <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Cache Performance</h2>
+        <button
+          onClick={fetchCacheStats}
+          className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+          disabled={loadingStats}
+        >
+          <RefreshCw className={`h-4 w-4 mr-1 ${loadingStats ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+      
+      {cacheStats ? (
+        <>
+          <CacheStatsBar type="User Profiles" stats={cacheStats.profiles} />
+          <CacheStatsBar type="Rides" stats={cacheStats.rides} />
+          <CacheStatsBar type="Notifications" stats={cacheStats.notifications} />
+        </>
+      ) : (
+        <div className="text-center text-gray-500">Loading cache statistics...</div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <AdminNavbar />
@@ -349,6 +433,9 @@ const AdminDashboard: React.FC = () => {
         )}
 
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+
+        {/* Add Cache Stats */}
+        {renderCacheStats()}
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
