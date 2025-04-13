@@ -68,22 +68,25 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Apply rate limiters to specific routes before route handlers
-app.use('/api/auth/*', authLimiter);
-app.use('/api/verify/*', verificationLimiter);
-// Apply general limiter last to avoid double counting
-app.use('/api/*', generalLimiter);
+// Apply rate limiters directly to route handlers
+const authRouter = express.Router();
+authRouter.use(authLimiter);
+authRouter.use('/', authRoutes);
+app.use("/api/auth", authRouter);
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/rides", rideRoutes);
-app.use("/api/verify", verificationRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/issues", issuesRoutes);
-app.use("/api/bug-reports", bugReportRoutes);
+const verifyRouter = express.Router();
+verifyRouter.use(verificationLimiter);
+verifyRouter.use('/', verificationRoutes);
+app.use("/api/verify", verifyRouter);
 
-// Health check route
+// Apply general limiter to other routes
+app.use("/api/profile", generalLimiter, profileRoutes);
+app.use("/api/rides", generalLimiter, rideRoutes);
+app.use("/api/admin", generalLimiter, adminRoutes);
+app.use("/api/issues", generalLimiter, issuesRoutes);
+app.use("/api/bug-reports", generalLimiter, bugReportRoutes);
+
+// Health check route - no rate limit
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });

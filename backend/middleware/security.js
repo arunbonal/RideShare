@@ -5,13 +5,18 @@ const hpp = require('hpp');
 const { redisClient } = require('../config/redis');
 
 // Rate limiting configuration
-const createRateLimiter = (windowMs, max, message) => rateLimit({
+const createRateLimiter = (windowMs, max, message, pathPrefix) => rateLimit({
     windowMs,
     max,
     message: { error: message },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/api/health', // Skip health check endpoint
+    // Skip health check and OPTIONS requests
+    skip: (req) => {
+        return req.path === '/api/health' || 
+               req.method === 'OPTIONS' ||
+               !req.path.startsWith(pathPrefix);
+    },
     // Use Redis as store if available
     store: redisClient ? {
         async increment(key) {
@@ -50,8 +55,6 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
     keyGenerator: (req) => {
         return req.ip;
     },
-    // Skip OPTIONS requests
-    skip: (req) => req.method === 'OPTIONS',
     // Handler for when rate limit is exceeded
     handler: (req, res) => {
         res.status(429).json({
@@ -65,21 +68,24 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
 const generalLimiter = createRateLimiter(
     60 * 1000, // 1 minute
     100,
-    'Too many requests, please try again later.'
+    'Too many requests, please try again later.',
+    '/api'
 );
 
 // Auth rate limiter - 5 requests per minute
 const authLimiter = createRateLimiter(
     60 * 1000, // 1 minute
     5,
-    'Too many authentication attempts, please try again later.'
+    'Too many authentication attempts, please try again later.',
+    '/api/auth'
 );
 
 // Verification rate limiter - 3 requests per minute
 const verificationLimiter = createRateLimiter(
     60 * 1000, // 1 minute
     3,
-    'Too many verification attempts, please try again later.'
+    'Too many verification attempts, please try again later.',
+    '/api/verify'
 );
 
 // Configure security middleware
