@@ -333,11 +333,11 @@ const Report: React.FC = () => {
           return;
         }
         
-        // Check if file size is less than 500KB
-        if (file.size > 500 * 1024) {
+        // Check if file size is less than 1.5MB
+        if (file.size > 1536 * 1024) {
           setNotification({
             show: true,
-            message: "Image size should be less than 500KB",
+            message: "Image size should be less than 1.5MB",
             type: "error"
           });
           return;
@@ -457,12 +457,12 @@ const Report: React.FC = () => {
         // Use the base64 image string for the screenshot
         reportData.screenshot = bugReportForm.screenshot;
         
-        // Check if the base64 string is too large
+        // Check if the base64 string is too large (approx 2MB)
         const approximateSize = Math.ceil((bugReportForm.screenshot.length * 3) / 4);
-        if (approximateSize > 1024 * 1024) {
+        if (approximateSize > 2 * 1024 * 1024) {
           setNotification({
             show: true,
-            message: "Screenshot is too large. Please use a smaller image.",
+            message: "Screenshot is too large. Please use a smaller image (less than 1.5MB).",
             type: "error"
           });
           setIsSubmitting(false);
