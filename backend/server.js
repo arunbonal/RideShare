@@ -18,6 +18,9 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - required when running behind a reverse proxy like Render
+app.set('trust proxy', 1);
+
 // Apply security middleware first
 app.use(securityMiddleware);
 

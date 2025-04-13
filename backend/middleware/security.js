@@ -14,14 +14,28 @@ const createRateLimiter = (windowMs, max, message) => rateLimit({
     skip: (req) => req.path === '/api/health', // Skip health check endpoint
     // Use Redis as store if available
     store: redisClient ? {
-        increment: async (key) => {
-            const result = await redisClient.incr(key);
-            await redisClient.expire(key, Math.ceil(windowMs / 1000));
-            return result;
+        async increment(key) {
+            const hits = await redisClient.incr(key);
+            if (hits === 1) {
+                await redisClient.expire(key, Math.ceil(windowMs / 1000));
+            }
+            return {
+                totalHits: hits,
+                resetTime: new Date(Date.now() + windowMs)
+            };
         },
-        decrement: (key) => redisClient.decr(key),
-        resetKey: (key) => redisClient.del(key)
-    } : undefined
+        async decrement(key) {
+            const hits = await redisClient.decr(key);
+            return hits < 0 ? await redisClient.del(key) : hits;
+        },
+        async resetKey(key) {
+            await redisClient.del(key);
+        }
+    } : undefined,
+    // Use IP for rate limiting when behind proxy
+    keyGenerator: (req) => {
+        return req.ip;
+    },
 });
 
 // General rate limiter - 100 requests per minute
