@@ -20,7 +20,8 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "path": "^0.12.7",
-    "twilio": "^5.5.0"
+    "twilio": "^5.5.0",
+    "redis": "^4.6.13"
   },
   "devDependencies": {
     "@types/node": "^22.13.10"

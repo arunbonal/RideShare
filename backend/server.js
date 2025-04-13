@@ -4,6 +4,7 @@ const cors = require("cors");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("./auth");
+const { connectRedis } = require("./config/redis");
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
 const rideRoutes = require("./routes/ride");
@@ -72,11 +73,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Connect to MongoDB
+// Connect to MongoDB and start server
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log("Connected to MongoDB Atlas");
+    
+    // Initialize Redis connection
+    await connectRedis();
+    
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
