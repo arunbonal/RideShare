@@ -3,6 +3,7 @@ const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
 const bugReportController = require('../controller/bugReportFixed');
 const { logger } = require('../config/logger');
+const BugReport = require('../models/BugReport');
 
 const MAX_FILE_SIZE = 1.5 * 1024 * 1024; // 1.5MB max file size
 const MAX_FILE_SIZE_MB = 1.5; // For error messages
@@ -64,7 +65,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 // @desc    Get all bug reports (admin only)
 // @access  Private/Admin
 router.get('/', isAuthenticated, function(req, res) {
-  return bugReportController.getAllBugReports(req, res);
+    return bugReportController.getAllBugReports(req, res);
 });
 
 // @route   GET /api/bug-reports/daily-count
@@ -72,24 +73,42 @@ router.get('/', isAuthenticated, function(req, res) {
 // @access  Private
 router.get('/daily-count', isAuthenticated, async (req, res) => {
     try {
+        const userId = req.user.id;
+        
+        // Get start of today (midnight)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        // Count reports submitted today by this user
         const count = await BugReport.countDocuments({
-            reporter: req.user.id,
+            reporter: userId,
             createdAt: { $gte: today }
         });
 
-        res.json({ count });
+        logger.info('Daily bug report count retrieved', {
+            userId,
+            count,
+            date: today
+        });
+
+        return res.json({ 
+            success: true,
+            count 
+        });
     } catch (error) {
         logger.error('Error getting daily report count', {
             error: error.message,
-            stack: error.stack
+            stack: error.stack,
+            userId: req.user.id
         });
-        res.status(500).json({ 
-            error: 'Failed to get daily report count',
-            message: error.message
-        });
+
+        if (!res.headersSent) {
+            return res.status(500).json({ 
+                success: false,
+                error: 'Failed to get daily report count',
+                message: error.message
+            });
+        }
     }
 });
 
@@ -97,21 +116,21 @@ router.get('/daily-count', isAuthenticated, async (req, res) => {
 // @desc    Get bug reports by current user
 // @access  Private
 router.get('/user', isAuthenticated, function(req, res) {
-  return bugReportController.getUserBugReports(req, res);
+    return bugReportController.getUserBugReports(req, res);
 });
 
 // @route   GET /api/bug-reports/:id
 // @desc    Get a single bug report by ID
 // @access  Private
 router.get('/:id', isAuthenticated, function(req, res) {
-  return bugReportController.getBugReportById(req, res);
+    return bugReportController.getBugReportById(req, res);
 });
 
 // @route   DELETE /api/bug-reports/:id
 // @desc    Delete a bug report
 // @access  Private/Admin
 router.delete('/:id', isAuthenticated, function(req, res) {
-  return bugReportController.deleteBugReport(req, res);
+    return bugReportController.deleteBugReport(req, res);
 });
 
 module.exports = router; 
