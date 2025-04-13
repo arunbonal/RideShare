@@ -1,43 +1,5 @@
 const winston = require('winston');
 const path = require('path');
-const Sentry = require("@sentry/node");
-
-// Custom Sentry transport for Winston
-class SentryTransport extends winston.Transport {
-  constructor(opts) {
-    super(opts);
-  }
-
-  log(info, callback) {
-    const { level, message, ...meta } = info;
-    
-    // Map Winston log levels to Sentry levels
-    const levelMap = {
-      error: 'error',
-      warn: 'warning',
-      info: 'info',
-      debug: 'debug'
-    };
-
-    Sentry.addBreadcrumb({
-      level: levelMap[level] || 'info',
-      message: message,
-      data: meta,
-      timestamp: Date.now()
-    });
-
-    if (level === 'error') {
-      Sentry.captureException(message);
-    } else {
-      Sentry.captureMessage(message, {
-        level: levelMap[level] || 'info',
-        extra: meta
-      });
-    }
-
-    callback();
-  }
-}
 
 // Define log format
 const logFormat = winston.format.combine(
@@ -56,9 +18,7 @@ const logger = winston.createLogger({
             // In production, only log to console (for cloud logging)
             new winston.transports.Console({
                 format: winston.format.json() // JSON format for cloud logging services
-            }),
-            // Sentry transport
-            new SentryTransport()
+            })
         ]
         : [
             // In development, log to console and files
@@ -78,9 +38,7 @@ const logger = winston.createLogger({
                 filename: path.join(__dirname, '../logs/combined.log'),
                 maxsize: 5242880, // 5MB
                 maxFiles: 5,
-            }),
-            // Sentry transport
-            new SentryTransport()
+            })
         ],
     // Handle uncaught exceptions and unhandled rejections
     exceptionHandlers: process.env.NODE_ENV === 'production'
