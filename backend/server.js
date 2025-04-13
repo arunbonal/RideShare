@@ -18,12 +18,19 @@ const issuesRoutes = require("./routes/issues");
 const bugReportRoutes = require("./routes/bugReports");
 const uuid = require('uuid');
 const helmet = require('helmet');
+const { initializeSentry, getSentryHandlers } = require('./config/sentry');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Trust proxy - required when running behind a reverse proxy like Render
-app.set('trust proxy', 1);
+// Initialize Sentry before any other middleware
+initializeSentry(app);
+
+// Get Sentry handlers
+const sentryHandlers = getSentryHandlers();
+
+// The request handler must be the first middleware
+app.use(sentryHandlers.requestHandler);
 
 // Apply metrics middleware first
 app.use(metricsMiddleware);
@@ -150,6 +157,26 @@ app.use(morgan((tokens, req, res) => {
     timestamp: new Date().toISOString()
   });
 }, { stream: { write: message => logger.info(message) } }));
+
+// The error handler must be before any other error middleware
+app.use(sentryHandlers.errorHandler);
+
+// Global error handler
+app.use((err, req, res, next) => {
+    logger.error('Unhandled error:', { 
+        error: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method,
+        ip: req.ip
+    });
+    
+    res.status(500).json({
+        error: process.env.NODE_ENV === 'production' 
+            ? 'Internal server error' 
+            : err.message
+    });
+});
 
 // Connect to MongoDB and start server
 connectDB()
