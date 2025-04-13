@@ -1,5 +1,6 @@
 const BugReport = require('../models/BugReport');
 const User = require('../models/User');
+const { logger } = require('../config/logger');
 
 const bugReportController = {
   // Create a new bug report or feature request
@@ -29,17 +30,33 @@ const bugReportController = {
 
       await bugReport.save();
 
-      res.status(201).json({
+      // Log successful creation
+      logger.info('Bug report created successfully', {
+        reportId: bugReport._id,
+        type: bugReport.type,
+        reporter: reporter
+      });
+
+      return res.status(201).json({
         success: true,
         message: type === 'bug' ? 'Bug report submitted successfully' : 'Feature request submitted successfully',
         bugReport
       });
     } catch (error) {
-      console.error('Error creating bug report:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Server error while submitting report'
+      // Log the error with details
+      logger.error('Error in createBugReport', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body
       });
+
+      // Only send response if headers haven't been sent
+      if (!res.headersSent) {
+        return res.status(500).json({
+          success: false,
+          message: 'Server error while submitting report'
+        });
+      }
     }
   },
 
@@ -58,17 +75,23 @@ const bugReportController = {
         .populate('reporter', 'name email phone')
         .sort({ createdAt: -1 });
 
-      res.json({
+      return res.json({
         success: true,
         count: bugReports.length,
         data: bugReports
       });
     } catch (error) {
-      console.error('Error fetching bug reports:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Server error while fetching bug reports'
+      logger.error('Error in getAllBugReports', {
+        error: error.message,
+        stack: error.stack
       });
+
+      if (!res.headersSent) {
+        return res.status(500).json({
+          success: false,
+          message: 'Server error while fetching bug reports'
+        });
+      }
     }
   },
 

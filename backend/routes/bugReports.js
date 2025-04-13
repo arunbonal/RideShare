@@ -45,13 +45,18 @@ router.post('/', isAuthenticated, async (req, res) => {
         });
 
         await bugReportController.createBugReport(req, res);
-        res.json({ message: 'Bug report submitted successfully' });
     } catch (error) {
         logger.error('Error processing bug report', {
             error: error.message,
             stack: error.stack
         });
-        res.status(500).json({ error: 'Failed to process bug report' });
+        
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                error: 'Failed to process bug report',
+                message: error.message
+            });
+        }
     }
 });
 
@@ -65,8 +70,27 @@ router.get('/', isAuthenticated, function(req, res) {
 // @route   GET /api/bug-reports/daily-count
 // @desc    Get current user's bug report count for today
 // @access  Private
-router.get('/daily-count', isAuthenticated, function(req, res) {
-  return bugReportController.getDailyBugReportCount(req, res);
+router.get('/daily-count', isAuthenticated, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const count = await BugReport.countDocuments({
+            reporter: req.user.id,
+            createdAt: { $gte: today }
+        });
+
+        res.json({ count });
+    } catch (error) {
+        logger.error('Error getting daily report count', {
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ 
+            error: 'Failed to get daily report count',
+            message: error.message
+        });
+    }
 });
 
 // @route   GET /api/bug-reports/user
