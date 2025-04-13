@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "npm run dev"
-  },
+  }, 
   "dependencies": {
     "@react-google-maps/api": "^2.20.6",
     "@sentry/integrations": "^7.114.0",
