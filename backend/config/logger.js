@@ -1,5 +1,4 @@
 const winston = require('winston');
-const path = require('path');
 const { Sentry } = require('./sentry');
 
 // Custom Sentry transport for Winston that handles errors gracefully
@@ -29,33 +28,35 @@ class SentryTransport extends winston.Transport {
                     verbose: 'debug'
                 };
 
-                // Always add breadcrumb for log context
-                Sentry.addBreadcrumb({
-                    level: levelMap[level] || 'info',
-                    message: message,
-                    data: meta,
-                    timestamp: Date.now(),
-                    category: meta.category || 'general'
-                });
-
-                // For errors, capture as exceptions
-                if (level === 'error') {
-                    if (message instanceof Error) {
-                        Sentry.captureException(message);
-                    } else {
-                        Sentry.captureException(new Error(message));
+                // Only send important logs to Sentry in production
+                if (process.env.NODE_ENV === 'production') {
+                    // Always send errors
+                    if (level === 'error') {
+                        if (message instanceof Error) {
+                            Sentry.captureException(message);
+                        } else {
+                            Sentry.captureException(new Error(message));
+                        }
                     }
-                } 
-                // For warnings, capture as issues
-                else if (level === 'warn') {
-                    Sentry.captureMessage(message, {
-                        level: 'warning',
-                        extra: meta,
-                        tags: { type: 'warning' }
-                    });
-                }
-                // For info and debug, capture as messages
-                else {
+                    // Send warnings
+                    else if (level === 'warn') {
+                        Sentry.captureMessage(message, {
+                            level: 'warning',
+                            extra: meta,
+                            tags: { type: 'warning' }
+                        });
+                    }
+                    // Sample info logs (10%)
+                    else if (level === 'info' && Math.random() < 0.1) {
+                        Sentry.captureMessage(message, {
+                            level: 'info',
+                            extra: meta,
+                            tags: { type: 'info' }
+                        });
+                    }
+                    // Don't send debug logs to Sentry in production
+                } else {
+                    // In development, send all logs to Sentry
                     Sentry.captureMessage(message, {
                         level: levelMap[level] || 'info',
                         extra: meta,
@@ -86,38 +87,26 @@ const logger = winston.createLogger({
         environment: process.env.NODE_ENV 
     },
     transports: [
-        // Console transport with colors
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            )
-        }),
-        // Sentry transport (will be silent if SENTRY_DSN is not set)
+        // Console transport in development only
+        ...(process.env.NODE_ENV !== 'production' ? [
+            new winston.transports.Console({
+                format: winston.format.combine(
+                    winston.format.colorize(),
+                    winston.format.simple()
+                )
+            })
+        ] : []),
+        // Sentry transport
         new SentryTransport()
     ]
 });
 
-// Add file transports in development
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new winston.transports.File({
-        filename: path.join(__dirname, '../logs/error.log'),
-        level: 'error',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-    }));
-    
-    logger.add(new winston.transports.File({
-        filename: path.join(__dirname, '../logs/combined.log'),
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-    }));
-}
-
-// Create a stream object for Morgan
+// Create a stream object for Morgan (only log HTTP in development)
 const stream = {
     write: (message) => {
-        logger.info(message.trim());
+        if (process.env.NODE_ENV !== 'production') {
+            logger.info(message.trim());
+        }
     },
 };
 

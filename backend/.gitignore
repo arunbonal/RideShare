@@ -9,17 +9,6 @@ package-lock.json
 .env.development
 .env.production
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
 # IDE
 .idea/
 .vscode/
