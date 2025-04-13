@@ -166,6 +166,28 @@ const Report: React.FC = () => {
     const now = new Date();
     
     const upcomingRides = rides.filter((ride: ExtendedRide) => {
+      // Filter out cancelled and completed rides from upcoming
+      if (ride.status === "cancelled" || ride.status === "completed") {
+        return false;
+      }
+      
+      // For hitchers, filter out rides where they've cancelled or been rejected
+      if (currentUser?.activeRoles.hitcher) {
+        const hitcherInfo = ride.hitchers?.find(h => h.user._id === currentUser.id);
+        if (hitcherInfo && 
+           (hitcherInfo.status === "cancelled" || 
+            hitcherInfo.status === "rejected" || 
+            hitcherInfo.status === "cancelled-by-driver")) {
+          return false;
+        }
+      }
+      
+      // For drivers, filter out rides they've cancelled
+      if (currentUser?.activeRoles.driver && ride.driver._id === currentUser.id && ride.status === "cancelled") {
+        return false;
+      }
+      
+      // Check if the ride is in the future or currently in progress
       const rideDate = new Date(ride.date);
       const timeString = ride.direction === "toCollege" 
         ? ride.toCollegeTime 
@@ -176,12 +198,32 @@ const Report: React.FC = () => {
         rideDate.setHours(hours, minutes, 0, 0);
       }
       
-      return (rideDate >= now || ride.status === "in-progress") && 
-             ride.status !== "cancelled" && 
-             ride.status !== "completed";
+      return rideDate >= now || ride.status === "in-progress";
     });
     
     const pastRides = rides.filter((ride: ExtendedRide) => {
+      // Consider all cancelled, rejected, or completed rides as past
+      if (ride.status === "cancelled" || ride.status === "completed") {
+        return true;
+      }
+      
+      // For hitchers, include rides where they've cancelled or been rejected
+      if (currentUser?.activeRoles.hitcher) {
+        const hitcherInfo = ride.hitchers?.find(h => h.user._id === currentUser.id);
+        if (hitcherInfo && 
+           (hitcherInfo.status === "cancelled" || 
+            hitcherInfo.status === "rejected" || 
+            hitcherInfo.status === "cancelled-by-driver")) {
+          return true;
+        }
+      }
+      
+      // For drivers, include rides they've cancelled
+      if (currentUser?.activeRoles.driver && ride.driver._id === currentUser.id && ride.status === "cancelled") {
+        return true;
+      }
+      
+      // For other rides, check if they are in the past
       const rideDate = new Date(ride.date);
       const timeString = ride.direction === "toCollege" 
         ? ride.toCollegeTime 
@@ -191,17 +233,14 @@ const Report: React.FC = () => {
         const [hours, minutes] = timeString.split(":").map(Number);
         rideDate.setHours(hours, minutes, 0, 0);
         
+        // If more than 2 hours have passed since the ride time, consider it past
         const twoHoursAfterRide = new Date(rideDate);
         twoHoursAfterRide.setHours(twoHoursAfterRide.getHours() + 2);
         
-        return now >= twoHoursAfterRide || 
-               ride.status === "cancelled" || 
-               ride.status === "completed";
+        return now >= twoHoursAfterRide;
       }
       
-      return rideDate < now || 
-             ride.status === "cancelled" || 
-             ride.status === "completed";
+      return rideDate < now;
     });
     
     return { upcomingRides, pastRides };
@@ -889,14 +928,16 @@ const Report: React.FC = () => {
                         </div>
                         <span
                           className={`px-2 py-1 text-sm font-medium rounded-full ${
-                            ride.status === "scheduled"
-                              ? "bg-green-100 text-green-800"
-                              : ride.status === "in-progress"
+                            ride.status === "in-progress"
                               ? "bg-blue-100 text-blue-800"
+                              : ride.status === "scheduled"
+                              ? "bg-green-100 text-green-800"
                               : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
+                          {ride.status === "in-progress" 
+                            ? "In Progress"
+                            : ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
                         </span>
                       </div>
                       <div className="space-y-3">
@@ -1009,15 +1050,52 @@ const Report: React.FC = () => {
                           {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
                         </p>
                       </div>
-                      <span
-                        className={`px-2 py-1 text-sm font-medium rounded-full ${
-                          ride.status === "completed"
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                      </span>
+                      {currentUser.activeRoles.hitcher ? (
+                        // For hitchers, show specific status detail for their ride
+                        (() => {
+                          const hitcherInfo = ride.hitchers?.find(h => h.user._id === currentUser.id);
+                          const displayStatus = hitcherInfo 
+                            ? (hitcherInfo.status === "cancelled-by-driver"
+                               ? "Cancelled by Driver"
+                               : hitcherInfo.status === "cancelled"
+                               ? "Cancelled by You"
+                               : hitcherInfo.status === "rejected"
+                               ? "Rejected by Driver"
+                               : ride.status === "completed"
+                               ? "Completed"
+                               : ride.status.charAt(0).toUpperCase() + ride.status.slice(1)) 
+                            : (ride.status.charAt(0).toUpperCase() + ride.status.slice(1));
+                          
+                          return (
+                            <span
+                              className={`px-2 py-1 text-sm font-medium rounded-full ${
+                                ride.status === "completed"
+                                ? "bg-gray-100 text-gray-800"
+                                : hitcherInfo?.status === "cancelled-by-driver" || hitcherInfo?.status === "cancelled" || hitcherInfo?.status === "rejected"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {displayStatus}
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        // For drivers, show overall ride status
+                        <span
+                          className={`px-2 py-1 text-sm font-medium rounded-full ${
+                            ride.status === "completed"
+                              ? "bg-gray-100 text-gray-800"
+                              : ride.status === "cancelled"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {ride.status === "cancelled"
+                            ? "Cancelled by You"
+                            : ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center text-gray-600">
