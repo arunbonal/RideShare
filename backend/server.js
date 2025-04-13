@@ -44,8 +44,21 @@ app.use(helmet.xssFilter());
 app.use(helmet.frameguard({ action: 'deny' }));
 
 // CORS configuration with specific origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
+  process.env.ALLOWED_ORIGINS.split(',') : 
+  ['https://rideshare-frontend.vercel.app'];
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS.split(','),
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
