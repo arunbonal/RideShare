@@ -84,6 +84,7 @@ const Report: React.FC = () => {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   // Helper functions to detect browser and device
   function getBrowser() {
@@ -421,6 +422,7 @@ const Report: React.FC = () => {
   const handleBugReportSubmit = async () => {
     try {
       setIsSubmitting(true);
+      setDebugError(null);
       
       // More robust validation
       let errorMessage = "";
@@ -471,35 +473,47 @@ const Report: React.FC = () => {
       }
       
       console.log("Sending bug report data, screenshot included:", !!reportData.screenshot);
-      const response = await api.post("/api/bug-reports", reportData);
+      // Add image size logging for debugging
+      if (reportData.screenshot) {
+        console.log("Screenshot size (approx):", Math.ceil((reportData.screenshot.length * 3) / 4) / 1024, "KB");
+      }
       
-      if (response.data.success) {
-        setNotification({
-          show: true,
-          message: bugReportForm.type === "bug" 
-            ? "Bug report submitted successfully" 
-            : "Feature request submitted successfully",
-          type: "success"
-        });
+      try {
+        const response = await api.post("/api/bug-reports", reportData);
         
-        // Clear form after successful submission
-        setBugReportForm({
-          type: bugReportForm.type,
-          title: "",
-          description: "",
-          browser: getBrowser(),
-          device: getDevice(),
-          screenshot: ""
-        });
-        setSelectedFile(null);
-        
-        // Show loading spinner while redirecting
-        setRedirecting(true);
-        
-        // Redirect back to dashboard after 2 seconds
-        setTimeout(() => {
-          navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
-        }, 2000);
+        if (response.data.success) {
+          setNotification({
+            show: true,
+            message: bugReportForm.type === "bug" 
+              ? "Bug report submitted successfully" 
+              : "Feature request submitted successfully",
+            type: "success"
+          });
+          
+          // Clear form after successful submission
+          setBugReportForm({
+            type: bugReportForm.type,
+            title: "",
+            description: "",
+            browser: getBrowser(),
+            device: getDevice(),
+            screenshot: ""
+          });
+          setSelectedFile(null);
+          
+          // Show loading spinner while redirecting
+          setRedirecting(true);
+          
+          // Redirect back to dashboard after 2 seconds
+          setTimeout(() => {
+            navigate(currentUser?.activeRoles.driver ? "/driver/dashboard" : "/hitcher/dashboard");
+          }, 2000);
+        }
+      } catch (error: any) {
+        // More specific error handling for API call
+        const errorDetails = error.response?.data?.message || error.message || "Unknown error";
+        setDebugError(`API Error: ${errorDetails}`);
+        throw error; // Re-throw for the outer catch
       }
     } catch (error: any) {
       console.error("Error submitting bug report:", error);
@@ -509,6 +523,15 @@ const Report: React.FC = () => {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
         console.error("Response headers:", error.response.headers);
+        setDebugError(`Status: ${error.response.status}, Message: ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error("Request made but no response:", error.request);
+        setDebugError(`Network error - no response received. Request size: ${error.request.upload?.total || 'unknown'} bytes`);
+      } else {
+        // Error setting up the request
+        console.error("Error setting up request:", error.message);
+        setDebugError(`Error: ${error.message}`);
       }
       
       setNotification({
@@ -934,10 +957,14 @@ const Report: React.FC = () => {
                     <input
                       type="file"
                       id="screenshot"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/gif,image/heic,image/heif"
+                      capture="environment"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       onChange={handleScreenshotUpload}
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Maximum file size: 1.5MB. Supported formats: JPEG, PNG, GIF, HEIC.
+                    </p>
                     {bugReportForm.screenshot && (
                       <div className="mt-2 relative">
                         <img 
@@ -983,6 +1010,13 @@ const Report: React.FC = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {debugError && (
+                <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <h4 className="text-red-800 font-medium mb-1">Error Details (Debug):</h4>
+                  <pre className="text-xs text-red-800 whitespace-pre-wrap break-words">{debugError}</pre>
+                </div>
               )}
 
               <div className="flex justify-end">
