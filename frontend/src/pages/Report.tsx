@@ -84,7 +84,6 @@ const Report: React.FC = () => {
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [redirecting, setRedirecting] = useState(false);
-  const [debugError, setDebugError] = useState<string | null>(null);
 
   // Helper functions to detect browser and device
   function getBrowser() {
@@ -480,7 +479,6 @@ const Report: React.FC = () => {
               });
               
               console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
-              setDebugError(`Original size: ${file.size / 1024} KB, Compressed size: ${compressedFile.size / 1024} KB`);
               resolve(compressedFile);
             }, 'image/jpeg', 0.5); // Very aggressive compression
           } else {
@@ -491,7 +489,6 @@ const Report: React.FC = () => {
             });
             
             console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
-            setDebugError(`Original size: ${file.size / 1024} KB, Compressed size: ${compressedFile.size / 1024} KB`);
             resolve(compressedFile);
           }
         }, 'image/jpeg', 0.7); // Medium compression
@@ -510,7 +507,6 @@ const Report: React.FC = () => {
   const handleBugReportSubmit = async () => {
     try {
       setIsSubmitting(true);
-      setDebugError(null);
       
       // More robust validation
       let errorMessage = "";
@@ -549,9 +545,9 @@ const Report: React.FC = () => {
           // Apply extreme compression 
           screenshotData = await applyExtremeCompression(bugReportForm.screenshot);
           
-          // Log the size for debugging
+          // Log the size for debugging (can keep some console.logs)
           const finalSize = Math.ceil((screenshotData.length * 3) / 4) / 1024;
-          setDebugError(`Original size: ${Math.ceil((bugReportForm.screenshot.length * 3) / 4) / 1024} KB, Final compressed size: ${finalSize} KB`);
+          console.log(`Original: ${Math.ceil((bugReportForm.screenshot.length * 3) / 4) / 1024} KB, Compressed: ${finalSize} KB`);
           
           // If still over 150KB (increased from 100KB), don't include it
           if (finalSize > 150) {
@@ -564,7 +560,6 @@ const Report: React.FC = () => {
           }
         } catch (error) {
           console.error("Error compressing screenshot:", error);
-          setDebugError(`Error during extreme compression: ${error instanceof Error ? error.message : String(error)}`);
           screenshotData = null;
         }
       }
@@ -582,8 +577,6 @@ const Report: React.FC = () => {
         } catch (error: any) {
           // If we get a payload too large error, try without the screenshot
           if (error.response && error.response.status === 413) {
-            setDebugError("Got 413 error with compressed image. Trying without image...");
-            
             // Wait a moment before trying again
             await new Promise(resolve => setTimeout(resolve, 500));
           } else {
@@ -625,15 +618,12 @@ const Report: React.FC = () => {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
         console.error("Response headers:", error.response.headers);
-        setDebugError(`Status: ${error.response.status}, Message: ${JSON.stringify(error.response.data)}`);
       } else if (error.request) {
         // Request was made but no response received
         console.error("Request made but no response:", error.request);
-        setDebugError(`Network error - no response received. Request size: ${error.request.upload?.total || 'unknown'} bytes`);
       } else {
         // Error setting up the request
         console.error("Error setting up request:", error.message);
-        setDebugError(`Error: ${error.message}`);
       }
       
       setNotification({
@@ -1208,13 +1198,6 @@ const Report: React.FC = () => {
                     </div>
                   </div>
                 </>
-              )}
-
-              {debugError && (
-                <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <h4 className="text-red-800 font-medium mb-1">Error Details (Debug):</h4>
-                  <pre className="text-xs text-red-800 whitespace-pre-wrap break-words">{debugError}</pre>
-                </div>
               )}
 
               <div className="flex justify-end">
