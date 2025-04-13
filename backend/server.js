@@ -19,6 +19,21 @@ const bugReportRoutes = require("./routes/bugReports");
 const winston = require('winston');
 const uuid = require('uuid');
 const helmet = require('helmet');
+const Sentry = require("@sentry/node");
+const { ProfilingIntegration } = require("@sentry/profiling-node");
+
+// Initialize Sentry
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [
+    new Sentry.Integrations.Http({ tracing: true }),
+    new Sentry.Integrations.Express({ app }),
+    new ProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+  environment: process.env.NODE_ENV
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -117,6 +132,17 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
+// Root route
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    service: "RideShare Backend API",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check route - no rate limit
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
@@ -141,6 +167,10 @@ app.use(morgan((tokens, req, res) => {
   });
 }, { stream: { write: message => logger.info(message) } }));
 
+// The request handler must be the first middleware on the app
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
+
 // Global error handler
 app.use((err, req, res, next) => {
   logger.error({
@@ -154,6 +184,9 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
   });
 });
+
+// The error handler must be before any other error middleware and after all controllers
+app.use(Sentry.Handlers.errorHandler());
 
 // Connect to MongoDB and start server
 connectDB()
