@@ -41,8 +41,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     if (!mapRef.current) return;
 
     const newMap = new google.maps.Map(mapRef.current, {
-      zoom: 6,
-      center: { lat: 41.85, lng: -87.65 },
+      zoom: 10,
+      center: { lat: 12.9716, lng: 77.5946 },
       mapTypeControl: false,
       streetViewControl: false,
     });
