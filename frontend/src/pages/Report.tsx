@@ -343,14 +343,43 @@ const Report: React.FC = () => {
   };
 
   const canReportIssue = (ride: ExtendedRide, hitcher?: { status: string }) => {
-    // Don't allow reporting if ride is cancelled
-    if (ride.status === "cancelled") {
-      return false;
-    }
-
     // For hitchers, check if their request was rejected
     if (hitcher && hitcher.status === "rejected") {
       return false;
+    }
+
+    if (!currentUser) {
+      return true;
+    }
+
+    // Check if the current user is a hitcher for this ride
+    if (currentUser.activeRoles.hitcher && hitcher) {
+      // Only prevent reporting if the hitcher cancelled the ride themselves
+      // Allow hitcher to report if the driver cancelled the ride
+      if (hitcher.status === "cancelled" && ride.status !== "cancelled") {
+        return false;
+      }
+
+      // Allow reporting if the hitcher was previously accepted and then the ride was cancelled
+      // This covers the case when a driver cancels a ride with accepted hitchers
+      if (hitcher.status === "cancelled-by-driver" || hitcher.status === "accepted-then-cancelled") {
+        return true;
+      }
+    }
+
+    // Check if the current user is the driver for this ride
+    if (currentUser.activeRoles.driver && ride.driver._id === currentUser.id) {
+      // Prevent driver from reporting if they cancelled the ride themselves
+      if (ride.status === "cancelled") {
+        return false;
+      }
+      
+      // Check if any hitcher cancelled after being accepted 
+      // (this would be for completed or in-progress rides)
+      const hasHitchersCancelled = ride.hitchers?.some(h => h.status === "cancelled") || false;
+      if (hasHitchersCancelled) {
+        return true;
+      }
     }
 
     return true;
@@ -821,6 +850,20 @@ const Report: React.FC = () => {
     handleBugReportSubmit();
   };
 
+  // Helper function to count accepted hitchers in a ride
+  const countAcceptedHitchers = (ride: ExtendedRide): number => {
+    if (!ride.hitchers || ride.hitchers.length === 0) {
+      return 0;
+    }
+    
+    // Look for hitchers with accepted status or any status indicating they were accepted before cancellation
+    return ride.hitchers.filter(h => 
+      h.status === "accepted" || 
+      h.status === "accepted-then-cancelled" || 
+      h.status === "cancelled-by-driver"
+    ).length;
+  };
+
   if (!currentUser) {
     return (
       <>
@@ -1092,7 +1135,21 @@ const Report: React.FC = () => {
                           }`}
                         >
                           {ride.status === "cancelled"
-                            ? "Cancelled by You"
+                            ? (() => {
+                                // Count any hitchers that were accepted before cancellation
+                                const acceptedHitchers = countAcceptedHitchers(ride);
+                                
+                                console.log("Report.tsx - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                                
+                                return acceptedHitchers > 0 
+                                  ? <>
+                                      Cancelled by You
+                                      <div className="text-xs mt-1 text-center">
+                                        {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher affected' : 'hitchers affected'}
+                                      </div>
+                                    </>
+                                  : "Cancelled by You";
+                              })()
                             : ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
                         </span>
                       )}
@@ -1119,35 +1176,20 @@ const Report: React.FC = () => {
                     {/* Driver-specific content */}
                     {currentUser.activeRoles.driver && (
                       <div className="mt-4">
-                        <h4 className="font-medium text-gray-900 mb-2">Accepted Hitchers:</h4>
-                        <div className="space-y-2">
-                          {ride.hitchers
-                            ?.filter((h) => h.status === "accepted")
-                            .map((hitcher) => (
-                              <div
-                                key={hitcher.user._id}
-                                className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
-                              >
-                                <div>
-                                  <p className="font-medium">{hitcher.user.name}</p>
-                                  <p className="text-sm text-gray-600">
-                                    Fare: ₹{hitcher.fare}
-                                  </p>
-                                </div>
-                                {!rideIssues[ride._id]?.[hitcher.user._id] && canReportIssue(ride) && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedRide(ride);
-                                      setShowIssueModal(true);
-                                    }}
-                                    className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                  >
-                                    Report Issue
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                        {/* Render only the Report Issue button directly for drivers */}
+                        <div className="flex justify-end">
+                          {!rideIssues[ride._id] && canReportIssue(ride) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRide(ride);
+                                setShowIssueModal(true);
+                              }}
+                              className="px-3 py-1 text-sm text-red-700 bg-red-50 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                              Report Issue
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

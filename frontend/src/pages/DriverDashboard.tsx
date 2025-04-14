@@ -60,6 +60,20 @@ const DriverDashboard: React.FC = () => {
   const [showReportDropdown, setShowReportDropdown] = useState(false);
   const navigate = useNavigate();
   
+  // Helper function to count accepted hitchers in a ride
+  const countAcceptedHitchers = (ride: ExtendedRide): number => {
+    if (!ride.hitchers || ride.hitchers.length === 0) {
+      return 0;
+    }
+    
+    // Look for hitchers with accepted status or any status indicating they were accepted before cancellation
+    return ride.hitchers.filter(h => 
+      h.status === "accepted" || 
+      h.status === "accepted-then-cancelled" || 
+      h.status === "cancelled-by-driver"
+    ).length;
+  };
+  
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -700,7 +714,7 @@ const DriverDashboard: React.FC = () => {
                               : formatTime(ride.fromCollegeTime || "")}
                           </p>
                           {(() => {
-                            const acceptedCount = ride.hitchers?.filter(h => h.status === "accepted").length || 0;
+                            const acceptedCount = countAcceptedHitchers(ride);
                             return acceptedCount > 0 && (
                               <p className="text-sm text-green-600 mt-2">
                                 <Users className="h-4 w-4 inline mr-1" />
@@ -722,8 +736,17 @@ const DriverDashboard: React.FC = () => {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {ride.status === "cancelled" 
-                              ? "Cancelled by You"
+                            {ride.status === "cancelled"
+                              ? (() => {
+                                  // Count any hitchers that have status "accepted" or had their request accepted before cancellation
+                                  const acceptedHitchers = countAcceptedHitchers(ride);
+                                  
+                                  console.log("DriverDashboard.tsx (upcoming) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                                  
+                                  return acceptedHitchers > 0 
+                                    ? `Cancelled by You (${acceptedHitchers} ${acceptedHitchers === 1 ? 'hitcher' : 'hitchers'})`
+                                    : "Cancelled by You";
+                                })()
                               : ride.status.charAt(0).toUpperCase() +
                                 ride.status.slice(1)}
                           </span>
@@ -776,10 +799,7 @@ const DriverDashboard: React.FC = () => {
                             <Users className="h-5 w-5 mr-2" />
                             <span>Available Seats: {ride.availableSeats}</span>
                             {(() => {
-                              const acceptedCount =
-                                ride.hitchers?.filter(
-                                  (h) => h.status === "accepted"
-                                ).length || 0;
+                              const acceptedCount = countAcceptedHitchers(ride);
                               return (
                                 acceptedCount > 0 && (
                                   <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
@@ -879,7 +899,21 @@ const DriverDashboard: React.FC = () => {
                         }`}
                       >
                         {ride.status === "cancelled"
-                          ? "Cancelled by You"
+                          ? (() => {
+                              // Count any hitchers that have status "accepted" or had their request accepted before cancellation
+                              const acceptedHitchers = countAcceptedHitchers(ride);
+                              
+                              console.log("DriverDashboard.tsx (past) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                              
+                              return acceptedHitchers > 0 
+                                ? <>
+                                    Cancelled by You
+                                    <div className="text-xs mt-1 text-center">
+                                      {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher affected' : 'hitchers affected'}
+                                    </div>
+                                  </>
+                                : "Cancelled by You";
+                            })()
                           : ride.status.charAt(0).toUpperCase() +
                             ride.status.slice(1)}
                       </span>

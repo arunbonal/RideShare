@@ -12,7 +12,6 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "express-prom-bundle": "^7.0.0",
     "express-rate-limit": "^7.1.5",
     "express-session": "^1.18.1",
     "express-validator": "^7.0.1",
@@ -28,7 +27,6 @@
     "nodemon": "^3.1.9",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "prom-client": "^15.1.0",
     "redis": "^4.6.13",
     "twilio": "^5.5.0",
     "winston": "^3.12.0"

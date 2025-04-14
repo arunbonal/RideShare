@@ -8,7 +8,6 @@ const { connectRedis } = require("./config/redis");
 const connectDB = require("./config/database");
 const { generalLimiter, authLimiter, verificationLimiter, securityMiddleware } = require("./middleware/security");
 const { logger, stream } = require("./config/logger");
-const { metricsMiddleware, metrics } = require("./config/metrics");
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
 const rideRoutes = require("./routes/ride");
@@ -31,9 +30,6 @@ const sentryHandlers = getSentryHandlers();
 
 // The request handler must be the first middleware
 app.use(sentryHandlers.requestHandler);
-
-// Apply metrics middleware first
-app.use(metricsMiddleware);
 
 // Request logging
 app.use(morgan('combined', { stream }));
@@ -131,14 +127,6 @@ app.use("/api/rides", generalLimiter, rideRoutes);
 app.use("/api/admin", generalLimiter, adminRoutes);
 app.use("/api/issues", generalLimiter, issuesRoutes);
 app.use("/api/bug-reports", generalLimiter, bugReportRoutes);
-
-// Metrics endpoint - protected and only enabled in development
-if (process.env.NODE_ENV !== 'production') {
-    app.get('/metrics', (req, res) => {
-        res.set('Content-Type', client.register.contentType);
-        client.register.metrics().then(data => res.send(data));
-    });
-}
 
 // Root route
 app.get("/", (req, res) => {

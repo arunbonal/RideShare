@@ -75,10 +75,6 @@ npm start
 - Development: View logs in console or `/logs` directory
 - Production: Access logs via Render dashboard
 
-### Metrics
-- Development: Access metrics at `/metrics` endpoint
-- Production: View system metrics in Render dashboard
-
 ## Security
 
 - Rate limiting implemented
