@@ -1,10 +1,12 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   User,
   ArrowLeft,
   LogOut,
   Settings as SettingsIcon,
+  FileText,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
@@ -156,6 +158,26 @@ const ProfileSettings: React.FC = () => {
                 <LogOut className="h-4 w-4 mr-1" />
                 <span>Logout</span>
               </button>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h3 className="text-lg font-semibold mb-3">About</h3>
+              <div className="space-y-3">
+                <Link
+                  to="/terms"
+                  className="flex items-center text-gray-700 hover:text-blue-600"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  <span>Terms and Conditions</span>
+                </Link>
+                <Link
+                  to="/privacy"
+                  className="flex items-center text-gray-700 hover:text-blue-600"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  <span>Privacy Policy</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

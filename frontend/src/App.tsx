@@ -89,6 +89,8 @@ import AdminUserDetails from "./pages/AdminUserDetails";
 import AdminRideDetails from './pages/AdminRideDetails';
 import Report from "./pages/Report";
 import AuthCallback from "./pages/AuthCallback";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Route change handler component
 const RouteChangeHandler = ({ children }: { children: ReactNode }) => {
@@ -112,6 +114,10 @@ function App() {
               {/* Root route with smart redirection */}
               <Route path="/" element={<RootRouteHandler />} />
               <Route path="/login" element={<Navigate to="/" replace />} />
+
+              {/* Legal Pages - Public Access */}
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
 
               {/* Auth Callback Route */}
               <Route path="/auth/google/callback" element={<AuthCallback />} />

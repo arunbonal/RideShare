@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Car } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -128,6 +128,14 @@ const Login: React.FC = () => {
           Note: Only PES University email addresses (@pesu.pes.edu) are allowed
           to register
         </p>
+
+        <div className="mt-4 text-center text-xs text-gray-500">
+          <div className="flex justify-center space-x-4">
+            <Link to="/terms" className="text-blue-600 hover:underline">Terms and Conditions</Link>
+            <Link to="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
+          </div>
+          <p className="mt-2">© {new Date().getFullYear()} RideShare. All rights reserved.</p>
+        </div>
       </div>
     </div>
   );
