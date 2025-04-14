@@ -118,7 +118,7 @@ function App() {
               {/* Legal Pages - Public Access */}
               <Route path="/terms" element={<TermsAndConditions />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
-
+              
               {/* Auth Callback Route */}
               <Route path="/auth/google/callback" element={<AuthCallback />} />
               
@@ -274,6 +274,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Not found route */}
               <Route path="*" element={
                 <RouteChangeHandler>
                   <NotFound />
