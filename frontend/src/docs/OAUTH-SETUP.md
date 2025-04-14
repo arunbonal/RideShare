@@ -13,7 +13,7 @@ To fix the issue with your backend URL being exposed in the OAuth consent screen
 
 Update the following fields with the full URLs to your new legal pages:
 
-- **Privacy Policy URL**: `https://rideshare-frontend.vercel.app/privacy`
+- **Privacy Policy URL**: `https://rideshare-frontend.vercel.app/privacy-policy`
 - **Terms of Service URL**: `https://rideshare-frontend.vercel.app/terms`
 
 ## Other Important Fields

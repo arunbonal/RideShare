@@ -14,7 +14,7 @@ This update adds Terms and Conditions and Privacy Policy pages to the RideShare 
 
 2. **Privacy Policy**
    - File: `src/pages/PrivacyPolicy.tsx`
-   - URL: `/privacy`
+   - URL: `/privacy-policy`
    - Compliant with Indian Information Technology Act, 2000 and IT Rules, 2011
    - Includes provisions for a Grievance Officer as required by Indian law
 
@@ -36,7 +36,7 @@ After deploying these changes to production, follow these steps:
 1. Log in to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Navigate to **APIs & Services** > **OAuth consent screen**
 3. Update the following fields:
-   - Privacy Policy URL: `https://rideshare-frontend.vercel.app/privacy`
+   - Privacy Policy URL: `https://rideshare-frontend.vercel.app/privacy-policy`
    - Terms of Service URL: `https://rideshare-frontend.vercel.app/terms`
    - App name: RideShare
    - User support email: rideshare.pesu@gmail.com

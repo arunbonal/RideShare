@@ -171,7 +171,7 @@ const ProfileSettings: React.FC = () => {
                   <span>Terms and Conditions</span>
                 </Link>
                 <Link
-                  to="/privacy"
+                  to="/privacy-policy"
                   className="flex items-center text-gray-700 hover:text-blue-600"
                 >
                   <Shield className="h-4 w-4 mr-2" />

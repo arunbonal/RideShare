@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Car, LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 const AdminNavbar: React.FC = () => {
@@ -23,7 +23,6 @@ const AdminNavbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/admin" className="flex items-center">
-              <Car className="h-8 w-8 mr-2" />
               <span className="font-bold text-xl">Admin Dashboard</span>
             </Link>
           </div>

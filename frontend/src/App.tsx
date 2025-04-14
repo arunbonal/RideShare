@@ -117,7 +117,7 @@ function App() {
 
               {/* Legal Pages - Public Access */}
               <Route path="/terms" element={<TermsAndConditions />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               
               {/* Auth Callback Route */}
               <Route path="/auth/google/callback" element={<AuthCallback />} />
