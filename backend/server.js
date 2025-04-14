@@ -22,6 +22,9 @@ const { initializeSentry, getSentryHandlers } = require('./config/sentry');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - important for secure callbacks when behind a reverse proxy
+app.set('trust proxy', 1);
+
 // Initialize Sentry before any other middleware
 initializeSentry(app);
 
