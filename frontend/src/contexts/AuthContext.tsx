@@ -94,6 +94,7 @@ export interface Ride {
     dropoffLocation?: string;
     fare?: number;
     requestTime: string;
+    autoCancel?: boolean;
   }[];
   notifications?: {
     _id: string;

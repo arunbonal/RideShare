@@ -22,17 +22,21 @@ interface User {
   };
 }
 
-// Extend the Ride interface to include totalFare as a number
+// Add a HitcherInfo interface to include autoCancel
+interface HitcherInfo {
+  user: User;
+  status: string;
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  fare?: number;
+  requestTime: string;
+  autoCancel?: boolean;
+}
+
+// Extend the Ride interface to use the HitcherInfo type
 interface ExtendedRide extends Ride {
   totalFare: number;
-  hitchers?: {
-    user: User;
-    status: string;
-    pickupLocation?: string;
-    dropoffLocation?: string;
-    fare?: number;
-    requestTime: string;
-  }[];
+  hitchers?: HitcherInfo[];
 }
 
 const DriverDashboard: React.FC = () => {
@@ -155,9 +159,12 @@ const DriverDashboard: React.FC = () => {
             .map(n => {
               // Determine notification type
               let notificationType: "success" | "error" | "info" = "info";
-              if (n.message.includes('accepted')) {
+              // First check for auto-cancellation messages specifically
+              if (n.message.includes('automatically cancelled')) {
+                notificationType = "error";
+              } else if (n.message.includes('accepted')) {
                 notificationType = "success";
-              } else if (n.message.includes('cancelled') || n.message.includes('rejected')) {
+              } else if (n.message.includes('cancelled') || n.message.includes('rejected') || n.message.includes('automatically')) {
                 notificationType = "error";
               } else if (n.message.includes('requested')) {
                 notificationType = "info";
@@ -648,6 +655,19 @@ const DriverDashboard: React.FC = () => {
     });
   };
 
+  // Helper function to determine notification styling based on message content
+  const handleNotificationStyle = (message: string) => {
+    if (message.includes('automatically cancelled')) {
+      return "bg-red-50 text-red-800 border border-red-200";
+    } else if (message.includes('cancelled') || message.includes('rejected')) {
+      return "bg-red-50 text-red-800 border border-red-200";
+    } else if (message.includes('accepted')) {
+      return "bg-green-50 text-green-800 border border-green-200";
+    } else {
+      return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -656,7 +676,9 @@ const DriverDashboard: React.FC = () => {
         {notification.show && (
           <div
             className={`fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg ${
-              notification.type === "success"
+              notification.message.includes('automatically cancelled')
+                ? "bg-red-50 text-red-800 border border-red-200"
+                : notification.type === "success"
                 ? "bg-green-50 text-green-800 border border-green-200"
                 : notification.type === "error"
                 ? "bg-red-50 text-red-800 border border-red-200"

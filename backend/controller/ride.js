@@ -387,6 +387,57 @@ exports.acceptRide = async (req, res) => {
     });
 
     await ride.save();
+
+    // Find and cancel all other pending requests from the same hitcher for the same day and direction
+    const acceptedRideDate = new Date(ride.date);
+    
+    // Find all rides for the same day and direction
+    const otherRides = await Ride.find({
+      _id: { $ne: rideId }, // Exclude the current ride
+      status: "scheduled",
+      direction: ride.direction,
+      date: {
+        $gte: new Date(acceptedRideDate.setHours(0, 0, 0, 0)),
+        $lt: new Date(acceptedRideDate.setHours(23, 59, 59, 999))
+      },
+      "hitchers.user": hitcherId,
+      "hitchers.status": "pending"
+    });
+
+    // Cancel all pending requests from this hitchhiker in other rides
+    for (const otherRide of otherRides) {
+      const pendingHitcher = otherRide.hitchers.find(
+        h => h.user && h.user.toString() === hitcherId && h.status === "pending"
+      );
+      
+      if (pendingHitcher) {
+        pendingHitcher.status = "cancelled";
+        pendingHitcher.autoCancel = true;
+        
+        // Add notification for the hitcher about auto-cancellation
+        if (!otherRide.notifications) {
+          otherRide.notifications = [];
+        }
+        
+        otherRide.notifications.push({
+          userId: hitcherId,
+          message: `Your ride request was automatically cancelled because another ride request was accepted for the same day and direction`,
+          read: false,
+          createdAt: new Date()
+        });
+        
+        // Add notification for the driver
+        otherRide.notifications.push({
+          userId: otherRide.driver,
+          message: `A ride request was automatically cancelled because the hitcher was accepted for another ride`,
+          read: false,
+          createdAt: new Date()
+        });
+        
+        await otherRide.save();
+      }
+    }
+
     res.status(200).json({ message: "Ride request accepted successfully" });
   } catch (err) {
     logger.error("Error accepting ride", {

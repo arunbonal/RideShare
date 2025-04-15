@@ -196,7 +196,7 @@ const HitcherDashboard: React.FC = () => {
             .filter(n => !n.read && n.userId === currentUser.id && !seenNotifications.includes(n._id))
             .map(n => {
               // Determine notification type
-              const notificationType = n.message.includes('accepted') ? 'success' : 'error';
+              const notificationType = n.message.includes('accepted') && !n.message.includes('automatically cancelled') ? 'success' : 'error';
               return { 
                 _id: n._id,
                 message: n.message,
@@ -858,34 +858,47 @@ const HitcherDashboard: React.FC = () => {
                                 ? formatTime(ride.toCollegeTime)
                                 : formatTime(ride.fromCollegeTime)}
                             </div>
+                            
                           </div>
                           <div className="flex flex-col items-end">
-                            <span
-                              className={`px-2 py-1 text-sm font-medium rounded-full ${
-                                ride.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800"
+                            {/* Fare and status in the same row */}
+                            <div className="flex items-center space-x-2">
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                                ₹{hitcherInfo.fare || 0} 
+                              </span>
+                              <span
+                                className={`px-2 py-1 text-sm font-medium rounded-full ${
+                                  ride.status === "in-progress"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : ride.status === "completed"
+                                    ? "bg-gray-100 text-gray-800"
+                                    : hitcherInfo.status === "accepted"
+                                    ? "bg-green-100 text-green-800"
+                                    : hitcherInfo.status === "pending"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : hitcherInfo.status === "cancelled" && hitcherInfo.autoCancel
+                                    ? "bg-red-100 text-red-800"
+                                    : hitcherInfo.status === "cancelled"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {ride.status === "in-progress" 
+                                  ? "In Progress"
                                   : ride.status === "completed"
-                                  ? "bg-gray-100 text-gray-800"
-                                  : hitcherInfo.status === "accepted"
-                                  ? "bg-green-100 text-green-800"
-                                  : hitcherInfo.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {ride.status === "in-progress" 
-                                ? "In Progress"
-                                : ride.status === "completed"
-                                ? "Completed"
-                                : (hitcherInfo.status as string) === "cancelled-by-driver" 
-                                ? "Cancelled by Driver" 
-                                : hitcherInfo.status === "cancelled"
-                                ? "Cancelled by You"
-                                : hitcherInfo.status === "rejected"
-                                ? "Rejected by Driver"
-                                : hitcherInfo.status.charAt(0).toUpperCase() +
-                                  hitcherInfo.status.slice(1)}
-                            </span>
+                                  ? "Completed"
+                                  : (hitcherInfo.status as string) === "cancelled-by-driver" 
+                                  ? "Cancelled by Driver" 
+                                  : hitcherInfo.status === "cancelled" && hitcherInfo.autoCancel
+                                  ? "Auto Cancelled"
+                                  : hitcherInfo.status === "cancelled"
+                                  ? "Cancelled by You"
+                                  : hitcherInfo.status === "rejected"
+                                  ? "Rejected by Driver"
+                                  : hitcherInfo.status.charAt(0).toUpperCase() +
+                                    hitcherInfo.status.slice(1)}
+                              </span>
+                            </div>
                             <button
                               className="text-gray-400 hover:text-gray-600 focus:outline-none mt-8"
                               onClick={(e) => {

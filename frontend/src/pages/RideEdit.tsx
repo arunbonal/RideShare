@@ -15,6 +15,7 @@ interface ValidationErrors {
   date?: string;
   time?: string;
   pricePerKm?: string;
+  direction?: string;
 }
 
 interface RideFormData {
@@ -45,6 +46,7 @@ const RideEdit: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [originalDirection, setOriginalDirection] = useState<"toCollege" | "fromCollege" | null>(null);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -72,6 +74,9 @@ const RideEdit: React.FC = () => {
           // Format the date to YYYY-MM-DD for the date input
           const formattedDate = new Date(existingRide.date).toISOString().split('T')[0];
           
+          // Store the original direction for validation
+          setOriginalDirection(existingRide.direction);
+          
           setRideForm({
             _id: existingRide._id,
             driver: {
@@ -98,6 +103,9 @@ const RideEdit: React.FC = () => {
           
           // Format the date to YYYY-MM-DD for the date input
           const formattedDate = new Date(ride.date).toISOString().split('T')[0];
+          
+          // Store the original direction for validation
+          setOriginalDirection(ride.direction);
           
           setRideForm({
             _id: ride._id,
@@ -184,6 +192,48 @@ const RideEdit: React.FC = () => {
     return undefined;
   }, []);
 
+  // Function to check if driver already has a ride of the specified direction on the same date
+  const checkForExistingRide = useCallback((date: string, direction: "toCollege" | "fromCollege", rideId: string): boolean => {
+    if (!currentUser) return false;
+    
+    // If the direction is the same as the original direction, no conflict can occur
+    if (direction === originalDirection) {
+      return false;
+    }
+    
+    // Convert string date to Date object for comparison (YYYY-MM-DD format)
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    // Filter rides that match the criteria:
+    // 1. Belongs to the current driver
+    // 2. Has the same direction
+    // 3. Is on the same date
+    // 4. Is not the current ride being edited
+    // 5. Is not cancelled
+    const existingRides = allRides.filter(ride => {
+      // Check if this is the driver's ride
+      if (ride.driver._id !== currentUser.id) return false;
+      
+      // Skip the current ride (the one being edited)
+      if (ride._id === rideId) return false;
+      
+      // Skip cancelled rides
+      if (ride.status === "cancelled") return false;
+      
+      // Check if directions match
+      if (ride.direction !== direction) return false;
+      
+      // Check if dates match (ignoring time)
+      const rideDate = new Date(ride.date);
+      rideDate.setHours(0, 0, 0, 0);
+      
+      return rideDate.getTime() === checkDate.getTime();
+    });
+    
+    return existingRides.length > 0;
+  }, [currentUser, allRides, originalDirection]);
+
   // Handle form submission to update the ride
   const handleUpdateRide = useCallback(async (): Promise<void> => {
     if (!rideForm) return;
@@ -228,16 +278,26 @@ const RideEdit: React.FC = () => {
     if (rideForm.pricePerKm !== undefined && (rideForm.pricePerKm < 1 || rideForm.pricePerKm > 10)) {
       errors.pricePerKm = "Price per kilometer must be between ₹1 and ₹10";
     }
-
-    // Set validation errors and return if there are any
+    
+    // We don't need to check direction conflicts during submission
+    // The UI will prevent direction changes if there's a conflict,
+    // so the current direction is always valid
+    
+    // Set validation errors and return if there are any (excluding direction)
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       setIsLoading(false);
       return;
     }
 
-    // Clear validation errors
-    setValidationErrors({});
+    // Clear validation errors except direction (which we'll handle separately)
+    const updatedErrors = { ...validationErrors };
+    Object.keys(updatedErrors).forEach(key => {
+      if (key !== 'direction') {
+        delete updatedErrors[key as keyof ValidationErrors];
+      }
+    });
+    setValidationErrors(updatedErrors);
 
     try {
       // Format the ride data to match the backend schema
@@ -288,7 +348,7 @@ const RideEdit: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [rideForm, validateAvailableSeats, isTimeValid, id, navigate, fetchAllRides]);
+  }, [rideForm, validateAvailableSeats, isTimeValid, id, navigate, fetchAllRides, validationErrors]);
 
   // Auto-dismiss notification after 3 seconds
   useEffect(() => {
@@ -443,17 +503,37 @@ const RideEdit: React.FC = () => {
                 max={maxDateString}
                 value={rideForm.date}
                 onChange={(e) => {
-                  setRideForm({
-                    ...rideForm,
-                    date: e.target.value,
-                  });
-                  // Clear date validation error
-                  if (validationErrors.date) {
+                  const newDate = e.target.value;
+                  
+                  // Check if changing the date would conflict with existing rides
+                  const hasExistingRide = checkForExistingRide(newDate, rideForm.direction, rideForm._id);
+                  
+                  if (hasExistingRide) {
+                    // Set validation error
                     setValidationErrors({
                       ...validationErrors,
-                      date: undefined
+                      direction: `You already have a ${rideForm.direction === "toCollege" ? "To College" : "From College"} ride scheduled on this date`
                     });
+                  } else {
+                    // Clear any existing direction validation error
+                    if (validationErrors.direction) {
+                      const updatedErrors = { ...validationErrors };
+                      delete updatedErrors.direction;
+                      setValidationErrors(updatedErrors);
+                    }
                   }
+                  
+                  // Clear date validation error
+                  if (validationErrors.date) {
+                    const updatedErrors = { ...validationErrors };
+                    delete updatedErrors.date;
+                    setValidationErrors(updatedErrors);
+                  }
+                  
+                  setRideForm({
+                    ...rideForm,
+                    date: newDate,
+                  });
                 }}
                 className={`w-full px-3 py-2 border ${validationErrors.date ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
                 required
@@ -481,6 +561,27 @@ const RideEdit: React.FC = () => {
                 value={rideForm.direction}
                 onChange={(e) => {
                   const newDirection = e.target.value as "toCollege" | "fromCollege";
+                  
+                  // Check if the driver already has a ride in this direction on this date
+                  const hasExistingRide = checkForExistingRide(rideForm.date, newDirection, rideForm._id);
+                  
+                  if (hasExistingRide) {
+                    // Set validation error for direction but DON'T change the selection
+                    setValidationErrors({
+                      ...validationErrors,
+                      direction: `You already have a ${newDirection === "toCollege" ? "To College" : "From College"} ride scheduled on this date`
+                    });
+                    // Don't update the form direction
+                    return;
+                  } else {
+                    // Clear any existing direction validation error
+                    if (validationErrors.direction) {
+                      const updatedErrors = { ...validationErrors };
+                      delete updatedErrors.direction;
+                      setValidationErrors(updatedErrors);
+                    }
+                  }
+                  
                   setRideForm({
                     ...rideForm,
                     direction: newDirection,
@@ -495,11 +596,16 @@ const RideEdit: React.FC = () => {
                         : currentUser?.homeAddress || "",
                   });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border ${validationErrors.direction ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
               >
                 <option value="toCollege">To College</option>
                 <option value="fromCollege">From College</option>
               </select>
+              {validationErrors.direction && (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.direction}
+                </p>
+              )}
             </div>
 
             {/* Time Selection */}
@@ -683,7 +789,10 @@ const RideEdit: React.FC = () => {
               onClick={handleUpdateRide}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               loadingText="Updating Ride..."
-              disabled={Object.keys(validationErrors).some(key => validationErrors[key as keyof ValidationErrors]) || isLoading}
+              disabled={Object.keys(validationErrors).some(key => 
+                // Only disable for errors other than direction errors
+                key !== 'direction' && validationErrors[key as keyof ValidationErrors]
+              ) || isLoading}
             >
               Update Ride
             </LoadingButton>

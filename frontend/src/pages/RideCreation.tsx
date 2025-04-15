@@ -15,6 +15,7 @@ interface ValidationErrors {
   date?: string;
   time?: string;
   pricePerKm?: string;
+  direction?: string;
 }
 
 interface RideSchedule {
@@ -42,7 +43,7 @@ interface RideSchedule {
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const RideCreation: React.FC = React.memo(() => {
   const navigate = useNavigate();
-  const { currentUser, ride, setRide, resetRide } = useAuth();
+  const { currentUser, ride, setRide, resetRide, allRides } = useAuth();
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   useEffect(() => {
@@ -120,6 +121,39 @@ const RideCreation: React.FC = React.memo(() => {
     return undefined;
   }, []);
 
+  // Function to check if driver already has a ride of the specified direction on the same date
+  const checkForExistingRide = useCallback((date: string, direction: "toCollege" | "fromCollege"): boolean => {
+    if (!currentUser || !date) return false;
+    
+    // Convert string date to Date object for comparison (YYYY-MM-DD format)
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    // Filter rides that match the criteria:
+    // 1. Belongs to the current driver
+    // 2. Has the same direction
+    // 3. Is on the same date
+    // 4. Is not cancelled
+    const existingRides = allRides.filter(ride => {
+      // Check if this is the driver's ride
+      if (ride.driver._id !== currentUser.id) return false;
+      
+      // Skip cancelled rides
+      if (ride.status === "cancelled") return false;
+      
+      // Check if directions match
+      if (ride.direction !== direction) return false;
+      
+      // Check if dates match (ignoring time)
+      const rideDate = new Date(ride.date);
+      rideDate.setHours(0, 0, 0, 0);
+      
+      return rideDate.getTime() === checkDate.getTime();
+    });
+    
+    return existingRides.length > 0;
+  }, [currentUser, allRides]);
+
   // Memoize the create schedule handler
   const handleCreateSchedule = useCallback(async (): Promise<void> => {
     // Collect all validation errors
@@ -160,6 +194,11 @@ const RideCreation: React.FC = React.memo(() => {
     if (ride.pricePerKm !== undefined && (ride.pricePerKm < 1 || ride.pricePerKm > 10)) {
       errors.pricePerKm = "Price per kilometer must be between ₹1 and ₹10";
     }
+    
+    // Check if the driver already has a ride in this direction on this date
+    if (ride.date && checkForExistingRide(ride.date, ride.direction)) {
+      errors.direction = `You already have a ${ride.direction === "toCollege" ? "To College" : "From College"} ride scheduled on this date`;
+    }
 
     // Set validation errors and return if there are any
     if (Object.keys(errors).length > 0) {
@@ -198,7 +237,7 @@ const RideCreation: React.FC = React.memo(() => {
     await api.post("/api/rides/create", rideData);
     resetRide();
     navigate("/driver/dashboard");
-  }, [ride, currentUser, isTimeValid, resetRide, navigate, validateAvailableSeats]);
+  }, [ride, currentUser, isTimeValid, resetRide, navigate, validateAvailableSeats, checkForExistingRide]);
 
   return (
     <>
@@ -278,16 +317,33 @@ const RideCreation: React.FC = React.memo(() => {
                 max={maxDateString}
                 value={ride.date}
                 onChange={(e) => {
+                  const newDate = e.target.value;
+                  
+                  // Check if changing the date would conflict with existing rides
+                  if (newDate && checkForExistingRide(newDate, ride.direction)) {
+                    // Set validation error
+                    setValidationErrors({
+                      ...validationErrors,
+                      direction: `You already have a ${ride.direction === "toCollege" ? "To College" : "From College"} ride scheduled on this date`
+                    });
+                  } else {
+                    // Clear any existing direction validation error
+                    if (validationErrors.direction) {
+                      const updatedErrors = { ...validationErrors };
+                      delete updatedErrors.direction;
+                      setValidationErrors(updatedErrors);
+                    }
+                  }
+                  
                   setRide({
                     ...ride,
-                    date: e.target.value,
+                    date: newDate,
                   });
                   // Clear date validation error
                   if (validationErrors.date) {
-                    setValidationErrors({
-                      ...validationErrors,
-                      date: undefined
-                    });
+                    const updatedErrors = { ...validationErrors };
+                    delete updatedErrors.date;
+                    setValidationErrors(updatedErrors);
                   }
                 }}
                 className={`w-full px-3 py-2 border ${validationErrors.date ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
@@ -317,6 +373,25 @@ const RideCreation: React.FC = React.memo(() => {
                 onChange={(e) => {
                   const newDirection = e.target
                     .value as RideSchedule["direction"];
+                  
+                  // Check if the driver already has a ride in this direction on this date
+                  if (ride.date && checkForExistingRide(ride.date, newDirection)) {
+                    // Set validation error for direction
+                    setValidationErrors({
+                      ...validationErrors,
+                      direction: `You already have a ${newDirection === "toCollege" ? "To College" : "From College"} ride scheduled on this date`
+                    });
+                    // Don't update the direction
+                    return;
+                  } else {
+                    // Clear any existing direction validation error
+                    if (validationErrors.direction) {
+                      const updatedErrors = { ...validationErrors };
+                      delete updatedErrors.direction;
+                      setValidationErrors(updatedErrors);
+                    }
+                  }
+                  
                   setRide({
                     ...ride,
                     direction: newDirection,
@@ -331,11 +406,16 @@ const RideCreation: React.FC = React.memo(() => {
                         : currentUser?.homeAddress || "",
                   });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border ${validationErrors.direction ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'} rounded-md focus:outline-none`}
               >
                 <option value="toCollege">To College</option>
                 <option value="fromCollege">From College</option>
               </select>
+              {validationErrors.direction && (
+                <p className="mt-1 text-sm text-red-600">
+                  {validationErrors.direction}
+                </p>
+              )}
             </div>
 
             {/* Map Preview */}
