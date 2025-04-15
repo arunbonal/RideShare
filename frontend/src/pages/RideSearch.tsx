@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Clock, Filter, X, Calendar, XCircle } from "lucide-react";
+import { Search, MapPin, Clock, Filter, X, Calendar, XCircle, Loader } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
@@ -485,7 +485,12 @@ const RideSearch: React.FC = () => {
               )}
             </div>
             <p className="text-gray-500 text-sm">
-              {isLoading ? "Loading rides..." : !direction ? "Please select a direction first" : !selectedDate ? "Please select a date to continue" : "Showing rides for selected date and direction"}
+              {isLoading ? (
+                <span className="flex items-center">
+                  <Loader className="animate-spin h-4 w-4 mr-1" />
+                  Loading rides...
+                </span>
+              ) : !direction ? "Please select a direction first" : !selectedDate ? "Please select a date to continue" : "Showing rides for selected date and direction"}
             </p>
           </div>
         </div>
