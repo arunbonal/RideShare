@@ -36,6 +36,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   const [directionsRenderer, setDirectionsRenderer] =
     useState<google.maps.DirectionsRenderer | null>(null);
   const [selectedHitcherIndex, setSelectedHitcherIndex] = useState<number | null>(null);
+  const [orderedWaypoints, setOrderedWaypoints] = useState<Array<{
+    location: string;
+    originalIndex: number;
+  }>>([]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -73,12 +77,27 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           origin: startLocation,
           destination: endLocation,
           waypoints: waypts,
-          optimizeWaypoints: true,
+          optimizeWaypoints: true, // This tells Google Maps to find the most efficient route
           travelMode: google.maps.TravelMode.DRIVING,
         })
         .then((response) => {
           directionsRenderer.setDirections(response);
           map.fitBounds(response.routes[0].bounds);
+          
+          // Store the ordered waypoints with their original indices
+          if (response.routes[0] && response.routes[0].waypoint_order && userLocation) {
+            const locations = userLocation.split("|");
+            const waypointOrder = response.routes[0].waypoint_order;
+            
+            // Create an array of ordered locations with their original indices
+            const ordered = waypointOrder.map((waypointIndex, newIndex) => ({
+              location: locations[waypointIndex],
+              originalIndex: waypointIndex,
+            }));
+            
+            setOrderedWaypoints(ordered);
+          }
+          
           onRouteCalculated?.(response);
         })
         .catch((e) =>
@@ -88,9 +107,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
     calculateAndDisplayRoute();
   }, [map, directionsRenderer, startLocation, endLocation, userLocation]);
-
-  // Parse user locations
-  const userLocations = userLocation ? userLocation.split("|") : [];
 
   // Get first name only for display
   const getFirstName = (fullName: string) => {
@@ -130,6 +146,14 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     };
   }, [selectedHitcherIndex]); // Only re-run if selectedHitcherIndex changes
 
+  // Parse user locations
+  const userLocations = userLocation ? userLocation.split("|") : [];
+  
+  // Use the ordered waypoints if available, otherwise use the original order
+  const displayWaypoints = orderedWaypoints.length > 0 
+    ? orderedWaypoints 
+    : userLocations.map((location, index) => ({ location, originalIndex: index }));
+
   return (
     <div className={`relative rounded-lg overflow-hidden ${className}`}>
       {/* Google Map */}
@@ -158,51 +182,54 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           
           
 
-          {/* User location(s) */}
-          {userLocations.map((location, index) => (
-            <React.Fragment key={index}>
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-1">
-                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                </div>
-                <div className="ml-3 min-w-0 flex-1">
-                  <div className="flex items-center space-x-2">
-                    <p className="text-sm font-medium text-gray-900">
-                      {direction === "toCollege" ? "Pickup Point" : "Dropoff Point"} {userLocations.length > 1 ? `#${index + 1}` : ""}
-                      {showAddressLabels && (
-                        (direction === "toCollege" || direction === "fromCollege") ? (
-                          <span className="ml-1 text-xs text-gray-500">(Your address)</span>
-                        ) : null
-                      )}
-                    </p>
-                    {isAcceptedLocation(location) && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                        Accepted
-                      </span>
-                    )}
-                    
-                    {/* Profile button - smaller and click-based */}
-                    {showHitcherDetails && hitcherNames && hitcherNames.length > index && hitcherNames[index] && (
-                      <div className="relative">
-                        <button 
-                          className="flex items-center text-blue-500 text-xs border border-blue-500 rounded px-1 py-0.5"
-                          onClick={(e) => handleProfileButtonClick(e, index)}
-                        >
-                          <UserCircle className="h-3 w-3 mr-1" />
-                          Profile
-                        </button>
-                      </div>
-                    )}
+          {/* User location(s) - Now using ordered waypoints */}
+          {displayWaypoints.map((waypointObj, displayIndex) => {
+            const location = waypointObj.location;
+            const originalIndex = waypointObj.originalIndex;
+            
+            return (
+              <React.Fragment key={originalIndex}>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                   </div>
-                  <p className="text-sm text-gray-500 break-words">
-                    {location}
-                  </p>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm font-medium text-gray-900">
+                        {direction === "toCollege" ? "Pickup Point" : "Dropoff Point"} #{displayIndex + 1}
+                        {showAddressLabels && (
+                          (direction === "toCollege" || direction === "fromCollege") ? (
+                            <span className="ml-1 text-xs text-gray-500">(Your address)</span>
+                          ) : null
+                        )}
+                      </p>
+                      {isAcceptedLocation(location) && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
+                          Accepted
+                        </span>
+                      )}
+                      
+                      {/* Profile button - using originalIndex to map to the correct hitcherName */}
+                      {showHitcherDetails && hitcherNames && hitcherNames.length > originalIndex && hitcherNames[originalIndex] && (
+                        <div className="relative">
+                          <button 
+                            className="flex items-center text-blue-500 text-xs border border-blue-500 rounded px-1 py-0.5"
+                            onClick={(e) => handleProfileButtonClick(e, originalIndex)}
+                          >
+                            <UserCircle className="h-3 w-3 mr-1" />
+                            Profile
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 break-words">
+                      {location}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              
-              
-            </React.Fragment>
-          ))}
+              </React.Fragment>
+            );
+          })}
 
           
 

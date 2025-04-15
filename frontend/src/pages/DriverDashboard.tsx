@@ -697,34 +697,14 @@ const DriverDashboard: React.FC = () => {
                       className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
                       onClick={() => toggleRideExpand(ride._id)}
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
+                      {/* Mobile layout (stacked) */}
+                      <div className="block md:hidden">
+                        <div className="flex justify-between items-start mb-3">
                           <h3 className="text-lg font-medium text-gray-900">
                             {ride.direction === "toCollege"
                               ? "To College"
                               : "From College"}
                           </h3>
-                          <p className="text-gray-500">
-                            {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                          </p>
-                          <p className="text-md text-gray-600 mt-2">
-                            <Clock className="h-5 w-4 inline mr-1" />
-                            {ride.direction === "toCollege"
-                              ? formatTime(ride.toCollegeTime || "")
-                              : formatTime(ride.fromCollegeTime || "")}
-                          </p>
-                          {(() => {
-                            const acceptedCount = countAcceptedHitchers(ride);
-                            return acceptedCount > 0 && (
-                              <p className="text-sm text-green-600 mt-2">
-                                <Users className="h-4 w-4 inline mr-1" />
-                                {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
-                              </p>
-                            );
-                          })()}
-                          
-                        </div>
-                        <div className="flex flex-col gap-2 items-end">
                           <span
                             className={`px-2 py-1 text-sm font-medium rounded-full ${
                               ride.status === "scheduled"
@@ -738,11 +718,7 @@ const DriverDashboard: React.FC = () => {
                           >
                             {ride.status === "cancelled"
                               ? (() => {
-                                  // Count any hitchers that have status "accepted" or had their request accepted before cancellation
                                   const acceptedHitchers = countAcceptedHitchers(ride);
-                                  
-                                  console.log("DriverDashboard.tsx (upcoming) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
-                                  
                                   return acceptedHitchers > 0 
                                     ? `Cancelled by You (${acceptedHitchers} ${acceptedHitchers === 1 ? 'hitcher' : 'hitchers'})`
                                     : "Cancelled by You";
@@ -750,28 +726,40 @@ const DriverDashboard: React.FC = () => {
                               : ride.status.charAt(0).toUpperCase() +
                                 ride.status.slice(1)}
                           </span>
+                        </div>
+                        
+                        <p className="text-gray-500 mb-3">
+                          {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                        </p>
+                        
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="text-md text-gray-600">
+                            <Clock className="h-5 w-4 inline mr-1" />
+                            {ride.direction === "toCollege"
+                              ? formatTime(ride.toCollegeTime || "")
+                              : formatTime(ride.fromCollegeTime || "")}
+                          </p>
                           
-                          {getRequestsForRide(ride._id).length > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setRequestModal({
-                                  show: true,
-                                  rideId: ride._id
-                                });
-                                setCurrentRequestIndex(0);
-                              }}
-                              className="px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
-                            >
-                              <Users className="h-5 w-5 mr-2" />
-                              View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
-                            </button>
-                          )}
                           {ride.totalFare > 0 && (
                             <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
                             </span>
                           )}
+                        </div>
+                        
+                        <div className="flex justify-between items-center mb-2">
+                          {(() => {
+                            const acceptedCount = countAcceptedHitchers(ride);
+                            return acceptedCount > 0 ? (
+                              <p className="text-sm text-green-600">
+                                <Users className="h-4 w-4 inline mr-1" />
+                                {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                              </p>
+                            ) : (
+                              <span></span> // Empty span to maintain layout when no hitchers
+                            );
+                          })()}
+                          
                           <button
                             className="text-gray-400 hover:text-gray-600 focus:outline-none"
                             onClick={(e) => {
@@ -779,8 +767,115 @@ const DriverDashboard: React.FC = () => {
                               toggleRideExpand(ride._id);
                             }}
                           >
-                            <ChevronDown className={`h-5 w-5 mt-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
                           </button>
+                        </div>
+                        
+                        {getRequestsForRide(ride._id).length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRequestModal({
+                                show: true,
+                                rideId: ride._id
+                              });
+                              setCurrentRequestIndex(0);
+                            }}
+                            className="w-full mt-2 px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center justify-center"
+                          >
+                            <Users className="h-5 w-5 mr-2" />
+                            View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Desktop layout */}
+                      <div className="hidden md:block">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {ride.direction === "toCollege"
+                                ? "To College"
+                                : "From College"}
+                            </h3>
+                            <p className="text-gray-500">
+                              {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                            </p>
+                            <p className="text-md text-gray-600 mt-2">
+                              <Clock className="h-5 w-4 inline mr-1" />
+                              {ride.direction === "toCollege"
+                                ? formatTime(ride.toCollegeTime || "")
+                                : formatTime(ride.fromCollegeTime || "")}
+                            </p>
+                            {(() => {
+                              const acceptedCount = countAcceptedHitchers(ride);
+                              return acceptedCount > 0 && (
+                                <p className="text-sm text-green-600 mt-2">
+                                  <Users className="h-4 w-4 inline mr-1" />
+                                  {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                                </p>
+                              );
+                            })()}
+                            
+                          </div>
+                          <div className="flex flex-col gap-2 items-end">
+                            <span
+                              className={`px-2 py-1 text-sm font-medium rounded-full ${
+                                ride.status === "scheduled"
+                                  ? "bg-green-100 text-green-800"
+                                  : ride.status === "in-progress"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : ride.status === "completed"
+                                  ? "bg-gray-100 text-gray-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {ride.status === "cancelled"
+                                ? (() => {
+                                    // Count any hitchers that have status "accepted" or had their request accepted before cancellation
+                                    const acceptedHitchers = countAcceptedHitchers(ride);
+                                    
+                                    console.log("DriverDashboard.tsx (upcoming) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                                    
+                                    return acceptedHitchers > 0 
+                                      ? `Cancelled by You (${acceptedHitchers} ${acceptedHitchers === 1 ? 'hitcher' : 'hitchers'})`
+                                      : "Cancelled by You";
+                                  })()
+                                : ride.status.charAt(0).toUpperCase() +
+                                  ride.status.slice(1)}
+                            </span>
+                            
+                            {getRequestsForRide(ride._id).length > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRequestModal({
+                                    show: true,
+                                    rideId: ride._id
+                                  });
+                                  setCurrentRequestIndex(0);
+                                }}
+                                className="px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
+                              >
+                                <Users className="h-5 w-5 mr-2" />
+                                View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                              </button>
+                            )}
+                            {ride.totalFare > 0 && (
+                              <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
+                                You'll receive ₹{ride.totalFare.toFixed(2)} in Total
+                              </span>
+                            )}
+                            <button
+                              className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRideExpand(ride._id);
+                              }}
+                            >
+                              <ChevronDown className={`h-5 w-5 mt-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       

@@ -288,41 +288,42 @@ const RideManagement: React.FC = () => {
                     key={ride._id}
                     className="border border-gray-200 rounded-md p-4 w-full"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium text-blue-600">
-                        {formatDate(ride.date)}
+                    {/* Mobile layout (stacked) */}
+                    <div className="block sm:hidden">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-medium text-blue-600">
+                          {formatDate(ride.date)}
+                        </p>
+                        <span
+                          className={`capitalize font-medium px-2 py-1 rounded-full text-xs ${
+                            ride.status === "scheduled" 
+                              ? "bg-green-100 text-green-800" 
+                              : ride.status === "in-progress" 
+                              ? "bg-blue-100 text-blue-800" 
+                              : ride.status === "completed" 
+                              ? "bg-gray-100 text-gray-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {ride.status}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-3">
+                        {ride.direction === "toCollege" ? (
+                          <>
+                            To College ({currentUser?.college}) :{" "}
+                            {formatTime(ride.toCollegeTime || "")}
+                          </>
+                        ) : (
+                          <>
+                            From College ({currentUser?.college}) :{" "}
+                            {formatTime(ride.fromCollegeTime || "")}
+                          </>
+                        )}
                       </p>
-                      <span
-                        className={`capitalize font-medium px-2 py-1 rounded-full text-xs ${
-                          ride.status === "scheduled" 
-                            ? "bg-green-100 text-green-800" 
-                            : ride.status === "in-progress" 
-                            ? "bg-blue-100 text-blue-800" 
-                            : ride.status === "completed" 
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {ride.status}
-                      </span>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mb-2">
-                      {ride.direction === "toCollege" ? (
-                        <>
-                          To College ({currentUser?.college}) :{" "}
-                          {formatTime(ride.toCollegeTime || "")}
-                        </>
-                      ) : (
-                        <>
-                          From College ({currentUser?.college}) :{" "}
-                          {formatTime(ride.fromCollegeTime || "")}
-                        </>
-                      )}
-                    </p>
-                    
-                    <div className="flex justify-between items-center mt-2">
-                      <div className="flex items-center gap-2">
+                      
+                      <div className="flex justify-between items-center mb-3">
                         <span className="text-sm text-gray-600">Available Seats: <span className="font-semibold">{ride.availableSeats}</span></span>
                         {(ride.hitchers?.filter(
                           (h) => h.status === "accepted"
@@ -339,14 +340,83 @@ const RideManagement: React.FC = () => {
                       </div>
                       
                       {ride.status === "scheduled" && (
-                        <LoadingButton
-                          onClick={() => handleCancelClick(index, ride._id)}
-                          className="px-4 py-1 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                          loadingText="..."
-                        >
-                          Cancel Ride
-                        </LoadingButton>
+                        <div className="flex justify-center w-full">
+                          <LoadingButton
+                            onClick={() => handleCancelClick(index, ride._id)}
+                            className="w-full px-4 py-2 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            loadingText="..."
+                          >
+                            Cancel Ride
+                          </LoadingButton>
+                        </div>
                       )}
+                    </div>
+                    
+                    {/* Desktop layout */}
+                    <div className="hidden sm:block">
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="font-medium text-blue-600">
+                            {formatDate(ride.date)}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {ride.direction === "toCollege" ? (
+                              <>
+                                To College ({currentUser?.college}) :{" "}
+                                {formatTime(ride.toCollegeTime || "")}
+                              </>
+                            ) : (
+                              <>
+                                From College ({currentUser?.college}) :{" "}
+                                {formatTime(ride.fromCollegeTime || "")}
+                              </>
+                            )}
+                          </p>
+                          <p className="text-sm text-gray-600 flex items-center mt-2">
+                            <span>
+                              Available Seats: <span className="font-semibold">{ride.availableSeats}</span>
+                            </span>
+                            {(ride.hitchers?.filter(
+                              (h) => h.status === "accepted"
+                            ).length || 0) > 0 && (
+                              <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
+                                {
+                                  ride.hitchers?.filter(
+                                    (h) => h.status === "accepted"
+                                  ).length
+                                }{" "}
+                                Accepted
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-col items-end justify-between">
+                          <span
+                            className={`capitalize font-medium px-2 py-1 rounded-full text-xs ${
+                              ride.status === "scheduled" 
+                                ? "bg-green-100 text-green-800" 
+                                : ride.status === "in-progress" 
+                                ? "bg-blue-100 text-blue-800" 
+                                : ride.status === "completed" 
+                                ? "bg-gray-100 text-gray-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {ride.status}
+                          </span>
+                          
+                          {ride.status === "scheduled" && (
+                            <LoadingButton
+                              onClick={() => handleCancelClick(index, ride._id)}
+                              className="mt-auto px-4 py-1 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                              loadingText="..."
+                            >
+                              Cancel Ride
+                            </LoadingButton>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
