@@ -547,7 +547,6 @@ const Report: React.FC = () => {
                 lastModified: Date.now()
               });
               
-              console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
               resolve(compressedFile);
             }, 'image/jpeg', 0.5); // Very aggressive compression
           } else {
@@ -557,7 +556,6 @@ const Report: React.FC = () => {
               lastModified: Date.now()
             });
             
-            console.log(`Compressed image size: ${compressedFile.size / 1024} KB`);
             resolve(compressedFile);
           }
         }, 'image/jpeg', 0.7); // Medium compression
@@ -658,7 +656,6 @@ const Report: React.FC = () => {
           
           // Log the size for debugging (can keep some console.logs)
           const finalSize = Math.ceil((screenshotData.length * 3) / 4) / 1024;
-          console.log(`Original: ${Math.ceil((bugReportForm.screenshot.length * 3) / 4) / 1024} KB, Compressed: ${finalSize} KB`);
           
           // If still over 150KB (increased from 100KB), don't include it
           if (finalSize > 150) {
@@ -1139,7 +1136,7 @@ const Report: React.FC = () => {
                                 // Count any hitchers that were accepted before cancellation
                                 const acceptedHitchers = countAcceptedHitchers(ride);
                                 
-                                console.log("Report.tsx - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                                
                                 
                                 return acceptedHitchers > 0 
                                   ? <>

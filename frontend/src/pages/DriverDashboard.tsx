@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, TouchEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Car, Plus, Calendar, Clock, Users, MapPin, List, X, ChevronDown, AlertTriangle, Bug, XCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -59,6 +59,40 @@ const DriverDashboard: React.FC = () => {
   const [currentRequestIndex, setCurrentRequestIndex] = useState(0);
   const [showReportDropdown, setShowReportDropdown] = useState(false);
   const navigate = useNavigate();
+  
+  // Add swipe functionality for mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+  
+  const onTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && activeTab === "upcoming") {
+      // Swipe left to go from upcoming to past
+      setActiveTab("past");
+    } else if (isRightSwipe && activeTab === "past") {
+      // Swipe right to go from past to upcoming
+      setActiveTab("upcoming");
+    }
+    
+    // Reset values
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
   
   // Helper function to count accepted hitchers in a ride
   const countAcceptedHitchers = (ride: ExtendedRide): number => {
@@ -659,8 +693,12 @@ const DriverDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          {/* Main content */}
-          <div>
+          {/* Main content with touch events */}
+          <div 
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-6">
               <nav className="flex -mb-px">
@@ -686,7 +724,7 @@ const DriverDashboard: React.FC = () => {
                 </button>
               </nav>
             </div>
-
+            
             {/* Ride listings */}
             <div className="space-y-6">
               {activeTab === "upcoming" ? (
@@ -706,7 +744,7 @@ const DriverDashboard: React.FC = () => {
                               : "From College"}
                           </h3>
                           <span
-                            className={`px-2 py-1 text-sm font-medium rounded-full ${
+                            className={`px-2 py-1 text-sm font-medium rounded-full whitespace-normal text-center max-w-[140px] ${
                               ride.status === "scheduled"
                                 ? "bg-green-100 text-green-800"
                                 : ride.status === "in-progress"
@@ -720,7 +758,12 @@ const DriverDashboard: React.FC = () => {
                               ? (() => {
                                   const acceptedHitchers = countAcceptedHitchers(ride);
                                   return acceptedHitchers > 0 
-                                    ? `Cancelled by You (${acceptedHitchers} ${acceptedHitchers === 1 ? 'hitcher' : 'hitchers'})`
+                                    ? <>
+                                        Cancelled by You
+                                        <div className="text-xs mt-1">
+                                          {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher' : 'hitchers'} affected
+                                        </div>
+                                      </>
                                     : "Cancelled by You";
                                 })()
                               : ride.status.charAt(0).toUpperCase() +
@@ -740,9 +783,17 @@ const DriverDashboard: React.FC = () => {
                               : formatTime(ride.fromCollegeTime || "")}
                           </p>
                           
-                          {ride.totalFare > 0 && (
+                          {ride.totalFare > 0 ? (
                             <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                               You'll receive ₹{ride.totalFare.toFixed(2)} in Total
+                            </span>
+                          ) : getRequestsForRide(ride._id).length > 0 ? (
+                            <span className="px-2 py-1 text-sm font-medium bg-yellow-50 text-yellow-700 rounded-full">
+                              {getRequestsForRide(ride._id).length} Pending {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-sm font-medium bg-gray-50 text-gray-500 rounded-full">
+                              No ride requests yet
                             </span>
                           )}
                         </div>
@@ -756,7 +807,10 @@ const DriverDashboard: React.FC = () => {
                                 {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
                               </p>
                             ) : (
-                              <span></span> // Empty span to maintain layout when no hitchers
+                              <p className="text-sm text-gray-500">
+                                <Users className="h-4 w-4 inline mr-1" />
+                                {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
+                              </p>
                             );
                           })()}
                           
@@ -809,10 +863,15 @@ const DriverDashboard: React.FC = () => {
                             </p>
                             {(() => {
                               const acceptedCount = countAcceptedHitchers(ride);
-                              return acceptedCount > 0 && (
+                              return acceptedCount > 0 ? (
                                 <p className="text-sm text-green-600 mt-2">
                                   <Users className="h-4 w-4 inline mr-1" />
                                   {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-500 mt-2">
+                                  <Users className="h-4 w-4 inline mr-1" />
+                                  {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
                                 </p>
                               );
                             })()}
@@ -820,7 +879,7 @@ const DriverDashboard: React.FC = () => {
                           </div>
                           <div className="flex flex-col gap-2 items-end">
                             <span
-                              className={`px-2 py-1 text-sm font-medium rounded-full ${
+                              className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
                                 ride.status === "scheduled"
                                   ? "bg-green-100 text-green-800"
                                   : ride.status === "in-progress"
@@ -835,10 +894,15 @@ const DriverDashboard: React.FC = () => {
                                     // Count any hitchers that have status "accepted" or had their request accepted before cancellation
                                     const acceptedHitchers = countAcceptedHitchers(ride);
                                     
-                                    console.log("DriverDashboard.tsx (upcoming) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                                   
                                     
                                     return acceptedHitchers > 0 
-                                      ? `Cancelled by You (${acceptedHitchers} ${acceptedHitchers === 1 ? 'hitcher' : 'hitchers'})`
+                                      ? <>
+                                          Cancelled by You
+                                          <div className="text-xs mt-1">
+                                            {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher' : 'hitchers'} affected
+                                          </div>
+                                        </>
                                       : "Cancelled by You";
                                   })()
                                 : ride.status.charAt(0).toUpperCase() +
@@ -861,9 +925,17 @@ const DriverDashboard: React.FC = () => {
                                 View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
                               </button>
                             )}
-                            {ride.totalFare > 0 && (
+                            {ride.totalFare > 0 ? (
                               <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                                 You'll receive ₹{ride.totalFare.toFixed(2)} in Total
+                              </span>
+                            ) : getRequestsForRide(ride._id).length > 0 ? (
+                              <span className="px-2 py-1 text-sm font-medium bg-yellow-50 text-yellow-700 rounded-full">
+                                {getRequestsForRide(ride._id).length} Pending {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-sm font-medium bg-gray-50 text-gray-500 rounded-full">
+                                No ride requests yet
                               </span>
                             )}
                             <button
@@ -987,7 +1059,7 @@ const DriverDashboard: React.FC = () => {
                         </p>
                       </div>
                       <span
-                        className={`px-2 py-1 text-sm font-medium rounded-full ${
+                        className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
                           ride.status === "completed"
                             ? "bg-gray-100 text-gray-800"
                             : "bg-red-100 text-red-800"
@@ -998,7 +1070,7 @@ const DriverDashboard: React.FC = () => {
                               // Count any hitchers that have status "accepted" or had their request accepted before cancellation
                               const acceptedHitchers = countAcceptedHitchers(ride);
                               
-                              console.log("DriverDashboard.tsx (past) - Cancelled ride:", ride._id, "Accepted hitchers:", acceptedHitchers, "Hitcher statuses:", ride.hitchers?.map(h => h.status));
+                  
                               
                               return acceptedHitchers > 0 
                                 ? <>

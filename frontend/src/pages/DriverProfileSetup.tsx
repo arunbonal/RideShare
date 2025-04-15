@@ -489,16 +489,13 @@ const DriverProfileSetup: React.FC = () => {
           hitcher: currentUser?.activeRoles?.hitcher || false,
         },
       };
-      
-      // Log the data being sent to help with debugging
-      console.log("Submitting driver profile data:", driverProfileData);
+
       
       const response = await api.post(
         "/api/profile/driver",
         driverProfileData
       );
-      
-      console.log("Driver profile update successful:", response.data);
+
       await updateDriverProfileComplete(true);
       navigate("/driver/dashboard");
     } catch (error) {

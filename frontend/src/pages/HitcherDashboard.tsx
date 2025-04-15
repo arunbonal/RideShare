@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, TouchEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Plus, Calendar, Clock, MapPin, X, ChevronDown, AlertTriangle, Bug } from "lucide-react";
@@ -68,6 +68,40 @@ const HitcherDashboard: React.FC = () => {
   }>({ currentRate: null, newRate: null });
 
   const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
+
+  // Add swipe functionality for mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+  
+  const onTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && activeTab === "upcoming") {
+      // Swipe left to go from upcoming to past
+      setActiveTab("past");
+    } else if (isRightSwipe && activeTab === "past") {
+      // Swipe right to go from past to upcoming
+      setActiveTab("upcoming");
+    }
+    
+    // Reset values
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -689,7 +723,11 @@ const HitcherDashboard: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             {/* Tabs */}
             <div className="border-b border-gray-200">
               <nav className="flex -mb-px">
