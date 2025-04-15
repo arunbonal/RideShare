@@ -78,26 +78,20 @@ const TermsAndConditions: React.FC = () => {
               <li>Be at the agreed pickup location on time</li>
               <li>Treat Drivers with respect and courtesy</li>
               <li>Not engage in disruptive or dangerous behavior during a Ride</li>
-              <li>Pay the agreed fare promptly as per the application's payment system</li>
               <li>Not request Drivers to violate traffic laws or regulations</li>
             </ul>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">6. Service Description</h2>
             <p>
-              RideShare provides a platform that connects Drivers and Hitchhikers for shared rides between locations. The Service facilitates ride matching, communication, and payment processing. RideShare does not provide transportation services and is not a transportation carrier.
+              RideShare provides a platform that connects Drivers and Hitchhikers for shared rides between locations. The Service facilitates ride matching between users within the PES University community. RideShare does not provide transportation services and is not a transportation carrier.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">7. Payment Terms</h2>
-            <p>
-              Hitchhikers agree to pay the fare calculated by the Service. Payment terms and methods are outlined in the application. Drivers agree to accept the fare calculated by the Service.
-            </p>
-
-            <h2 className="text-xl font-semibold mt-6 mb-3">8. Cancellation Policy</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">7. Cancellation Policy</h2>
             <p>
               Users may cancel rides subject to the cancellation terms specified in the Service. Repeated cancellations may result in penalties or service restrictions.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">10. Limitation of Liability</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">8. Limitation of Liability</h2>
             <p>
               To the maximum extent permitted by applicable law, RideShare shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including lost profits, arising out of or in connection with your use of the Service.
             </p>
@@ -105,37 +99,37 @@ const TermsAndConditions: React.FC = () => {
               RideShare does not guarantee the quality, safety, suitability, or availability of Drivers or their vehicles. Users acknowledge and accept the risks associated with transportation services.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">11. Indemnification</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">9. Indemnification</h2>
             <p>
               You agree to indemnify, defend, and hold harmless RideShare and its officers, directors, employees, and agents from and against all claims, liabilities, damages, losses, costs, expenses, and fees (including reasonable attorneys' fees) arising from or relating to your use of the Service or violation of these Terms.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">12. Intellectual Property</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">10. Intellectual Property</h2>
             <p>
               The Service and its original content, features, and functionality are owned by RideShare and are protected by copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, modify, create derivative works of, publicly display, publicly perform, republish, download, store, or transmit any material from the Service without prior written consent.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">13. Dispute Resolution</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">11. Dispute Resolution</h2>
             <p>
               Any disputes arising out of or related to these Terms or the Service shall be resolved through amicable negotiation. If the dispute cannot be resolved through negotiation, it shall be referred to arbitration in accordance with the Arbitration and Conciliation Act, 1996 of India. The arbitration shall take place in Bangalore, Karnataka, India.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">14. Governing Law</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">12. Governing Law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with the laws of India. Subject to the dispute resolution provisions, the courts of Bangalore, Karnataka, India shall have exclusive jurisdiction over any disputes arising out of these Terms.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">15. Modification of Terms</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">13. Modification of Terms</h2>
             <p>
               RideShare reserves the right to modify these Terms at any time. We will notify users of any material changes by posting the updated Terms on the Service and updating the "Last Updated" date. Your continued use of the Service after such modifications constitutes your acceptance of the revised Terms.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">16. Termination</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">14. Termination</h2>
             <p>
               RideShare may terminate or suspend your account and access to the Service immediately, without prior notice or liability, for any reason, including breach of these Terms. Upon termination, your right to use the Service will cease immediately.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">17. Contact Information</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">15. Contact Information</h2>
             <p>
               If you have any questions about these Terms, please contact us at:
               <br />
