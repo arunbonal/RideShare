@@ -91,6 +91,7 @@ import Report from "./pages/Report";
 import AuthCallback from "./pages/AuthCallback";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import RideEdit from "./pages/RideEdit";
 
 // Route change handler component
 const RouteChangeHandler = ({ children }: { children: ReactNode }) => {
@@ -199,6 +200,16 @@ function App() {
                   <ProtectedRoute>
                     <RouteChangeHandler>
                       <RideCreation />
+                    </RouteChangeHandler>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rides/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <RouteChangeHandler>
+                      <RideEdit />
                     </RouteChangeHandler>
                   </ProtectedRoute>
                 }

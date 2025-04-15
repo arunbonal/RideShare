@@ -273,6 +273,27 @@ const DriverDashboard: React.FC = () => {
       
       // Consider in-progress rides as upcoming
       return (rideDate >= now || ride.status === "in-progress") && ride.status !== "cancelled" && ride.status !== "completed";
+    }).sort((a, b) => {
+      // Sort by date and time (earliest first)
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Add time component
+      const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+      const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+      
+      if (timeA) {
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        dateA.setHours(hoursA, minutesA, 0, 0);
+      }
+      
+      if (timeB) {
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        dateB.setHours(hoursB, minutesB, 0, 0);
+      }
+      
+      // Earliest first for upcoming rides
+      return dateA.getTime() - dateB.getTime();
     });
     
     const pastRides = rides.filter((ride: ExtendedRide) => {
@@ -295,6 +316,27 @@ const DriverDashboard: React.FC = () => {
       
       // For rides without time, compare just the date
       return rideDate < now || ride.status === "cancelled" || ride.status === "completed";
+    }).sort((a, b) => {
+      // Sort by date and time (most recent first)
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Add time component
+      const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+      const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+      
+      if (timeA) {
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        dateA.setHours(hoursA, minutesA, 0, 0);
+      }
+      
+      if (timeB) {
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        dateB.setHours(hoursB, minutesB, 0, 0);
+      }
+      
+      // Most recent first (reverse chronological)
+      return dateB.getTime() - dateA.getTime();
     });
     
     return { upcomingRides, pastRides };
@@ -894,8 +936,8 @@ const DriverDashboard: React.FC = () => {
                                     // Count any hitchers that have status "accepted" or had their request accepted before cancellation
                                     const acceptedHitchers = countAcceptedHitchers(ride);
                                     
-                                   
-                                    
+                  
+                  
                                     return acceptedHitchers > 0 
                                       ? <>
                                           Cancelled by You
@@ -1071,7 +1113,7 @@ const DriverDashboard: React.FC = () => {
                               const acceptedHitchers = countAcceptedHitchers(ride);
                               
                   
-                              
+                  
                               return acceptedHitchers > 0 
                                 ? <>
                                     Cancelled by You

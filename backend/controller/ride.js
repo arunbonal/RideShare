@@ -670,3 +670,162 @@ exports.getHitcherStatus = async (req, res) => {
     });
   }
 };
+
+exports.updateRide = async (req, res) => {
+  try {
+    const { rideId } = req.params;
+    const userId = req.user.id;
+    
+    logger.info('Attempting to update ride', {
+      rideId,
+      userId
+    });
+    
+    // Find the ride
+    const ride = await Ride.findById(rideId);
+    
+    if (!ride) {
+      logger.warn('Ride not found during update', {
+        rideId,
+        userId
+      });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ride not found' 
+      });
+    }
+    
+    // Check if the user is the driver of the ride
+    if (ride.driver.toString() !== userId) {
+      logger.warn('User not authorized to update ride', {
+        rideId,
+        userId,
+        driverId: ride.driver
+      });
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You are not authorized to update this ride' 
+      });
+    }
+    
+    // Check if the ride is scheduled (not in progress, completed, or cancelled)
+    if (ride.status !== 'scheduled') {
+      logger.warn('Cannot update ride that is not in scheduled status', {
+        rideId,
+        status: ride.status,
+        userId
+      });
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot update a ride that is ${ride.status}` 
+      });
+    }
+    
+    // Check if there are any pending or accepted hitchers
+    const hasPendingOrAcceptedHitchers = ride.hitchers && ride.hitchers.some(
+      h => h.status === 'pending' || h.status === 'accepted'
+    );
+    
+    if (hasPendingOrAcceptedHitchers) {
+      logger.warn('Cannot update ride with pending or accepted hitchers', {
+        rideId,
+        userId
+      });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot update a ride that has pending or accepted hitchers' 
+      });
+    }
+    
+    // Update ride with new information
+    const updateData = {
+      from: req.body.from,
+      to: req.body.to,
+      date: req.body.date,
+      direction: req.body.direction,
+      toCollegeTime: req.body.toCollegeTime,
+      fromCollegeTime: req.body.fromCollegeTime,
+      availableSeats: req.body.availableSeats,
+      pricePerKm: req.body.pricePerKm,
+      datetime: req.body.datetime
+    };
+    
+    const updatedRide = await Ride.findByIdAndUpdate(
+      rideId, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    logger.info('Ride updated successfully', {
+      rideId,
+      userId
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Ride updated successfully', 
+      ride: updatedRide 
+    });
+    
+  } catch (err) {
+    logger.error('Error updating ride', {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error updating ride',
+      error: err.message || 'Unknown error occurred'
+    });
+  }
+};
+
+exports.getRideById = async (req, res) => {
+  try {
+    const { rideId } = req.params;
+    
+    logger.info('Fetching single ride', {
+      rideId,
+      userId: req.user.id
+    });
+    
+    const ride = await Ride.findById(rideId)
+      .populate("driver", "name email phone gender srn college driverProfile.vehicle.model driverProfile.vehicle.registrationNumber driverProfile.reliabilityRate")
+      .populate("hitchers.user", "name email phone gender srn college hitcherProfile.reliabilityRate");
+    
+    if (!ride) {
+      logger.warn('Ride not found', {
+        rideId,
+        userId: req.user.id
+      });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ride not found' 
+      });
+    }
+    
+    logger.info('Ride fetched successfully', {
+      rideId,
+      userId: req.user.id
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Ride fetched successfully', 
+      ride 
+    });
+    
+  } catch (err) {
+    logger.error('Error fetching ride', {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching ride',
+      error: err.message || 'Unknown error occurred'
+    });
+  }
+};

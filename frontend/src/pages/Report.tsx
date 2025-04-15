@@ -199,6 +199,27 @@ const Report: React.FC = () => {
       }
       
       return rideDate >= now || ride.status === "in-progress";
+    }).sort((a, b) => {
+      // Sort by date and time (ascending - earliest first)
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Add time component
+      const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+      const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+      
+      if (timeA) {
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        dateA.setHours(hoursA, minutesA, 0, 0);
+      }
+      
+      if (timeB) {
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        dateB.setHours(hoursB, minutesB, 0, 0);
+      }
+      
+      // Earliest first for upcoming rides
+      return dateA.getTime() - dateB.getTime();
     });
     
     const pastRides = rides.filter((ride: ExtendedRide) => {
@@ -241,6 +262,27 @@ const Report: React.FC = () => {
       }
       
       return rideDate < now;
+    }).sort((a, b) => {
+      // Sort by date and time (descending - most recent first)
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Add time component
+      const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+      const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+      
+      if (timeA) {
+        const [hoursA, minutesA] = timeA.split(':').map(Number);
+        dateA.setHours(hoursA, minutesA, 0, 0);
+      }
+      
+      if (timeB) {
+        const [hoursB, minutesB] = timeB.split(':').map(Number);
+        dateB.setHours(hoursB, minutesB, 0, 0);
+      }
+      
+      // Most recent first for past rides
+      return dateB.getTime() - dateA.getTime();
     });
     
     return { upcomingRides, pastRides };

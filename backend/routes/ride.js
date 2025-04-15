@@ -33,4 +33,10 @@ router.get("/:rideId/status", rideController.getRideStatus);
 // Get the status of a specific hitcher in a ride
 router.get("/:rideId/hitcher/:hitcherId/status", rideController.getHitcherStatus);
 
+// Get a specific ride by ID
+router.get("/:rideId", rideController.getRideById);
+
+// Update a ride
+router.put("/:rideId", rideController.updateRide);
+
 module.exports = router;

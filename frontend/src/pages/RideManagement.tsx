@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, ArrowLeft, Edit } from "lucide-react";
 import api from "../utils/api"; // Import API utility
 import LoadingButton from "../components/LoadingButton"; // Import LoadingButton
 
@@ -40,7 +40,91 @@ const RideManagement: React.FC = () => {
       const driverRides = allRides.filter(
         (ride) => ride.driver._id === currentUser.id
       );
-      setRides(driverRides);
+      
+      // Split rides into upcoming and past
+      const now = new Date();
+      const upcomingRides = driverRides.filter(ride => {
+        // Create a datetime by combining the date with the appropriate time
+        const rideDate = new Date(ride.date);
+        const timeString = ride.direction === "toCollege" 
+          ? ride.toCollegeTime 
+          : ride.fromCollegeTime;
+        
+        if (timeString) {
+          const [hours, minutes] = timeString.split(":").map(Number);
+          rideDate.setHours(hours, minutes, 0, 0);
+        }
+        
+        // Consider scheduled and in-progress rides as upcoming
+        return (rideDate >= now || ride.status === "in-progress") && 
+               ride.status !== "cancelled" && 
+               ride.status !== "completed";
+      }).sort((a, b) => {
+        // Sort upcoming rides by date and time (earliest first)
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        
+        // Add time component
+        const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+        const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+        
+        if (timeA) {
+          const [hoursA, minutesA] = timeA.split(':').map(Number);
+          dateA.setHours(hoursA, minutesA, 0, 0);
+        }
+        
+        if (timeB) {
+          const [hoursB, minutesB] = timeB.split(':').map(Number);
+          dateB.setHours(hoursB, minutesB, 0, 0);
+        }
+        
+        // Earliest first for upcoming rides
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      const pastRides = driverRides.filter(ride => {
+        // Create a datetime by combining the date with the appropriate time
+        const rideDate = new Date(ride.date);
+        const timeString = ride.direction === "toCollege" 
+          ? ride.toCollegeTime 
+          : ride.fromCollegeTime;
+        
+        if (timeString) {
+          const [hours, minutes] = timeString.split(":").map(Number);
+          rideDate.setHours(hours, minutes, 0, 0);
+        }
+        
+        // Consider cancelled and completed rides as past, or rides with date in the past
+        return ride.status === "cancelled" || 
+               ride.status === "completed" || 
+               rideDate < now;
+      }).sort((a, b) => {
+        // Sort past rides by date and time (most recent first)
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        
+        // Add time component
+        const timeA = a.direction === "toCollege" ? a.toCollegeTime : a.fromCollegeTime;
+        const timeB = b.direction === "toCollege" ? b.toCollegeTime : b.fromCollegeTime;
+        
+        if (timeA) {
+          const [hoursA, minutesA] = timeA.split(':').map(Number);
+          dateA.setHours(hoursA, minutesA, 0, 0);
+        }
+        
+        if (timeB) {
+          const [hoursB, minutesB] = timeB.split(':').map(Number);
+          dateB.setHours(hoursB, minutesB, 0, 0);
+        }
+        
+        // Most recent first for past rides
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // Combine sorted rides: upcoming (earliest first) followed by past (most recent first)
+      const sortedRides = [...upcomingRides, ...pastRides];
+      
+      setRides(sortedRides);
     }
   }, [allRides, currentUser]);
 
@@ -166,6 +250,17 @@ const RideManagement: React.FC = () => {
       }, 3000);
       setLoading(false);
     }
+  };
+
+  const canEditRide = (ride: Ride): boolean => {
+    // A ride can be edited if it's scheduled and has no pending or accepted hitchers
+    if (ride.status !== "scheduled") return false;
+    
+    return !(ride.hitchers?.some(h => h.status === "pending" || h.status === "accepted"));
+  };
+
+  const handleEditRide = (rideId: string) => {
+    navigate(`/rides/edit/${rideId}`);
   };
 
   return (
@@ -340,10 +435,19 @@ const RideManagement: React.FC = () => {
                       </div>
                       
                       {ride.status === "scheduled" && (
-                        <div className="flex justify-center w-full">
+                        <div className="flex justify-center w-full space-x-2">
+                          {canEditRide(ride) && (
+                            <button
+                              onClick={() => handleEditRide(ride._id)}
+                              className="flex-1 px-4 py-2 bg-blue-50 border border-blue-300 text-blue-700 text-sm rounded-md hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </button>
+                          )}
                           <LoadingButton
                             onClick={() => handleCancelClick(index, ride._id)}
-                            className="w-full px-4 py-2 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            className={`${canEditRide(ride) ? 'flex-1' : 'w-full'} px-4 py-2 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
                             loadingText="..."
                           >
                             Cancel Ride
@@ -407,13 +511,24 @@ const RideManagement: React.FC = () => {
                           </span>
                           
                           {ride.status === "scheduled" && (
-                            <LoadingButton
-                              onClick={() => handleCancelClick(index, ride._id)}
-                              className="mt-auto px-4 py-1 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                              loadingText="..."
-                            >
-                              Cancel Ride
-                            </LoadingButton>
+                            <div className="mt-auto flex space-x-2">
+                              {canEditRide(ride) && (
+                                <button
+                                  onClick={() => handleEditRide(ride._id)}
+                                  className="px-4 py-1 bg-blue-50 border border-blue-300 text-blue-700 text-sm rounded-md hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center"
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </button>
+                              )}
+                              <LoadingButton
+                                onClick={() => handleCancelClick(index, ride._id)}
+                                className="px-4 py-1 bg-red-50 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                loadingText="..."
+                              >
+                                Cancel Ride
+                              </LoadingButton>
+                            </div>
                           )}
                         </div>
                       </div>
