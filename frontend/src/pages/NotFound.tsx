@@ -6,7 +6,7 @@ const NotFound: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12">
       <div className="max-w-md w-full text-center bg-white p-8 rounded-lg shadow-xl">
         <img 
-          src="/images/logo.svg" 
+          src="/logo.svg"  
           alt="RideShare Logo" 
           className="h-20 w-20 mx-auto mb-4" 
         />
