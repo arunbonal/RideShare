@@ -146,6 +146,26 @@ const ProfileSettings: React.FC = () => {
                     <ArrowLeft className="h-5 w-5 text-gray-400 transform rotate-180" />
                   </div>
                 </div>
+
+                <div
+                  className="flex items-center justify-between p-4 border rounded-lg cursor-pointer border-gray-300 hover:bg-gray-50"
+                  onClick={() => navigate("/faq")}
+                >
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full bg-blue-100">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="font-medium">Frequently Asked Questions</h4>
+                      <p className="text-sm text-gray-600">
+                        Learn more about features and get help
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <ArrowLeft className="h-5 w-5 text-gray-400 transform rotate-180" />
+                  </div>
+                </div>
               </div>
             </div>
 

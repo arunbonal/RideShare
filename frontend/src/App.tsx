@@ -92,6 +92,7 @@ import AuthCallback from "./pages/AuthCallback";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import RideEdit from "./pages/RideEdit";
+import FAQ from "./pages/FAQ";
 
 // Route change handler component
 const RouteChangeHandler = ({ children }: { children: ReactNode }) => {
@@ -240,6 +241,16 @@ function App() {
                   <ProtectedRoute>
                     <RouteChangeHandler>
                       <RoleDetails />
+                    </RouteChangeHandler>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/faq"
+                element={
+                  <ProtectedRoute>
+                    <RouteChangeHandler>
+                      <FAQ />
                     </RouteChangeHandler>
                   </ProtectedRoute>
                 }
