@@ -351,39 +351,6 @@ const RideSearch: React.FC = () => {
         return;
       }
 
-      // Check if the user already has any pending ride requests for the same day and direction
-      const pendingRequestsForSameDayAndDirection = allRides.filter(ride => {
-        const rideDate = new Date(ride.date);
-        const selectedRideDate = new Date(selectedRide.date);
-        
-        // Check if dates are the same day
-        const isSameDay = 
-          rideDate.getFullYear() === selectedRideDate.getFullYear() &&
-          rideDate.getMonth() === selectedRideDate.getMonth() &&
-          rideDate.getDate() === selectedRideDate.getDate();
-          
-        // Check if same direction
-        const isSameDirection = ride.direction === selectedRide.direction;
-        
-        // Check if the hitcher has a pending request in this ride
-        const hasPendingRequest = ride.hitchers?.some(
-          h => h.user?._id === currentUser?.id && h.status === "pending"
-        );
-        
-        return isSameDay && isSameDirection && hasPendingRequest;
-      });
-      
-      const MAX_PENDING_REQUESTS = 3;
-      if (pendingRequestsForSameDayAndDirection.length >= MAX_PENDING_REQUESTS) {
-        setNotification({
-          show: true,
-          message: `You already have ${MAX_PENDING_REQUESTS} pending requests for this day and direction. Please wait for a response or cancel an existing request first.`,
-          type: "error",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       // Check if the user already has an accepted ride for the same day and direction
       const hasAcceptedRide = allRides.some(ride => {
         const rideDate = new Date(ride.date);

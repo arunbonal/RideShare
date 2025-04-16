@@ -159,23 +159,23 @@ const FAQ: React.FC = () => {
                     </div>
                     
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="font-medium text-blue-600 mb-1">How many ride requests can I have pending at once?</h3>
+                      <h3 className="font-medium text-blue-600 mb-1">What happens if I don't show up for a ride?</h3>
                       <p className="text-sm text-gray-700">
-                        You can have up to 3 pending ride requests at a time for a particular day and direction. This limit allows you to explore multiple options while preventing excessive requests that might overload the system. Once a driver accepts one of your requests, your other pending requests for that day and direction will be automatically cancelled.
+                        Not showing up for a scheduled ride without cancellation badly affects your reliability score. The penalty to your reliability rate is doubled compared to cancelling a ride. This policy encourages users to at least cancel rides they cannot fulfill rather than simply not showing up, which causes more inconvenience to other users.
                       </p>
                     </div>
                     
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-medium text-blue-600 mb-1">What do the different reliability scores mean?</h3>
                       <p className="text-sm text-gray-700">
-                        When browsing rides, you'll see drivers' reliability scores. Green (&gt;80%) indicates highly reliable drivers, yellow (60-80%) means moderate reliability, and red (&lt;60%) suggests caution. Choose drivers with higher scores for a better experience.
+                        When browsing rides, you'll see drivers' reliability scores. Green (<span className="text-green-600">&gt;80%</span>) indicates highly reliable drivers, yellow (<span className="text-yellow-600">60-80%</span>) means moderate reliability, and red (<span className="text-red-600">&lt;60%</span>) suggests caution. Choose drivers with higher scores for a better experience.
                       </p>
                     </div>
                     
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h3 className="font-medium text-blue-600 mb-1">What if I need to cancel my ride request?</h3>
                       <p className="text-sm text-gray-700">
-                        You can cancel a requested or approved ride from your dashboard. Try to cancel as early as possible to maintain a good reliability score. Frequent last-minute cancellations will lower your score and may affect your ability to join rides in the future.
+                        You can cancel a requested or approved ride from your dashboard. Frequent cancellations of accepted rides will lower your score and may affect your ability to join rides in the future.
                       </p>
                     </div>
                   </div>
