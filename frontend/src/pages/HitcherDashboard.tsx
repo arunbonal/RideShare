@@ -8,6 +8,7 @@ import { Ride } from "../contexts/AuthContext";
 import axios from "axios";
 import api from "../utils/api"; // Import API utility
 import LoadingButton from "../components/LoadingButton";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 // Extend the driver interface to include driverProfile
 interface ExtendedRide extends Ride {
@@ -38,6 +39,7 @@ const HitcherDashboard: React.FC = () => {
   const [pastRides, setPastRides] = useState<ExtendedRide[]>([]);
   const [navigating, setNavigating] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -130,9 +132,20 @@ const HitcherDashboard: React.FC = () => {
 
   // Fetch all rides when component mounts
   useEffect(() => {
-    if (currentUser?.hitcherProfileComplete) {
-      fetchAllRides();
-    }
+    const loadRides = async () => {
+      if (currentUser?.hitcherProfileComplete) {
+        setIsLoading(true);
+        try {
+          await fetchAllRides();
+        } catch (error) {
+          console.error("Error fetching rides:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    loadRides();
   }, [currentUser, fetchAllRides]);
 
   const markNotificationAsRead = async (rideId: string, notificationId: string) => {
@@ -744,7 +757,11 @@ const HitcherDashboard: React.FC = () => {
           </div>
         </div>
 
-        {hitcherRides.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <LoadingSpinner />
+          </div>
+        ) : hitcherRides.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">

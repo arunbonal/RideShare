@@ -19,7 +19,7 @@ const TermsAndConditions: React.FC = () => {
 
           <div className="prose max-w-none text-gray-700">
             <p className="mb-4">
-              Last Updated: {new Date().toLocaleDateString("en-IN")}
+              Last Updated: "16/04/2025"
             </p>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">1. Introduction</h2>

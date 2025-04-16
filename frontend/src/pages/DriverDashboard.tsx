@@ -6,6 +6,7 @@ import type { Ride } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import MapPreview from "../components/MapPreview";
 import LoadingButton from "../components/LoadingButton";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { format } from "date-fns";
 import api from "../utils/api"; // Import API utility
 
@@ -46,6 +47,7 @@ const DriverDashboard: React.FC = () => {
   const [upcomingRides, setUpcomingRides] = useState<ExtendedRide[]>([]);
   const [pastRides, setPastRides] = useState<ExtendedRide[]>([]);
   const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
@@ -139,9 +141,20 @@ const DriverDashboard: React.FC = () => {
   
   // Fetch all rides when component mounts
   useEffect(() => {
-    if (currentUser?.driverProfileComplete) {
-      fetchAllRides();
-    }
+    const loadRides = async () => {
+      if (currentUser?.driverProfileComplete) {
+        setIsLoading(true);
+        try {
+          await fetchAllRides();
+        } catch (error) {
+          console.error("Error fetching rides:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    loadRides();
   }, [currentUser, fetchAllRides]);
 
   // Check for unread notifications
@@ -757,193 +770,64 @@ const DriverDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          {/* Main content with touch events */}
-          <div 
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            {/* Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-              <nav className="flex -mb-px">
-                <button
-                  onClick={() => setActiveTab("upcoming")}
-                  className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                    activeTab === "upcoming"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  Upcoming Rides ({upcomingRides.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("past")}
-                  className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                    activeTab === "past"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  Past Rides ({pastRides.length})
-                </button>
-              </nav>
+          {/* Show loading spinner when loading */}
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <LoadingSpinner />
             </div>
-            
-            {/* Ride listings */}
-            <div className="space-y-6">
-              {activeTab === "upcoming" ? (
-                upcomingRides.length > 0 ? (
-                  upcomingRides.map((ride) => (
-                    <div
-                      key={ride._id}
-                      className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
-                      onClick={() => toggleRideExpand(ride._id)}
-                    >
-                      {/* Mobile layout (stacked) */}
-                      <div className="block md:hidden">
-                        <div className="flex justify-between items-start mb-3">
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {ride.direction === "toCollege"
-                              ? "To College"
-                              : "From College"}
-                          </h3>
-                          <span
-                            className={`px-2 py-1 text-sm font-medium rounded-full whitespace-normal text-center max-w-[140px] ${
-                              ride.status === "scheduled"
-                                ? "bg-green-100 text-green-800"
-                                : ride.status === "in-progress"
-                                ? "bg-blue-100 text-blue-800"
-                                : ride.status === "completed"
-                                ? "bg-gray-100 text-gray-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {ride.status === "cancelled"
-                              ? (() => {
-                                  const acceptedHitchers = countAcceptedHitchers(ride);
-                                  return acceptedHitchers > 0 
-                                    ? <>
-                                        Cancelled by You
-                                        <div className="text-xs mt-1">
-                                          {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher' : 'hitchers'} affected
-                                        </div>
-                                      </>
-                                    : "Cancelled by You";
-                                })()
-                              : ride.status.charAt(0).toUpperCase() +
-                                ride.status.slice(1)}
-                          </span>
-                        </div>
-                        
-                        <p className="text-gray-500 mb-3">
-                          {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                        </p>
-                        
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="text-md text-gray-600">
-                            <Clock className="h-5 w-4 inline mr-1" />
-                            {ride.direction === "toCollege"
-                              ? formatTime(ride.toCollegeTime || "")
-                              : formatTime(ride.fromCollegeTime || "")}
-                          </p>
-                          
-                          {ride.totalFare > 0 ? (
-                            <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
-                              You'll receive ₹{ride.totalFare.toFixed(2)} in Total
-                            </span>
-                          ) : getRequestsForRide(ride._id).length > 0 ? (
-                            <span className="px-2 py-1 text-sm font-medium bg-yellow-50 text-yellow-700 rounded-full">
-                              {getRequestsForRide(ride._id).length} Pending {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 text-sm font-medium bg-gray-50 text-gray-500 rounded-full">
-                              No ride requests yet
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex justify-between items-center mb-2">
-                          {(() => {
-                            const acceptedCount = countAcceptedHitchers(ride);
-                            return acceptedCount > 0 ? (
-                              <p className="text-sm text-green-600">
-                                <Users className="h-4 w-4 inline mr-1" />
-                                {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
-                              </p>
-                            ) : (
-                              <p className="text-sm text-gray-500">
-                                <Users className="h-4 w-4 inline mr-1" />
-                                {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
-                              </p>
-                            );
-                          })()}
-                          
-                          <button
-                            className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRideExpand(ride._id);
-                            }}
-                          >
-                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
-                          </button>
-                        </div>
-                        
-                        {getRequestsForRide(ride._id).length > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRequestModal({
-                                show: true,
-                                rideId: ride._id
-                              });
-                              setCurrentRequestIndex(0);
-                            }}
-                            className="w-full mt-2 px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center justify-center"
-                          >
-                            <Users className="h-5 w-5 mr-2" />
-                            View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Desktop layout */}
-                      <div className="hidden md:block">
-                        <div className="flex justify-between items-start">
-                          <div>
+          ) : (
+            /* Main content with touch events */
+            <div 
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              {/* Tabs */}
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="flex -mb-px">
+                  <button
+                    onClick={() => setActiveTab("upcoming")}
+                    className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                      activeTab === "upcoming"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Upcoming Rides ({upcomingRides.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("past")}
+                    className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                      activeTab === "past"
+                        ? "border-blue-500 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    Past Rides ({pastRides.length})
+                  </button>
+                </nav>
+              </div>
+              
+              {/* Ride listings */}
+              <div className="space-y-6">
+                {activeTab === "upcoming" ? (
+                  upcomingRides.length > 0 ? (
+                    upcomingRides.map((ride) => (
+                      <div
+                        key={ride._id}
+                        className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
+                        onClick={() => toggleRideExpand(ride._id)}
+                      >
+                        {/* Mobile layout (stacked) */}
+                        <div className="block md:hidden">
+                          <div className="flex justify-between items-start mb-3">
                             <h3 className="text-lg font-medium text-gray-900">
                               {ride.direction === "toCollege"
                                 ? "To College"
                                 : "From College"}
                             </h3>
-                            <p className="text-gray-500">
-                              {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                            </p>
-                            <p className="text-md text-gray-600 mt-2">
-                              <Clock className="h-5 w-4 inline mr-1" />
-                              {ride.direction === "toCollege"
-                                ? formatTime(ride.toCollegeTime || "")
-                                : formatTime(ride.fromCollegeTime || "")}
-                            </p>
-                            {(() => {
-                              const acceptedCount = countAcceptedHitchers(ride);
-                              return acceptedCount > 0 ? (
-                                <p className="text-sm text-green-600 mt-2">
-                                  <Users className="h-4 w-4 inline mr-1" />
-                                  {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
-                                </p>
-                              ) : (
-                                <p className="text-sm text-gray-500 mt-2">
-                                  <Users className="h-4 w-4 inline mr-1" />
-                                  {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
-                                </p>
-                              );
-                            })()}
-                            
-                          </div>
-                          <div className="flex flex-col gap-2 items-end">
                             <span
-                              className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
+                              className={`px-2 py-1 text-sm font-medium rounded-full whitespace-normal text-center max-w-[140px] ${
                                 ride.status === "scheduled"
                                   ? "bg-green-100 text-green-800"
                                   : ride.status === "in-progress"
@@ -955,11 +839,7 @@ const DriverDashboard: React.FC = () => {
                             >
                               {ride.status === "cancelled"
                                 ? (() => {
-                                    // Count any hitchers that have status "accepted" or had their request accepted before cancellation
                                     const acceptedHitchers = countAcceptedHitchers(ride);
-                                    
-                  
-                  
                                     return acceptedHitchers > 0 
                                       ? <>
                                           Cancelled by You
@@ -972,23 +852,20 @@ const DriverDashboard: React.FC = () => {
                                 : ride.status.charAt(0).toUpperCase() +
                                   ride.status.slice(1)}
                             </span>
+                          </div>
+                          
+                          <p className="text-gray-500 mb-3">
+                            {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                          </p>
+                          
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-md text-gray-600">
+                              <Clock className="h-5 w-4 inline mr-1" />
+                              {ride.direction === "toCollege"
+                                ? formatTime(ride.toCollegeTime || "")
+                                : formatTime(ride.fromCollegeTime || "")}
+                            </p>
                             
-                            {getRequestsForRide(ride._id).length > 0 && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRequestModal({
-                                    show: true,
-                                    rideId: ride._id
-                                  });
-                                  setCurrentRequestIndex(0);
-                                }}
-                                className="px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
-                              >
-                                <Users className="h-5 w-5 mr-2" />
-                                View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
-                              </button>
-                            )}
                             {ride.totalFare > 0 ? (
                               <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
                                 You'll receive ₹{ride.totalFare.toFixed(2)} in Total
@@ -1002,6 +879,24 @@ const DriverDashboard: React.FC = () => {
                                 No ride requests yet
                               </span>
                             )}
+                          </div>
+                          
+                          <div className="flex justify-between items-center mb-2">
+                            {(() => {
+                              const acceptedCount = countAcceptedHitchers(ride);
+                              return acceptedCount > 0 ? (
+                                <p className="text-sm text-green-600">
+                                  <Users className="h-4 w-4 inline mr-1" />
+                                  {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-500">
+                                  <Users className="h-4 w-4 inline mr-1" />
+                                  {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
+                                </p>
+                              );
+                            })()}
+                            
                             <button
                               className="text-gray-400 hover:text-gray-600 focus:outline-none"
                               onClick={(e) => {
@@ -1009,177 +904,302 @@ const DriverDashboard: React.FC = () => {
                                 toggleRideExpand(ride._id);
                               }}
                             >
-                              <ChevronDown className={`h-5 w-5 mt-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                              <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
                             </button>
                           </div>
+                          
+                          {getRequestsForRide(ride._id).length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRequestModal({
+                                  show: true,
+                                  rideId: ride._id
+                                });
+                                setCurrentRequestIndex(0);
+                              }}
+                              className="w-full mt-2 px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center justify-center"
+                            >
+                              <Users className="h-5 w-5 mr-2" />
+                              View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Desktop layout */}
+                        <div className="hidden md:block">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-medium text-gray-900">
+                                {ride.direction === "toCollege"
+                                  ? "To College"
+                                  : "From College"}
+                              </h3>
+                              <p className="text-gray-500">
+                                {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                              </p>
+                              <p className="text-md text-gray-600 mt-2">
+                                <Clock className="h-5 w-4 inline mr-1" />
+                                {ride.direction === "toCollege"
+                                  ? formatTime(ride.toCollegeTime || "")
+                                  : formatTime(ride.fromCollegeTime || "")}
+                              </p>
+                              {(() => {
+                                const acceptedCount = countAcceptedHitchers(ride);
+                                return acceptedCount > 0 ? (
+                                  <p className="text-sm text-green-600 mt-2">
+                                    <Users className="h-4 w-4 inline mr-1" />
+                                    {acceptedCount} {acceptedCount === 1 ? 'Hitcher' : 'Hitchers'} Accepted
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-2">
+                                    <Users className="h-4 w-4 inline mr-1" />
+                                    {ride.availableSeats} {ride.availableSeats === 1 ? 'Seat' : 'Seats'} Available
+                                  </p>
+                                );
+                              })()}
+                              
+                            </div>
+                            <div className="flex flex-col gap-2 items-end">
+                              <span
+                                className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
+                                  ride.status === "scheduled"
+                                    ? "bg-green-100 text-green-800"
+                                    : ride.status === "in-progress"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : ride.status === "completed"
+                                    ? "bg-gray-100 text-gray-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {ride.status === "cancelled"
+                                  ? (() => {
+                                      // Count any hitchers that have status "accepted" or had their request accepted before cancellation
+                                      const acceptedHitchers = countAcceptedHitchers(ride);
+                                      
+                  
+                  
+                                      return acceptedHitchers > 0 
+                                        ? <>
+                                            Cancelled by You
+                                            <div className="text-xs mt-1">
+                                              {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher' : 'hitchers'} affected
+                                            </div>
+                                          </>
+                                        : "Cancelled by You";
+                                    })()
+                                  : ride.status.charAt(0).toUpperCase() +
+                                    ride.status.slice(1)}
+                              </span>
+                              
+                              {getRequestsForRide(ride._id).length > 0 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRequestModal({
+                                      show: true,
+                                      rideId: ride._id
+                                    });
+                                    setCurrentRequestIndex(0);
+                                  }}
+                                  className="px-3 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex items-center"
+                                >
+                                  <Users className="h-5 w-5 mr-2" />
+                                  View {getRequestsForRide(ride._id).length} Ride {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                                </button>
+                              )}
+                              {ride.totalFare > 0 ? (
+                                <span className="px-2 py-1 text-sm font-medium bg-green-50 text-green-700 rounded-full">
+                                  You'll receive ₹{ride.totalFare.toFixed(2)} in Total
+                                </span>
+                              ) : getRequestsForRide(ride._id).length > 0 ? (
+                                <span className="px-2 py-1 text-sm font-medium bg-yellow-50 text-yellow-700 rounded-full">
+                                  {getRequestsForRide(ride._id).length} Pending {getRequestsForRide(ride._id).length === 1 ? 'Request' : 'Requests'}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-sm font-medium bg-gray-50 text-gray-500 rounded-full">
+                                  No ride requests yet
+                                </span>
+                              )}
+                              <button
+                                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRideExpand(ride._id);
+                                }}
+                              >
+                                <ChevronDown className={`h-5 w-5 mt-5 transition-transform duration-200 ${expandedRides.has(ride._id) ? 'transform rotate-180' : ''}`} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {expandedRides.has(ride._id) && (
+                          <div className="mt-4 space-y-3">
+                            
+                            <div className="flex items-center text-gray-600">
+                              <MapPin className="h-5 w-5 mr-2" />
+                              From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <MapPin className="h-5 w-5 mr-2" />
+                              To: {ride.direction === "fromCollege" ? `${ride.to}` : ride.to}
+                            </div>
+                            <div className="flex items-center text-gray-600">
+                              <Users className="h-5 w-5 mr-2" />
+                              <span>Available Seats: {ride.availableSeats}</span>
+                              {(() => {
+                                const acceptedCount = countAcceptedHitchers(ride);
+                                return (
+                                  acceptedCount > 0 && (
+                                    <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
+                                      {acceptedCount} Accepted
+                                    </span>
+                                  )
+                                );
+                              })()}
+                            </div>
+                            
+                            <p className="mt-4 text-md text-red-700">
+                              Your Current Route:
+                            </p>
+                            <div className="mt-2 mb-2">
+                              <a 
+                                href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
+                                  ride.hitchers
+                                    ?.filter(h => h.status === "accepted")
+                                    .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
+                                    .filter(Boolean)
+                                    .join("|")
+                                }&travelmode=driving`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
+                              >
+                                <MapPin className="h-4 w-4 mr-1" />
+                                Open in Google Maps
+                              </a>
+                            </div>
+                            <div className="mt-4">
+                              <MapPreview
+                                startLocation={`${ride.direction === "toCollege" ? `${ride.from} (Your Address)` : ride.from}`}
+                                endLocation={`${ride.direction === "fromCollege" ? `${ride.to} (Your Address)` : ride.to}`}
+                                userLocation={ride.hitchers
+                                  ?.filter(h => h.status === "accepted")
+                                  .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
+                                  .filter(Boolean)
+                                  .join("|")}
+                                className="rounded-lg shadow-sm"
+                                direction={ride.direction}
+                                hitcherNames={ride.hitchers
+                                  ?.filter(h => h.status === "accepted")
+                                  .map(h => h.user.name)}
+                                hitcherPhones={ride.hitchers
+                                  ?.filter(h => h.status === "accepted")
+                                  .map(h => h.user.phone)}
+                                hitcherFares={ride.hitchers
+                                  ?.filter(h => h.status === "accepted")
+                                  .map(h => h.fare || 0)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                      <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">
+                        No upcoming rides
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        You don't have any upcoming rides scheduled.
+                      </p>
+                      <Link
+                        to="/rides/create"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create a new ride
+                      </Link>
+                    </div>
+                  )
+                ) : pastRides.length > 0 ? (
+                  pastRides.map((ride) => (
+                    <div
+                      key={ride._id}
+                      className="bg-white rounded-lg shadow-md p-6"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {ride.direction === "toCollege"
+                              ? "To College"
+                              : "From College"}
+                          </h3>
+                          <p className="text-gray-500">
+                            {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
+                            ride.status === "completed"
+                              ? "bg-gray-100 text-gray-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {ride.status === "cancelled"
+                            ? (() => {
+                                // Count any hitchers that have status "accepted" or had their request accepted before cancellation
+                                const acceptedHitchers = countAcceptedHitchers(ride);
+                                
+                  
+                  
+                                return acceptedHitchers > 0 
+                                  ? <>
+                                      Cancelled by You
+                                      <div className="text-xs mt-1 text-center">
+                                        {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher affected' : 'hitchers affected'}
+                                      </div>
+                                    </>
+                                  : "Cancelled by You";
+                              })()
+                            : ride.status.charAt(0).toUpperCase() +
+                              ride.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center text-gray-600">
+                          <Clock className="h-5 w-5 mr-2" />
+                          {ride.direction === "toCollege"
+                            ? formatTime(ride.toCollegeTime || "")
+                            : formatTime(ride.fromCollegeTime || "")}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <MapPin className="h-5 w-5 mr-2" />
+                          From: {ride.from}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <MapPin className="h-5 w-5 mr-2" />
+                          To: {ride.to}
                         </div>
                       </div>
-                      
-                      {expandedRides.has(ride._id) && (
-                        <div className="mt-4 space-y-3">
-                          
-                          <div className="flex items-center text-gray-600">
-                            <MapPin className="h-5 w-5 mr-2" />
-                            From: {ride.direction === "toCollege" ? `${ride.from}` : ride.from}
-                          </div>
-                          <div className="flex items-center text-gray-600">
-                            <MapPin className="h-5 w-5 mr-2" />
-                            To: {ride.direction === "fromCollege" ? `${ride.to}` : ride.to}
-                          </div>
-                          <div className="flex items-center text-gray-600">
-                            <Users className="h-5 w-5 mr-2" />
-                            <span>Available Seats: {ride.availableSeats}</span>
-                            {(() => {
-                              const acceptedCount = countAcceptedHitchers(ride);
-                              return (
-                                acceptedCount > 0 && (
-                                  <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full">
-                                    {acceptedCount} Accepted
-                                  </span>
-                                )
-                              );
-                            })()}
-                          </div>
-                          
-                          <p className="mt-4 text-md text-red-700">
-                            Your Current Route:
-                          </p>
-                          <div className="mt-2 mb-2">
-                            <a 
-                              href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
-                                ride.hitchers
-                                  ?.filter(h => h.status === "accepted")
-                                  .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
-                                  .filter(Boolean)
-                                  .join("|")
-                              }&travelmode=driving`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
-                            >
-                              <MapPin className="h-4 w-4 mr-1" />
-                              Open in Google Maps
-                            </a>
-                          </div>
-                          <div className="mt-4">
-                            <MapPreview
-                              startLocation={`${ride.direction === "toCollege" ? `${ride.from} (Your Address)` : ride.from}`}
-                              endLocation={`${ride.direction === "fromCollege" ? `${ride.to} (Your Address)` : ride.to}`}
-                              userLocation={ride.hitchers
-                                ?.filter(h => h.status === "accepted")
-                                .map(h => ride.direction === "toCollege" ? h.pickupLocation : h.dropoffLocation)
-                                .filter(Boolean)
-                                .join("|")}
-                              className="rounded-lg shadow-sm"
-                              direction={ride.direction}
-                              hitcherNames={ride.hitchers
-                                ?.filter(h => h.status === "accepted")
-                                .map(h => h.user.name)}
-                              hitcherPhones={ride.hitchers
-                                ?.filter(h => h.status === "accepted")
-                                .map(h => h.user.phone)}
-                              hitcherFares={ride.hitchers
-                                ?.filter(h => h.status === "accepted")
-                                .map(h => h.fare || 0)}
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))
                 ) : (
                   <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                    <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-1">
-                      No upcoming rides
+                      No past rides
                     </h3>
-                    <p className="text-gray-500 mb-4">
-                      You don't have any upcoming rides scheduled.
+                    <p className="text-gray-500">
+                      Your ride history will appear here.
                     </p>
-                    <Link
-                      to="/rides/create"
-                      className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Create a new ride
-                    </Link>
                   </div>
-                )
-              ) : pastRides.length > 0 ? (
-                pastRides.map((ride) => (
-                  <div
-                    key={ride._id}
-                    className="bg-white rounded-lg shadow-md p-6"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {ride.direction === "toCollege"
-                            ? "To College"
-                            : "From College"}
-                        </h3>
-                        <p className="text-gray-500">
-                          {format(new Date(ride.date), "EEEE, MMMM d, yyyy")}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-2 py-1 text-sm font-medium rounded-full text-center max-w-[160px] whitespace-normal ${
-                          ride.status === "completed"
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {ride.status === "cancelled"
-                          ? (() => {
-                              // Count any hitchers that have status "accepted" or had their request accepted before cancellation
-                              const acceptedHitchers = countAcceptedHitchers(ride);
-                              
-                  
-                  
-                              return acceptedHitchers > 0 
-                                ? <>
-                                    Cancelled by You
-                                    <div className="text-xs mt-1 text-center">
-                                      {acceptedHitchers} {acceptedHitchers === 1 ? 'hitcher affected' : 'hitchers affected'}
-                                    </div>
-                                  </>
-                                : "Cancelled by You";
-                            })()
-                          : ride.status.charAt(0).toUpperCase() +
-                            ride.status.slice(1)}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center text-gray-600">
-                        <Clock className="h-5 w-5 mr-2" />
-                        {ride.direction === "toCollege"
-                          ? formatTime(ride.toCollegeTime || "")
-                          : formatTime(ride.fromCollegeTime || "")}
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <MapPin className="h-5 w-5 mr-2" />
-                        From: {ride.from}
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <MapPin className="h-5 w-5 mr-2" />
-                        To: {ride.to}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">
-                    No past rides
-                  </h3>
-                  <p className="text-gray-500">
-                    Your ride history will appear here.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       {/* Request Modal */}
