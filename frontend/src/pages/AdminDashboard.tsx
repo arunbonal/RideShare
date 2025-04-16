@@ -5,6 +5,7 @@ import api from '../utils/api'; // Import API utility
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import LoadingButton from '../components/LoadingButton';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 // Define interfaces for the data we'll be working with
 interface AdminUser {
@@ -100,6 +101,7 @@ const AdminDashboard: React.FC = () => {
   const [issues, setIssues] = useState<AdminIssue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<AdminIssue[]>([]);
   const [activeTab, setActiveTab] = useState<string>('users');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [rideSearchTerm, setRideSearchTerm] = useState<string>('');
   const [issueSearchTerm, setIssueSearchTerm] = useState<string>('');
@@ -233,6 +235,7 @@ const AdminDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      setIsLoading(true);
       if (activeTab === 'users') {
         const response = await api.get('/api/admin/users');
         setUsers(response.data);
@@ -253,6 +256,8 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       showNotification('Failed to fetch data', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -411,408 +416,417 @@ const AdminDashboard: React.FC = () => {
           </nav>
         </div>
 
-        {/* Conditional content based on active tab */}
-        {activeTab === 'users' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">All Users ({filteredUsers.length})</h2>
-              
-              {/* Search Bar */}
-              <div className="relative w-64">
-                <input
-                  type="text"
-                  placeholder="Search by name or SRN..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRN</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map(user => (
-                    <tr key={user._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{formatName(user.name)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{user.phone || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{user.srn || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.isAdmin ? <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Admin</span> : null}
-                        {user.activeRoles?.driver ? <span className="ml-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Driver</span> : null}
-                        {user.activeRoles?.hitcher ? <span className="ml-1 bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Hitcher</span> : null}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {!user.isAdmin && (
-                          <LoadingButton 
-                            onClick={() => {
-                              setLoadingUser(user._id);
-                              navigate(`/admin/users/${user._id}`);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                            loadingText="Loading..."
-                            disabled={loadingUser === user._id}
-                          >
-                            View Details
-                          </LoadingButton>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Loading Spinner */}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <LoadingSpinner />
           </div>
-        )}
-
-        {activeTab === 'rides' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">All Rides ({filteredRides.length})</h2>
-              
-              {/* Ride Search Bar */}
-              <div className="relative w-64">
-                <input
-                  type="text"
-                  placeholder="Search by driver name or SRN..."
-                  value={rideSearchTerm}
-                  onChange={(e) => setRideSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRN</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredRides.map(ride => (
-                    <tr key={ride._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatDate(ride.date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {ride.direction === 'toCollege' ? 'To College' : 'From College'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getFirstName(ride.driver.name)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {ride.driver.srn || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {ride.driver.phone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          ride.status === 'scheduled' ? 'bg-green-100 text-green-800' : 
-                          ride.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                          ride.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <LoadingButton 
-                          onClick={() => {
-                            setLoadingRide(ride._id);
-                            navigate(`/admin/rides/${ride._id}`);
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                          loadingText="Loading..."
-                          disabled={loadingRide === ride._id}
-                        >
-                          View Details
-                        </LoadingButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'issues' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">All Issues ({filteredIssues.length})</h2>
-              
-              {/* Issue Search Bar */}
-              <div className="relative w-64">
-                <input
-                  type="text"
-                  placeholder="Search issues..."
-                  value={issueSearchTerm}
-                  onChange={(e) => setIssueSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Issue Filters */}
-            <div className="flex gap-4 mb-6">
-              <select
-                value={issueTypeFilter}
-                onChange={(e) => setIssueTypeFilter(e.target.value)}
-                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Types</option>
-                <option value="no-show">No Show</option>
-                <option value="safety">Safety</option>
-                <option value="payment">Payment</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ride Date</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reporter</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported User</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredIssues.map(issue => (
-                    <tr key={issue._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatDate(issue.ride.date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          issue.type === 'no-show' ? 'bg-red-100 text-red-800' :
-                          issue.type === 'safety' ? 'bg-yellow-100 text-yellow-800' :
-                          issue.type === 'payment' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`} title={issue.description}>
-                          {issue.type.charAt(0).toUpperCase() + issue.type.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium">
-                          {getFirstName(issue.reporter.name)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className={`inline-block px-2 py-0.5 rounded ${
-                            issue.reporter.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
-                            issue.reporter.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {issue.reporter.activeRoles?.driver ? 'Driver' :
-                            issue.reporter.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {issue.reporter.phone || 'No phone'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium">
-                          {getFirstName(issue.reportedUser.name)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className={`inline-block px-2 py-0.5 rounded ${
-                            issue.reportedUser.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
-                            issue.reportedUser.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {issue.reportedUser.activeRoles?.driver ? 'Driver' :
-                            issue.reportedUser.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {issue.reportedUser.phone || 'No phone'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          issue.status === 'open' ? 'bg-red-100 text-red-800' :
-                          issue.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                          issue.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <LoadingButton
-                          onClick={() => viewIssueDetails(issue)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                          loadingText="Loading..."
-                          disabled={loadingIssue === issue._id}
-                        >
-                          View Details
-                        </LoadingButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'bug-reports' && (
-          <div>
-            <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <div className="flex-1 w-full sm:w-auto">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search by title, reporter or description..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md pr-10"
-                    value={bugReportSearchTerm}
-                    onChange={(e) => setBugReportSearchTerm(e.target.value)}
-                  />
-                  <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+        ) : (
+          /* Conditional content based on active tab */
+          <>
+            {activeTab === 'users' && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">All Users ({filteredUsers.length})</h2>
+                  
+                  {/* Search Bar */}
+                  <div className="relative w-64">
+                    <input
+                      type="text"
+                      placeholder="Search by name or SRN..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRN</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredUsers.map(user => (
+                        <tr key={user._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">{formatName(user.name)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{user.phone || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{user.srn || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {user.isAdmin ? <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Admin</span> : null}
+                            {user.activeRoles?.driver ? <span className="ml-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Driver</span> : null}
+                            {user.activeRoles?.hitcher ? <span className="ml-1 bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Hitcher</span> : null}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {!user.isAdmin && (
+                              <LoadingButton 
+                                onClick={() => {
+                                  setLoadingUser(user._id);
+                                  navigate(`/admin/users/${user._id}`);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                                loadingText="Loading..."
+                                disabled={loadingUser === user._id}
+                              >
+                                View Details
+                              </LoadingButton>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="flex flex-1 gap-4 w-full sm:w-auto">
-                <select
-                  className="px-4 py-2 border border-gray-300 rounded-md bg-white flex-1 sm:flex-none"
-                  value={bugReportTypeFilter}
-                  onChange={(e) => setBugReportTypeFilter(e.target.value)}
-                >
-                  <option value="all">All Types</option>
-                  <option value="bug">Bug Reports</option>
-                  <option value="feature">Feature Requests</option>
-                </select>
-              </div>
-            </div>
+            )}
 
-            <div className="bg-white shadow-md rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Type
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Title
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Reporter
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Reported
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredBugReports.length > 0 ? (
-                      filteredBugReports.map((report) => (
-                        <tr key={report._id} className="hover:bg-gray-50">
+            {activeTab === 'rides' && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">All Rides ({filteredRides.length})</h2>
+                  
+                  {/* Ride Search Bar */}
+                  <div className="relative w-64">
+                    <input
+                      type="text"
+                      placeholder="Search by driver name or SRN..."
+                      value={rideSearchTerm}
+                      onChange={(e) => setRideSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRN</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredRides.map(ride => (
+                        <tr key={ride._id}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                report.type === 'bug'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}
-                            >
-                              {report.type === 'bug' ? 'Bug' : 'Feature'}
+                            {formatDate(ride.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {ride.direction === 'toCollege' ? 'To College' : 'From College'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getFirstName(ride.driver.name)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {ride.driver.srn || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {ride.driver.phone}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              ride.status === 'scheduled' ? 'bg-green-100 text-green-800' : 
+                              ride.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                              ride.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {report.title}
+                            <LoadingButton 
+                              onClick={() => {
+                                setLoadingRide(ride._id);
+                                navigate(`/admin/rides/${ride._id}`);
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                              loadingText="Loading..."
+                              disabled={loadingRide === ride._id}
+                            >
+                              View Details
+                            </LoadingButton>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'issues' && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">All Issues ({filteredIssues.length})</h2>
+                  
+                  {/* Issue Search Bar */}
+                  <div className="relative w-64">
+                    <input
+                      type="text"
+                      placeholder="Search issues..."
+                      value={issueSearchTerm}
+                      onChange={(e) => setIssueSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Issue Filters */}
+                <div className="flex gap-4 mb-6">
+                  <select
+                    value={issueTypeFilter}
+                    onChange={(e) => setIssueTypeFilter(e.target.value)}
+                    className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="no-show">No Show</option>
+                    <option value="safety">Safety</option>
+                    <option value="payment">Payment</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ride Date</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reporter</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reported User</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredIssues.map(issue => (
+                        <tr key={issue._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {formatDate(issue.ride.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              issue.type === 'no-show' ? 'bg-red-100 text-red-800' :
+                              issue.type === 'safety' ? 'bg-yellow-100 text-yellow-800' :
+                              issue.type === 'payment' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`} title={issue.description}>
+                              {issue.type.charAt(0).toUpperCase() + issue.type.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium">
+                              {getFirstName(issue.reporter.name)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              <span className={`inline-block px-2 py-0.5 rounded ${
+                                issue.reporter.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
+                                issue.reporter.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {issue.reporter.activeRoles?.driver ? 'Driver' :
+                                issue.reporter.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {issue.reporter.phone || 'No phone'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {report.reporter.name}
+                            <div className="text-sm font-medium">
+                              {getFirstName(issue.reportedUser.name)}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {report.reporter.email}
+                              <span className={`inline-block px-2 py-0.5 rounded ${
+                                issue.reportedUser.activeRoles?.driver ? 'bg-blue-100 text-blue-800' :
+                                issue.reportedUser.activeRoles?.hitcher ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {issue.reportedUser.activeRoles?.driver ? 'Driver' :
+                                issue.reportedUser.activeRoles?.hitcher ? 'Hitcher' : 'Unknown'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {issue.reportedUser.phone || 'No phone'}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDateTime(report.createdAt)}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              issue.status === 'open' ? 'bg-red-100 text-red-800' :
+                              issue.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                              issue.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+                            </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              <LoadingButton
-                                onClick={() => viewBugReportDetails(report)}
-                                className="text-blue-600 hover:text-blue-900 px-2 py-1"
-                                loadingText="Loading..."
-                                disabled={loadingBugReport === report._id}
-                              >
-                                Details
-                              </LoadingButton>
-                              <LoadingButton
-                                onClick={() => confirmDeleteBugReport(report)}
-                                className="text-red-600 hover:text-red-900 px-2 py-1"
-                                loadingText="Deleting..."
-                                disabled={deletingBugReport === report._id}
-                              >
-                                Delete
-                              </LoadingButton>
-                            </div>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <LoadingButton
+                              onClick={() => viewIssueDetails(issue)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                              loadingText="Loading..."
+                              disabled={loadingIssue === issue._id}
+                            >
+                              View Details
+                            </LoadingButton>
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-6 py-4 text-center text-sm text-gray-500"
-                        >
-                          No bug reports found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+
+            {activeTab === 'bug-reports' && (
+              <div>
+                <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                  <div className="flex-1 w-full sm:w-auto">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search by title, reporter or description..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md pr-10"
+                        value={bugReportSearchTerm}
+                        onChange={(e) => setBugReportSearchTerm(e.target.value)}
+                      />
+                      <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                  <div className="flex flex-1 gap-4 w-full sm:w-auto">
+                    <select
+                      className="px-4 py-2 border border-gray-300 rounded-md bg-white flex-1 sm:flex-none"
+                      value={bugReportTypeFilter}
+                      onChange={(e) => setBugReportTypeFilter(e.target.value)}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="bug">Bug Reports</option>
+                      <option value="feature">Feature Requests</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Type
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Title
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Reporter
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Reported
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredBugReports.length > 0 ? (
+                          filteredBugReports.map((report) => (
+                            <tr key={report._id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    report.type === 'bug'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}
+                                >
+                                  {report.type === 'bug' ? 'Bug' : 'Feature'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {report.title}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {report.reporter.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {report.reporter.email}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDateTime(report.createdAt)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex justify-end space-x-2">
+                                  <LoadingButton
+                                    onClick={() => viewBugReportDetails(report)}
+                                    className="text-blue-600 hover:text-blue-900 px-2 py-1"
+                                    loadingText="Loading..."
+                                    disabled={loadingBugReport === report._id}
+                                  >
+                                    Details
+                                  </LoadingButton>
+                                  <LoadingButton
+                                    onClick={() => confirmDeleteBugReport(report)}
+                                    className="text-red-600 hover:text-red-900 px-2 py-1"
+                                    loadingText="Deleting..."
+                                    disabled={deletingBugReport === report._id}
+                                  >
+                                    Delete
+                                  </LoadingButton>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-6 py-4 text-center text-sm text-gray-500"
+                            >
+                              No bug reports found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
