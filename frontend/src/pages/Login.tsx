@@ -17,7 +17,7 @@ const Login: React.FC = () => {
 
     if (error === "invalid-email") {
       setErrorMessage(
-        "Please sign in with your PESU Gmail ID (<srn>@pesu.pes.edu)"
+        "Please sign in with your PESU Email ID (<srn>@pesu.pes.edu)"
       );
     }
 
