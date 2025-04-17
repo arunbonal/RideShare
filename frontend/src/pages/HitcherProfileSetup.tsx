@@ -209,6 +209,21 @@ const HitcherProfileSetup: React.FC = () => {
     };
   }, [map]);
 
+  // Add countdown timer effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendTimer]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
