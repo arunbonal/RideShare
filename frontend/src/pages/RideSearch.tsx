@@ -190,6 +190,21 @@ const RideSearch: React.FC = () => {
           return false;
         }
 
+        // Exclude rides that are in progress
+        const currentTime = new Date();
+        const rideDate = new Date(ride.date);
+        const rideTime = ride.direction === "toCollege" ? ride.toCollegeTime : ride.fromCollegeTime;
+        
+        if (rideTime) {
+          const [hours, minutes] = rideTime.split(':').map(Number);
+          rideDate.setHours(hours, minutes, 0, 0);
+          
+          // If the ride date and time has passed, consider it in progress
+          if (currentTime > rideDate) {
+            return false;
+          }
+        }
+
         // Exclude rides where the current user is the driver
         if (ride.driver._id === currentUser?.id) {
           return false;
