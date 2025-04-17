@@ -7,6 +7,7 @@ import {
   Settings as SettingsIcon,
   FileText,
   Shield,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
@@ -197,6 +198,19 @@ const ProfileSettings: React.FC = () => {
                   <Shield className="h-4 w-4 mr-2" />
                   <span>Privacy Policy</span>
                 </Link>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h3 className="text-lg font-semibold mb-3">Contact Us</h3>
+              <div className="space-y-3">
+                <a
+                  href="mailto:rideshare.pesu@gmail.com"
+                  className="flex items-center text-gray-700 hover:text-blue-600"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  <span>rideshare.pesu@gmail.com</span>
+                </a>
               </div>
             </div>
           </div>
