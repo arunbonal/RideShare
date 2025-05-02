@@ -1,6 +1,11 @@
 const Ride = require("../models/Ride");
 const User = require("../models/User");
 const { logger } = require("../config/logger");
+const axios = require("axios");
+require("dotenv").config();
+
+let message = ``;
+let payload = {};
 
 exports.createRide = async (req, res) => {
   try {
@@ -94,16 +99,9 @@ exports.getRides = async (req, res) => {
 exports.cancelRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.body;
-    
-    logger.info('Attempting to cancel ride', {
-      rideId,
-      hitcherId,
-      userId: req.user.id,
-      isCancellingEntireRide: !hitcherId
-    });
 
-    // Find the ride
-    const ride = await Ride.findById(rideId).populate('driver', 'name').populate('hitchers.user', 'name');
+    // Find the ride first to access driver and hitcher info
+    const ride = await Ride.findById(rideId).populate('driver', 'name email').populate('hitchers.user', 'name email');
     if (!ride) {
       logger.warn('Ride not found during cancellation', {
         rideId,
@@ -112,6 +110,16 @@ exports.cancelRide = async (req, res) => {
       });
       return res.status(404).json({ success: false, message: 'Ride not found' });
     }
+    
+    let driverEmail = ride.driver.email;
+    
+
+    logger.info('Attempting to cancel ride', {
+      rideId,
+      hitcherId,
+      userId: req.user.id,
+      isCancellingEntireRide: !hitcherId
+    });
 
     // Check if the entire ride is already cancelled
     if (ride.status === 'cancelled' && !hitcherId) {
@@ -168,17 +176,30 @@ exports.cancelRide = async (req, res) => {
         
         ride.notifications.push({
           userId: ride.driver._id,
-          message: `${hitcher.user.name} has cancelled their ride`,
+          message: `${hitcher.user.name.split(' ')[0]} has cancelled their ride`,
           read: false,
           createdAt: new Date()
         });
 
         // Update hitcher reliability - they cancelled an accepted ride
         await User.updateHitcherReliability(hitcherId, 'CANCEL_ACCEPTED_RIDE');
+
+        message = `${hitcher.user.name.split(' ')[0]} has cancelled their ride (their rating will be negatively impacted), visit ${process.env.CLIENT_URL} for details`;
+        payload = {
+          email : driverEmail,
+          message
+        };
+
+        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
+        .then(() => {console.log("'CANCEL_ACCEPTED_RIDE' message sent to n8n")})
+        .catch((err) => {console.log(err)});
+
       } else {
         // Hitcher cancelled a pending ride - no reliability penalty
         await User.updateHitcherReliability(hitcherId, 'CANCEL_PENDING_RIDE');
       }
+      
+      
     } else {
       // Driver is canceling the entire ride
       
@@ -195,10 +216,25 @@ exports.cancelRide = async (req, res) => {
 
       // Check if there are any accepted hitchers
       const hasAcceptedHitchers = ride.hitchers && ride.hitchers.some(h => h.status === 'accepted');
+
+      
       
       // Update driver reliability based on whether there were accepted hitchers
       if (hasAcceptedHitchers) {
         await User.updateDriverReliability(ride.driver._id, 'CANCEL_ACCEPTED_RIDE');
+
+        const hitcherEmails = ride.hitchers.filter(h => h.status === 'accepted').map(h => h.user.email);
+        
+        message = `${ride.driver.name.split(' ')[0]} has cancelled their ride (their rating will be negatively impacted), visit ${process.env.CLIENT_URL} for details`;
+        payload = {
+          email: hitcherEmails.join(','),
+          message
+        };
+        
+
+        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
+        .then(() => {console.log("'CANCEL_ACCEPTED_RIDE' message sent to n8n")})
+        .catch((err) => {console.log(err)});
       } else {
         await User.updateDriverReliability(ride.driver._id, 'CANCEL_NON_ACCEPTED_RIDE');
       }
@@ -266,7 +302,9 @@ exports.requestRide = async (req, res) => {
   try {
     const { rideId, user, pickupLocation, dropoffLocation, fare, status, gender } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('driver', 'college').populate('hitchers.user', 'name');
+    const ride = await Ride.findById(rideId).populate('driver', 'college email').populate('hitchers.user', 'name');
+
+    const driverEmail = ride.driver.email;
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
@@ -322,6 +360,18 @@ exports.requestRide = async (req, res) => {
 
     await ride.save();
     res.status(200).json({ message: "Ride request sent successfully" });
+
+    message = `You have a new ride request, visit ${process.env.CLIENT_URL} for details`;
+        payload = {
+          email: driverEmail,
+          message
+        };
+        
+
+        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
+        .then(() => {console.log("'NEW RIDE REQUEST' message sent to n8n")})
+        .catch((err) => {console.log(err)});
+
   } catch (err) {
     logger.error("Error requesting ride", {
       error: err.message,
@@ -339,7 +389,7 @@ exports.acceptRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('hitchers.user');
+    const ride = await Ride.findById(rideId).populate('hitchers.user', 'email').populate('driver', 'name');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
@@ -439,6 +489,19 @@ exports.acceptRide = async (req, res) => {
     }
 
     res.status(200).json({ message: "Ride request accepted successfully" });
+
+    const hitcherEmail = hitcher.user.email;
+        
+        message = `${ride.driver.name.split(' ')[0]} has accepted your ride request, visit ${process.env.CLIENT_URL} for details`;
+        payload = {
+          email: hitcherEmail,
+          message
+        };
+        
+
+        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
+        .then(() => {console.log("'ACCEPTED_RIDE' message sent to n8n")})
+        .catch((err) => {console.log(err)});
   } catch (err) {
     logger.error("Error accepting ride", {
       error: err.message,
