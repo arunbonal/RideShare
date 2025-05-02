@@ -126,6 +126,8 @@ const AdminDashboard: React.FC = () => {
   const [deletingBugReport, setDeletingBugReport] = useState<string | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
   const [bugReportToDelete, setBugReportToDelete] = useState<AdminBugReport | null>(null);
+  const [showResetConfirmation, setShowResetConfirmation] = useState<boolean>(false);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
   const navigate = useNavigate();
 
   // Format name to show only first 3 words, but exclude PESU if it appears in the third position
@@ -337,6 +339,26 @@ const AdminDashboard: React.FC = () => {
     setShowDeleteConfirmation(true);
   };
 
+  // Function to reset the database
+  const resetDatabase = async () => {
+    try {
+      setIsResetting(true);
+      const response = await api.post('/api/admin/reset-database');
+      
+      if (response.data.success) {
+        showNotification('Database reset successfully', 'success');
+        // Refresh data after reset
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      showNotification('Failed to reset database', 'error');
+    } finally {
+      setIsResetting(false);
+      setShowResetConfirmation(false);
+    }
+  };
+
   return (
     <>
       <AdminNavbar />
@@ -353,7 +375,17 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          
+          {/* Reset Database Button */}
+          <button
+            onClick={() => setShowResetConfirmation(true)}
+            className="px-4 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            Reset Database
+          </button>
+        </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
@@ -973,6 +1005,34 @@ const AdminDashboard: React.FC = () => {
                 disabled={deletingBugReport === bugReportToDelete._id}
               >
                 Delete
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Database Confirmation Modal */}
+      {showResetConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Database Reset</h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to reset the entire database? This action will delete all rides, users, issues, and bug reports. This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowResetConfirmation(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+              <LoadingButton
+                onClick={resetDatabase}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                loadingText="Resetting..."
+                disabled={isResetting}
+              >
+                Reset Database
               </LoadingButton>
             </div>
           </div>

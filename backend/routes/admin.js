@@ -26,4 +26,7 @@ router.get('/rides', adminController.getAllRides);
 
 router.get('/rides/:id', adminController.getRideDetails);
 
+// Reset database (admin only)
+router.post('/reset-database', adminController.resetDatabase);
+
 module.exports = router;

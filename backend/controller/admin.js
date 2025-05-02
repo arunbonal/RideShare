@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Ride = require('../models/Ride');
+const Issue = require('../models/Issue');
+const BugReport = require('../models/BugReport');
 
 exports.getUsers = async (req, res) => {
     try {
@@ -109,5 +111,39 @@ exports.getRideDetails = async (req, res) => {
   } catch (error) {
     console.error('Error fetching ride details:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.resetDatabase = async (req, res) => {
+  try {
+    // Make sure the user making the request is an admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only administrators can reset the database'
+      });
+    }
+
+    // Delete all rides
+    await Ride.deleteMany({});
+
+    // Delete all issues
+    await Issue.deleteMany({});
+
+    // Delete all bug reports
+    await BugReport.deleteMany({});
+
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Database has been reset successfully',
+    });
+  } catch (error) {
+    console.error('Error resetting database:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while resetting the database',
+      error: error.message
+    });
   }
 };
