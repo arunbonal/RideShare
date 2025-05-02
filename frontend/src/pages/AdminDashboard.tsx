@@ -1017,7 +1017,7 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Database Reset</h3>
             <p className="text-gray-700 mb-6">
-              Are you sure you want to reset the entire database? This action will delete all rides, users, issues, and bug reports. This action cannot be undone.
+              Are you sure you want to reset the entire database? This action will delete all rides, issues, and bug reports. This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-4">
               <button
