@@ -1,11 +1,10 @@
 const Ride = require("../models/Ride");
 const User = require("../models/User");
 const { logger } = require("../config/logger");
-const axios = require("axios");
 require("dotenv").config();
+const { sendEmailNotification } = require("../utils/email_notifications");
 
 let message = ``;
-let payload = {};
 
 exports.createRide = async (req, res) => {
   try {
@@ -185,14 +184,8 @@ exports.cancelRide = async (req, res) => {
         await User.updateHitcherReliability(hitcherId, 'CANCEL_ACCEPTED_RIDE');
 
         message = `${hitcher.user.name.split(' ')[0]} has cancelled their ride (their rating will be negatively impacted), visit ${process.env.CLIENT_URL} for details`;
-        payload = {
-          email : driverEmail,
-          message
-        };
-
-        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
-        .then(() => {console.log("'CANCEL_ACCEPTED_RIDE' message sent to n8n")})
-        .catch((err) => {console.log(err)});
+        
+        sendEmailNotification({message, email : driverEmail});
 
       } else {
         // Hitcher cancelled a pending ride - no reliability penalty
@@ -226,17 +219,13 @@ exports.cancelRide = async (req, res) => {
         const hitcherEmails = ride.hitchers.filter(h => h.status === 'accepted').map(h => h.user.email);
         
         message = `${ride.driver.name.split(' ')[0]} has cancelled their ride (their rating will be negatively impacted), visit ${process.env.CLIENT_URL} for details`;
-        payload = {
-          email: hitcherEmails.join(','),
-          message
-        };
-        
 
-        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
-        .then(() => {console.log("'CANCEL_ACCEPTED_RIDE' message sent to n8n")})
-        .catch((err) => {console.log(err)});
+        sendEmailNotification({message, email : hitcherEmails.join(',')});
       } else {
         await User.updateDriverReliability(ride.driver._id, 'CANCEL_NON_ACCEPTED_RIDE');
+        const hitcherEmails = ride.hitchers.filter(h => h.status === 'pending').map(h => h.user.email);
+        message = `${ride.driver.name.split(' ')[0]} has cancelled their ride. Don't worry, you can always find and book another ride, visit ${process.env.CLIENT_URL}`
+        sendEmailNotification({message, email : hitcherEmails.join(',')})
       }
 
       // Update all pending and accepted hitchers to cancelled-by-driver
@@ -362,15 +351,8 @@ exports.requestRide = async (req, res) => {
     res.status(200).json({ message: "Ride request sent successfully" });
 
     message = `You have a new ride request, visit ${process.env.CLIENT_URL} for details`;
-        payload = {
-          email: driverEmail,
-          message
-        };
-        
-
-        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
-        .then(() => {console.log("'NEW RIDE REQUEST' message sent to n8n")})
-        .catch((err) => {console.log(err)});
+    console.log("completed till here");
+    sendEmailNotification({message, email : driverEmail});
 
   } catch (err) {
     logger.error("Error requesting ride", {
@@ -493,15 +475,7 @@ exports.acceptRide = async (req, res) => {
     const hitcherEmail = hitcher.user.email;
         
         message = `${ride.driver.name.split(' ')[0]} has accepted your ride request, visit ${process.env.CLIENT_URL} for details`;
-        payload = {
-          email: hitcherEmail,
-          message
-        };
-        
-
-        axios.post("https://rideshare.app.n8n.cloud/webhook/notification-email", payload)
-        .then(() => {console.log("'ACCEPTED_RIDE' message sent to n8n")})
-        .catch((err) => {console.log(err)});
+        sendEmailNotification({message, email : hitcherEmail});
   } catch (err) {
     logger.error("Error accepting ride", {
       error: err.message,
