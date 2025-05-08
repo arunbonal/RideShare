@@ -96,9 +96,15 @@ const AdminUserDetails: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    // Convert to number if the field is a reliability rate
+  const newValue = (name === 'driverReliabilityRate' || name === 'hitcherReliabilityRate') 
+  ? parseFloat(value) || 0 // Convert to number, default to 0 if NaN
+  : value; // Keep as string for other fields
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: newValue,
     }));
   };
 
