@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Ride = require('../models/Ride');
 const Issue = require('../models/Issue');
 const BugReport = require('../models/BugReport');
+const {initReliability} = require("../utils/initReliability")
 
 exports.getUsers = async (req, res) => {
     try {
@@ -37,14 +38,13 @@ exports.updateUser = async (req, res) => {
             return res.status(400).json({ error: 'Gender must be either male or female' });
         }
         
+        // Prepare the update object
+        const updateFields = { phone, gender, homeAddress };
+
         // Find user and update only editable fields
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            { 
-                phone, 
-                gender,
-                homeAddress
-            },
+            updateFields,
             { new: true }
         );
         
@@ -133,7 +133,8 @@ exports.resetDatabase = async (req, res) => {
     // Delete all bug reports
     await BugReport.deleteMany({});
 
-    
+    await initReliability();
+
     return res.status(200).json({
       success: true,
       message: 'Database has been reset successfully',
