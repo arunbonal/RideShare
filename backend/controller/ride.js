@@ -351,7 +351,6 @@ exports.requestRide = async (req, res) => {
     res.status(200).json({ message: "Ride request sent successfully" });
 
     message = `You have a new ride request, visit ${process.env.CLIENT_URL} for details`;
-    console.log("completed till here");
     sendEmailNotification({message, email : driverEmail});
 
   } catch (err) {
@@ -531,7 +530,7 @@ exports.rejectRide = async (req, res) => {
 
     const hitcherEmail = hitcher.user.email;
     message = `${ride.driver.name.split(' ')[0]} has rejected your ride request, visit ${process.env.CLIENT_URL} for details`;
-    sendEmailNotification({message, email : hitcherEmail}).then(() => console.log("email sent"));
+    sendEmailNotification({message, email : hitcherEmail});
   } catch (err) {
     logger.error("Error declining ride", {
       error: err.message,
