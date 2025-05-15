@@ -492,7 +492,7 @@ exports.rejectRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('hitchers.user', 'email').populate('driver', 'name');
+    const ride = await Ride.findById(rideId).populate('hitchers.user', 'email');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
@@ -529,7 +529,7 @@ exports.rejectRide = async (req, res) => {
     res.status(200).json({ message: "Ride rejected successfully" });
 
     const hitcherEmail = hitcher.user.email;
-    message = `${ride.driver.name.split(' ')[0]} has rejected your ride request, visit ${process.env.CLIENT_URL} for details`;
+    message = `Your ride request was rejected by the driver, visit ${process.env.CLIENT_URL} for details`;
     sendEmailNotification({message, email : hitcherEmail});
   } catch (err) {
     logger.error("Error declining ride", {
