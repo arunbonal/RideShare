@@ -492,7 +492,7 @@ exports.rejectRide = async (req, res) => {
   try {
     const { rideId, hitcherId } = req.body;
 
-    const ride = await Ride.findById(rideId).populate('hitchers.user', 'email');
+    const ride = await Ride.findById(rideId).populate('hitchers.user', 'email').populate('driver', 'name');
     if (!ride) {
       return res.status(404).json({ message: "Ride not found" });
     }
