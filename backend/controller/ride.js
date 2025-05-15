@@ -474,8 +474,8 @@ exports.acceptRide = async (req, res) => {
 
     const hitcherEmail = hitcher.user.email;
         
-        message = `${ride.driver.name.split(' ')[0]} has accepted your ride request, visit ${process.env.CLIENT_URL} for details`;
-        sendEmailNotification({message, email : hitcherEmail});
+    message = `${ride.driver.name.split(' ')[0]} has accepted your ride request, visit ${process.env.CLIENT_URL} for details`;
+    sendEmailNotification({message, email : hitcherEmail});
   } catch (err) {
     logger.error("Error accepting ride", {
       error: err.message,
@@ -511,9 +511,6 @@ exports.rejectRide = async (req, res) => {
       });
     }
 
-    // Store the hitcher's name for notification
-    const hitcherName = hitcher.user.name;
-
     // Update hitcher status to rejected
     hitcher.status = "rejected";
     
@@ -531,6 +528,10 @@ exports.rejectRide = async (req, res) => {
 
     await ride.save();
     res.status(200).json({ message: "Ride rejected successfully" });
+    const hitcherEmail = hitcher.user.email;
+        
+    message = `${ride.driver.name.split(' ')[0]} has rejected your ride request, visit ${process.env.CLIENT_URL} for details`;
+    sendEmailNotification({message, email : hitcherEmail});
   } catch (err) {
     logger.error("Error declining ride", {
       error: err.message,
