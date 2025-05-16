@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { UserCircle, X } from "lucide-react";
+
+// Keep track if the Maps API is already loaded
+let googleMapsLoaded = false;
 
 interface MapPreviewProps {
   startLocation: string;
@@ -9,6 +11,7 @@ interface MapPreviewProps {
   className?: string;
   direction?: "toCollege" | "fromCollege"; // Add direction prop
   onRouteCalculated?: (route: google.maps.DirectionsResult) => void;
+  onWaypointsOrdered?: (orderedWaypoints: string[]) => void; // New callback for ordered waypoints
   isAcceptedLocation?: (location: string) => boolean; // New prop to check if a location is already accepted
   hitcherNames?: string[]; // Array of hitcher names matching the locations
   hitcherPhones?: string[]; // Array of hitcher phone numbers matching the locations
@@ -24,6 +27,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   direction,
   className = "",
   onRouteCalculated,
+  onWaypointsOrdered,
   isAcceptedLocation = () => false, // Default to false if not provided
   hitcherNames = [],
   hitcherPhones = [],
@@ -40,9 +44,25 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     location: string;
     originalIndex: number;
   }>>([]);
+  
+  // Memoize the waypoints callback to prevent it from changing on each render
+  const stableWaypointsCallback = useCallback((orderedLocations: string[]) => {
+    if (onWaypointsOrdered) {
+      onWaypointsOrdered(orderedLocations);
+    }
+  }, [onWaypointsOrdered]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+    
+    // Only initialize Google Maps if it hasn't been loaded yet
+    if (!window.google || !window.google.maps) {
+      if (!googleMapsLoaded) {
+        googleMapsLoaded = true;
+        // Load Google Maps API script here if needed
+        return;
+      }
+    }
 
     const newMap = new google.maps.Map(mapRef.current, {
       zoom: 10,
@@ -56,10 +76,31 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
     setMap(newMap);
     setDirectionsRenderer(renderer);
+    
+    // Clean up function
+    return () => {
+      if (renderer) {
+        renderer.setMap(null);
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (!map || !directionsRenderer || !startLocation || !endLocation) return;
+
+    // Keep track of previous input to avoid unnecessary recalculations
+    const routeInputKey = `${startLocation}|${endLocation}|${userLocation || ""}`;
+    const prevRouteInputKey = mapRef.current?.getAttribute('data-route-input');
+    
+    // Only recalculate if inputs have changed
+    if (prevRouteInputKey === routeInputKey) {
+      return;
+    }
+    
+    // Store current input for future comparison
+    if (mapRef.current) {
+      mapRef.current.setAttribute('data-route-input', routeInputKey);
+    }
 
     const directionsService = new google.maps.DirectionsService();
 
@@ -96,6 +137,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             }));
             
             setOrderedWaypoints(ordered);
+            
+            // Call the stable callback with the ordered waypoints
+            const orderedLocations = waypointOrder.map(index => locations[index]);
+            stableWaypointsCallback(orderedLocations);
           }
           
           onRouteCalculated?.(response);
@@ -106,7 +151,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     };
 
     calculateAndDisplayRoute();
-  }, [map, directionsRenderer, startLocation, endLocation, userLocation]);
+  }, [map, directionsRenderer, startLocation, endLocation, userLocation, stableWaypointsCallback, onRouteCalculated]);
 
   // Get first name only for display
   const getFirstName = (fullName: string) => {

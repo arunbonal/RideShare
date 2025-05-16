@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, TouchEvent } from "react";
+import React, { useState, useEffect, useRef, TouchEvent, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Car, Plus, Calendar, Clock, Users, MapPin, List, X, ChevronDown, AlertTriangle, Bug, XCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -681,6 +681,37 @@ const DriverDashboard: React.FC = () => {
     }
   };
 
+  // Add these new state variables inside the DriverDashboard component
+  const [rideWaypoints, setRideWaypoints] = useState<{[rideId: string]: string[]}>({});
+  const [requestWaypoints, setRequestWaypoints] = useState<{[requestId: string]: string[]}>({});
+  
+  // Add these handler functions with useCallback to maintain stable references
+  const handleRideWaypointsOrdered = useCallback((rideId: string, orderedWaypoints: string[]) => {
+    setRideWaypoints(prev => {
+      // Only update if the waypoints have changed
+      if (JSON.stringify(prev[rideId]) !== JSON.stringify(orderedWaypoints)) {
+        return {
+          ...prev,
+          [rideId]: orderedWaypoints
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleRequestWaypointsOrdered = useCallback((hitcherId: string, orderedWaypoints: string[]) => {
+    setRequestWaypoints(prev => {
+      // Only update if the waypoints have changed
+      if (JSON.stringify(prev[hitcherId]) !== JSON.stringify(orderedWaypoints)) {
+        return {
+          ...prev,
+          [hitcherId]: orderedWaypoints
+        };
+      }
+      return prev;
+    });
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -1066,11 +1097,13 @@ const DriverDashboard: React.FC = () => {
                             <div className="mt-2 mb-2">
                               <a 
                                 href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ride.direction === "toCollege" ? ride.from : ride.from)}&destination=${encodeURIComponent(ride.direction === "fromCollege" ? ride.to : ride.to)}&waypoints=${
-                                  ride.hitchers
-                                    ?.filter(h => h.status === "accepted")
-                                    .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
-                                    .filter(Boolean)
-                                    .join("|")
+                                  rideWaypoints[ride._id] 
+                                    ? rideWaypoints[ride._id].map(loc => encodeURIComponent(loc)).join("|")
+                                    : ride.hitchers
+                                        ?.filter(h => h.status === "accepted")
+                                        .map(h => ride.direction === "toCollege" ? encodeURIComponent(h.pickupLocation || "") : encodeURIComponent(h.dropoffLocation || ""))
+                                        .filter(Boolean)
+                                        .join("|")
                                 }&travelmode=driving`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -1091,6 +1124,7 @@ const DriverDashboard: React.FC = () => {
                                   .join("|")}
                                 className="rounded-lg shadow-sm"
                                 direction={ride.direction}
+                                onWaypointsOrdered={(orderedWaypoints) => handleRideWaypointsOrdered(ride._id, orderedWaypoints)}
                                 hitcherNames={ride.hitchers
                                   ?.filter(h => h.status === "accepted")
                                   .map(h => h.user.name)}
@@ -1333,13 +1367,15 @@ const DriverDashboard: React.FC = () => {
                     <div className="mb-2">
                       <a 
                         href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(currentRequest.rideDirection === "fromCollege" ? currentRequest.from : currentRequest.from)}&destination=${encodeURIComponent(currentRequest.rideDirection === "fromCollege" ? currentRequest.to : currentRequest.to)}&waypoints=${
-                          [
-                            ...currentRequest.acceptedHitchersLocations,
-                            currentRequest.rideDirection === "toCollege" ? currentRequest.pickupLocation : currentRequest.dropoffLocation
-                          ]
-                            .filter(Boolean)
-                            .map(location => encodeURIComponent(location || ""))
-                            .join("|")
+                          requestWaypoints[currentRequest.hitcherId]
+                            ? requestWaypoints[currentRequest.hitcherId].map(loc => encodeURIComponent(loc)).join("|")
+                            : [
+                                ...currentRequest.acceptedHitchersLocations,
+                                currentRequest.rideDirection === "toCollege" ? currentRequest.pickupLocation : currentRequest.dropoffLocation
+                              ]
+                                .filter(Boolean)
+                                .map(location => encodeURIComponent(location || ""))
+                                .join("|")
                         }&travelmode=driving`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -1360,6 +1396,7 @@ const DriverDashboard: React.FC = () => {
                           currentRequest.rideDirection === "toCollege" ? currentRequest.pickupLocation : currentRequest.dropoffLocation
                         ].filter(Boolean).join("|")}
                         direction={currentRequest.rideDirection}
+                        onWaypointsOrdered={(orderedWaypoints) => handleRequestWaypointsOrdered(currentRequest.hitcherId, orderedWaypoints)}
                         isAcceptedLocation={(location) => currentRequest.acceptedHitchersLocations.includes(location)}
                         hitcherNames={[
                           // Names for accepted hitchers - we don't have these in the currentRequest
